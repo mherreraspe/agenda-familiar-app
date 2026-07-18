@@ -5,30 +5,31 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `5b9bdd4fc54423eb8e450ecf4a4bce49d3dd32ae`.
-- Release activo: `20260718T200358Z`.
+- Commit desplegado: `e5beb0bc904cc8d7bd99d96af137f90e8c568e3d`.
+- Release activo: `20260718T205050Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
-- Migraciones: V1–V6 aplicadas correctamente.
-- Último bloque: historial de acciones, estados/vencimientos del botiquín y horarios/intervalos.
-- E2E de regresión y revisión móvil V6 autenticada: aprobados.
+- Migraciones: V1–V7 aplicadas correctamente.
+- Último bloque: recurrencia, acciones de agenda y administración familiar.
+- E2E HTTPS y revisión móvil V7 autenticada: aprobados.
 
 ## Último bloque completado
 
-- PR #7: funcionalidad V6. PR #8 y #9: backup/despliegue reproducible y hotfix Bash.
-- Migración V6: reprogramación enlazada, cierre idempotente y horarios/intervalos.
-- UI: historial con actor, posposición rápida, reprogramación, cierre anticipado y vencimientos cercanos.
-- Botiquín: estados calculados `DISPONIBLE`, `POR_VENCER`, `VENCIDO`, `AGOTADO` y `DESCARTADO`.
-- Tratamientos: varios horarios, intervalo y responsable alternativo.
-- CI: frontend y backend aprobados con Testcontainers.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z`.
-- Producción saludable; V6 aplicada una vez, E2E V5 aprobado y móvil 390×844 sin desborde ni errores de consola.
+- PR #11 integrado en `main`; CI `29660227013` verde (frontend 13 s, backend 1 min 11 s).
+- Migración V7: series de tareas/eventos y acciones idempotentes con RLS forzado.
+- Recurrencia diaria, semanal y mensual materializada sin borrar instancias anteriores.
+- Omitir y reprogramar tareas/eventos desde “Hoy”, “Revisar” y calendario; reprogramación enlazada.
+- Interfaz para perfiles adultos/dependientes, cuentas vinculadas y permisos, restringida a administradores.
+- Pruebas PostgreSQL 18: recurrencia, historial, idempotencia, concurrencia, IDOR, RLS y permisos.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-e5beb0b-20260718T205050Z`.
+- Producción saludable; V7 aplicada una vez y E2E con aislamiento 404, auditoría e indexación aprobado.
+- PWA autenticada a 390×844: bundle V7, recurrencia y gestión familiar visibles; sin desborde ni errores de consola.
 
 ## Siguiente bloque funcional
 
-1. Recurrencia de eventos y tareas sin perder el historial anterior.
-2. Omitir y reprogramar tareas/eventos desde “Hoy” y “Revisar”.
-3. Gestión de perfiles, adultos, dependientes y permisos desde la interfaz.
-4. Pruebas de recurrencia, transiciones, concurrencia e IDOR/RLS.
+1. Fotografía opcional de receta desde la PWA con reducción y eliminación de EXIF/ubicación.
+2. Almacenamiento privado, descarga autorizada, miniaturas y eliminación completa.
+3. Cuota familiar con avisos y bloqueo de nuevas fotos al alcanzar el límite.
+4. Pruebas de archivos inválidos/maliciosos, aislamiento, cuota y concurrencia.
 
 ## Entrada operativa
 
