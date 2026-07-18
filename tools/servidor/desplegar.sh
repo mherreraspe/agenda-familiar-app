@@ -23,6 +23,6 @@ test -s "$RESPALDO/autenticacion.dump"
 
 cp "$ACTUAL/infraestructura/.env" "$VARIABLES"
 chmod 600 "$VARIABLES"
-"$ACTUAL/infraestructura/desplegar-servidor.sh" "$ARCHIVO" "$VARIABLES"
+bash "$ACTUAL/infraestructura/desplegar-servidor.sh" "$ARCHIVO" "$VARIABLES"
 
 echo "BACKUP_OK=$RESPALDO"
