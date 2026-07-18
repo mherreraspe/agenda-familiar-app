@@ -24,4 +24,6 @@ public class MiembroFamilia {
     private boolean activo;
 
     protected MiembroFamilia() { }
+    public String getRol() { return rol; }
+    public UUID getUsuarioPublicoId() { return usuarioPublicoId; }
 }

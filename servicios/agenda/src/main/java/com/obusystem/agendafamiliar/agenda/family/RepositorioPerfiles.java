@@ -8,5 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RepositorioPerfiles extends JpaRepository<Perfil, Long> {
     List<Perfil> findByFamiliaIdOrderByNombreVisible(Long familiaId);
+    List<Perfil> findByFamiliaIdAndActivoTrueOrderByNombreVisible(Long familiaId);
     Optional<Perfil> findByFamiliaIdAndIdPublico(Long familiaId, UUID idPublico);
 }

@@ -93,6 +93,10 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .boton-secundario { padding: 9px 13px; }
 .acciones-ocurrencia { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .acciones-ocurrencia .boton-secundario { padding: 7px 10px; font-size: .75rem; }
+.opcion-linea { display: flex; align-items: center; gap: 8px; }
+.opcion-linea input { width: auto; }
+.muestra-color { width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%; }
+.perfil-inactivo { opacity: .62; }
 .estado { padding: 6px 9px; border-radius: 999px; color: #315b4c; background: #e5ece8; font-size: .68rem; font-weight: 900; }
 .aviso-medico { padding: 12px 15px; border-radius: 12px; color: #76562f; background: #f3ead9; font-size: .8rem; }
 

@@ -34,4 +34,15 @@ public class AccesoFamilia {
         }
         return familia;
     }
+
+    public Familia autorizarAdministrador(UUID familiaId, Jwt jwt) {
+        Familia familia = autorizar(familiaId, jwt);
+        UUID usuarioId = UUID.fromString(jwt.getSubject());
+        MiembroFamilia miembro = miembros.findByFamiliaIdAndUsuarioPublicoIdAndActivoTrue(familia.getId(), usuarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Familia no encontrada"));
+        if (!"ADMINISTRADOR_FAMILIAR".equals(miembro.getRol())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Solo un administrador familiar puede gestionar perfiles y permisos");
+        }
+        return familia;
+    }
 }

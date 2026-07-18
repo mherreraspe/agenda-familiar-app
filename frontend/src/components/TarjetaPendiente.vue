@@ -4,10 +4,13 @@ defineProps<{
   titulo: string
   detalle: string
   tono?: 'normal' | 'atrasado' | 'proximo'
+  recurrente?: boolean
 }>()
 
 const emit = defineEmits<{
   completar: []
+  omitir: []
+  reprogramar: []
 }>()
 </script>
 
@@ -17,7 +20,12 @@ const emit = defineEmits<{
     <div class="tarjeta__contenido">
       <h3>{{ titulo }}</h3>
       <p>{{ detalle }}</p>
+      <small v-if="recurrente">Recurrente</small>
     </div>
-    <button type="button" class="boton-secundario" @click="emit('completar')">Hecho</button>
+    <div class="acciones-ocurrencia">
+      <button type="button" class="boton-secundario" @click="emit('completar')">Hecho</button>
+      <button type="button" class="boton-secundario" @click="emit('omitir')">Omitir</button>
+      <button type="button" class="boton-secundario" @click="emit('reprogramar')">Reprogramar</button>
+    </div>
   </article>
 </template>

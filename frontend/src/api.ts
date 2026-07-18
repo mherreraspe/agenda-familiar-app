@@ -19,6 +19,8 @@ export interface TareaResumen {
   estado: 'PENDIENTE' | 'COMPLETADA' | 'OMITIDA' | 'REPROGRAMADA'
   perfilId: string
   responsable: string
+  recurrente: boolean
+  tareaOrigenId?: string
 }
 
 export interface RespuestaHoy {
@@ -34,7 +36,7 @@ export type EstadoBotiquin = 'DISPONIBLE' | 'POR_VENCER' | 'VENCIDO' | 'AGOTADO'
 export interface RespuestaCatalogo {
   medicamentos: Array<{ id: string; loteId?: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: EstadoBotiquin }>
   tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; responsablePerfilId: string; responsable: string; responsableAlternativoPerfilId?: string; responsableAlternativo?: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string; estado: string }>
-  eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; estado: string }>
+  eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; estado: string; recurrente: boolean; eventoOrigenId?: string }>
   lugares: Array<{ id: string; nombre: string; direccion?: string; ultimaUtilizacion: string; frecuenciaUso: number }>
 }
 
@@ -83,6 +85,12 @@ export interface RespuestaOcurrencias {
   ocurrencias: OcurrenciaResumen[]
   revisar: ElementoRevision[]
 }
+
+export type FrecuenciaRecurrencia = 'DIARIA' | 'SEMANAL' | 'MENSUAL'
+export interface RecurrenciaSolicitud { frecuencia: FrecuenciaRecurrencia; intervalo: number; hasta: string }
+export interface PerfilAdministrado { id: string; nombre: string; tipo: 'ADULTO' | 'DEPENDIENTE'; color?: string; relacion?: string; usuarioId?: string; permiso?: 'ADMINISTRADOR_FAMILIAR' | 'ADULTO'; activo: boolean }
+export interface RespuestaFamilia { puedeAdministrar: boolean; perfiles: PerfilAdministrado[] }
+export type DatosPerfil = Omit<PerfilAdministrado, 'id'>
 
 interface RespuestaSesion {
   accessToken: string
@@ -169,6 +177,10 @@ export function consultarAuditoria() {
   return solicitud<RespuestaAuditoria>(`/api/v1/familias/${FAMILIA_TEST_ID}/auditoria`)
 }
 
+export function consultarConfiguracionFamilia() {
+  return solicitud<RespuestaFamilia>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion`)
+}
+
 export function consultarSugerencias(consulta: string) {
   return solicitud<RespuestaSugerencias>(`/api/v1/familias/${FAMILIA_TEST_ID}/sugerencias?q=${encodeURIComponent(consulta)}`)
 }
@@ -197,15 +209,30 @@ export function cerrarTratamiento(tratamientoId: string, motivo?: string) {
 }
 
 export function completarTarea(tareaId: string) {
-  return solicitud<TareaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/tareas/${tareaId}/estado/COMPLETADA`, { method: 'PATCH' })
+  return actuarAgenda('tareas', tareaId, 'COMPLETAR')
 }
 
-export function crearTarea(datos: { titulo: string; descripcion: string; perfilId: string; fechaLimite: string }) {
+export function actuarAgenda(entidad: 'tareas' | 'eventos', id: string, accion: 'COMPLETAR' | 'OMITIR' | 'REPROGRAMAR', fechaNueva?: string) {
+  return solicitud<{ id: string; origenId?: string; entidad: string; estado: string; fecha: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/${entidad}/${id}/acciones/${accion}`, {
+    method: 'PATCH', headers: { 'Idempotency-Key': crypto.randomUUID() },
+    body: fechaNueva ? JSON.stringify({ fechaNueva }) : undefined
+  })
+}
+
+export function crearTarea(datos: { titulo: string; descripcion: string; perfilId: string; fechaLimite: string; recurrencia?: RecurrenciaSolicitud }) {
   return solicitud<TareaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/tareas`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
-export function crearEvento(datos: { perfilId?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string }) {
+export function crearEvento(datos: { perfilId?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; recurrencia?: RecurrenciaSolicitud }) {
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/eventos`, { method: 'POST', body: JSON.stringify(datos) })
+}
+
+export function crearPerfil(datos: DatosPerfil) {
+  return solicitud<PerfilAdministrado>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion/perfiles`, { method: 'POST', body: JSON.stringify(datos) })
+}
+
+export function actualizarPerfil(id: string, datos: DatosPerfil) {
+  return solicitud<PerfilAdministrado>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion/perfiles/${id}`, { method: 'PATCH', body: JSON.stringify(datos) })
 }
 
 export function crearMedicamento(datos: { nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string }) {
