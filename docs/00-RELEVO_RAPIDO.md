@@ -5,32 +5,30 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `231a411f9edc193570697234919424ad09999c19`.
-- Release activo: `20260718T163608Z`.
+- Commit desplegado: `5b9bdd4fc54423eb8e450ecf4a4bce49d3dd32ae`.
+- Release activo: `20260718T200358Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
-- Migraciones: V1–V5 aplicadas correctamente.
-- Último bloque: auditoría visible, catálogo privado de lugares y sugerencias privadas por familia.
-- E2E V5 y revisión móvil autenticada: aprobados.
+- Migraciones: V1–V6 aplicadas correctamente.
+- Último bloque: historial de acciones, estados/vencimientos del botiquín y horarios/intervalos.
+- E2E de regresión y revisión móvil V6 autenticada: aprobados.
 
-## Integrado pendiente de despliegue
+## Último bloque completado
 
-- PR #7 integrado en `main`: `f7c27c91b3a06ebe008747f713707cf502a49661`.
+- PR #7: funcionalidad V6. PR #8 y #9: backup/despliegue reproducible y hotfix Bash.
 - Migración V6: reprogramación enlazada, cierre idempotente y horarios/intervalos.
 - UI: historial con actor, posposición rápida, reprogramación, cierre anticipado y vencimientos cercanos.
 - Botiquín: estados calculados `DISPONIBLE`, `POR_VENCER`, `VENCIDO`, `AGOTADO` y `DESCARTADO`.
 - Tratamientos: varios horarios, intervalo y responsable alternativo.
-- `VerificarLocal`: aprobado. CI del PR #7: frontend y backend aprobados con Testcontainers.
+- CI: frontend y backend aprobados con Testcontainers.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z`.
+- Producción saludable; V6 aplicada una vez, E2E V5 aprobado y móvil 390×844 sin desborde ni errores de consola.
 
-## Trabajo operativo en curso
+## Siguiente bloque funcional
 
-- Rama: `agent/despliegue-operativo-v6`.
-- Añadir `agenda-ops.cmd Desplegar` con backup predeploy y paquete inmutable.
-
-## Siguiente paso
-
-1. Integrar la acción de despliegue con CI verde.
-2. Desplegar V6 y repetir E2E móvil.
-3. Actualizar el commit/release desplegado y reemplazar este relevo.
+1. Recurrencia de eventos y tareas sin perder el historial anterior.
+2. Omitir y reprogramar tareas/eventos desde “Hoy” y “Revisar”.
+3. Gestión de perfiles, adultos, dependientes y permisos desde la interfaz.
+4. Pruebas de recurrencia, transiciones, concurrencia e IDOR/RLS.
 
 ## Entrada operativa
 

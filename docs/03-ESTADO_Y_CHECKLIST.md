@@ -1,9 +1,9 @@
 # Estado y checklist de continuidad
 
 **Corte:** 2026-07-18 (America/Lima)  
-**Rama:** `agent/historial-estados-botiquin`
-**Commit desplegado:** `231a411f9edc193570697234919424ad09999c19`
-**Versión del servidor:** `20260718T163608Z`
+**Rama:** `agent/cerrar-bloque-v6`
+**Commit desplegado:** `5b9bdd4fc54423eb8e450ecf4a4bce49d3dd32ae`
+**Versión del servidor:** `20260718T200358Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
@@ -47,9 +47,9 @@ Integrado mediante el PR #5, desplegado y verificado en producción:
 - [x] E2E HTTPS: evento 201 en 35 ms, indexación asíncrona, sugerencia de registro real, lugar privado, auditoría coincidente para Papá/Mamá, responsable e aislamiento de familia ajena 404.
 - [x] Revisión PWA autenticada a 390 × 844: filtros, responsable, historial y evento E2E visibles; sin desborde horizontal ni errores o advertencias de consola.
 
-## Bloque preparado — historial, botiquín y horarios
+## Bloque completado — historial, botiquín y horarios
 
-Integrado mediante el PR #7; CI verde y pendiente de despliegue y E2E móvil:
+Integrado mediante los PR #7–#9, desplegado y verificado en producción:
 
 - [x] Reprogramación separada de la posposición rápida, con ocurrencia original inmutable y nueva ocurrencia enlazada.
 - [x] Cierre anticipado de tratamientos idempotente, con motivo opcional, actor visible y cancelación trazable de pendientes.
@@ -59,7 +59,10 @@ Integrado mediante el PR #7; CI verde y pendiente de despliegue y E2E móvil:
 - [x] Pruebas de transiciones competidoras, IDOR, RLS, estados, horarios e intervalos añadidas.
 - [x] Validación local rápida aprobada y CI `29657913288` aprobado (frontend 16 s, backend 1 min 4 s).
 - [x] PR #7 integrado en `main` como `f7c27c9`.
-- [ ] Desplegar V6 y repetir E2E/revisión móvil.
+- [x] Acción `Desplegar` integrada con paquete inmutable, backup predeploy de ambas bases y manifiesto SHA-256.
+- [x] Release `20260718T200358Z` activo; Flyway aplicó V6 una vez y los cuatro contenedores están saludables.
+- [x] E2E HTTPS de regresión aprobado: aislamiento 404, evento, indexación, sugerencias, auditoría y responsables.
+- [x] Revisión PWA autenticada a 390 × 844: historial con actor, posposición, reprogramación, cierre y vencimientos visibles; sin desborde ni errores/advertencias de consola.
 
 ## Completado y verificado
 
@@ -95,8 +98,11 @@ Integrado mediante el PR #7; CI verde y pendiente de despliegue y E2E móvil:
 - PR de auditoría visible y sugerencias privadas por familia: <https://github.com/mherreraspe/agenda-familiar-app/pull/5>
 - PR de historial, estados del botiquín y horarios: <https://github.com/mherreraspe/agenda-familiar-app/pull/7>
 - CI del PR #7: ejecución `29657913288`, frontend y backend aprobados con Testcontainers PostgreSQL 18.
+- PR de backup y despliegue reproducible: <https://github.com/mherreraspe/agenda-familiar-app/pull/8>
+- PR del hotfix de invocación Bash: <https://github.com/mherreraspe/agenda-familiar-app/pull/9>; CI `29658934355` aprobado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
+- Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
 - Credenciales: se entregaron al propietario en el chat y están configuradas únicamente en el `.env` protegido del servidor.
 
 ## Pendiente del MVP según `docs/`
@@ -164,12 +170,12 @@ Integrado mediante el PR #7; CI verde y pendiente de despliegue y E2E móvil:
 
 ## Próximo bloque recomendado
 
-Completar acciones e información operativa de tratamientos y botiquín:
+Completar recurrencia y administración familiar:
 
-1. Completar, omitir, posponer, reprogramar y cerrar con historial íntegro y actor visible.
-2. Añadir sección de vencimientos cercanos y estados calculados del botiquín: disponible, por vencer, vencido, agotado y descartado.
-3. Completar horarios/intervalos y responsable alternativo con edición progresiva.
-4. Ampliar pruebas de transiciones, concurrencia, IDOR/RLS y cálculo de estados.
+1. Añadir recurrencia de eventos y tareas sin perder el historial anterior.
+2. Permitir omitir y reprogramar tareas/eventos desde “Hoy” y “Revisar”.
+3. Gestionar perfiles, adultos, dependientes y permisos desde la interfaz.
+4. Ampliar pruebas de recurrencia, transiciones, concurrencia e IDOR/RLS.
 5. Publicar por PR, exigir CI verde, desplegar y repetir E2E móvil.
 
 ## Continuidad operativa
