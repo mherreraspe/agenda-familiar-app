@@ -1,0 +1,91 @@
+:root {
+  font-family: Inter, ui-rounded, "Segoe UI", system-ui, sans-serif;
+  color: #24312d;
+  background: #efece4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+
+button, a { font: inherit; }
+
+button { cursor: pointer; }
+
+.aplicacion {
+  width: min(100%, 760px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 28px 22px 124px;
+  background: #f9f7f1;
+  box-shadow: 0 0 48px rgb(38 49 45 / 9%);
+}
+
+.cabecera, .titulo-seccion, .tarjeta, .navegacion { display: flex; align-items: center; }
+
+.cabecera { justify-content: space-between; gap: 18px; margin-bottom: 28px; }
+
+.cabecera h1 { margin: 4px 0; font-family: Georgia, serif; font-size: clamp(1.85rem, 6vw, 2.6rem); }
+
+.cabecera p { margin: 0; color: #63706b; }
+
+.sobretitulo { text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; font-weight: 800; }
+
+.avatar { flex: 0 0 50px; height: 50px; border: 0; border-radius: 50%; background: #315b4c; color: white; font-weight: 800; }
+
+.resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
+
+.resumen div { display: grid; gap: 2px; padding: 16px 10px; border: 1px solid #ded9ce; border-radius: 18px; text-align: center; background: white; }
+
+.resumen strong { font-family: Georgia, serif; font-size: 1.65rem; color: #315b4c; }
+
+.resumen span { color: #63706b; font-size: .82rem; }
+
+.seccion { margin-top: 30px; }
+
+.titulo-seccion { justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+
+.titulo-seccion h2 { margin: 3px 0 0; font-family: Georgia, serif; font-size: 1.4rem; }
+
+.titulo-seccion a { color: #315b4c; font-size: .88rem; font-weight: 800; }
+
+.etiqueta { color: #9c4f32; text-transform: uppercase; letter-spacing: .1em; font-size: .66rem; font-weight: 900; }
+.etiqueta--verde { color: #3c705d; }
+.etiqueta--arena { color: #85663f; }
+
+.filtro, .boton-secundario { border: 1px solid #c8d2ce; border-radius: 999px; color: #315b4c; background: transparent; font-weight: 800; }
+.filtro { padding: 8px 12px; font-size: .78rem; }
+
+.tarjeta { gap: 15px; margin-bottom: 10px; padding: 16px; border: 1px solid #e1ddd3; border-radius: 18px; background: white; box-shadow: 0 8px 20px rgb(58 54 44 / 5%); }
+.tarjeta--atrasado { border-left: 5px solid #c06c4d; }
+.tarjeta--proximo { border-left: 5px solid #d1aa70; }
+.tarjeta time { min-width: 58px; color: #63706b; font-size: .82rem; font-weight: 800; }
+.tarjeta__contenido { flex: 1; min-width: 0; }
+.tarjeta h3, .tarjeta p { margin: 0; }
+.tarjeta h3 { font-size: 1rem; }
+.tarjeta p { margin-top: 4px; color: #6e7773; font-size: .84rem; }
+.boton-secundario { padding: 9px 13px; }
+
+.confirmacion { padding: 12px 16px; border-radius: 12px; color: #244b3d; background: #dcebe4; }
+
+.agregar { position: fixed; right: max(22px, calc((100vw - 716px) / 2)); bottom: 82px; z-index: 2; padding: 13px 20px; border: 0; border-radius: 999px; color: white; background: #315b4c; box-shadow: 0 10px 25px rgb(49 91 76 / 28%); font-weight: 900; }
+.agregar span { margin-right: 5px; font-size: 1.2rem; }
+
+.navegacion { position: fixed; left: 50%; bottom: 0; z-index: 1; width: min(100%, 760px); transform: translateX(-50%); justify-content: space-around; padding: 14px 8px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid #ded9ce; background: rgb(249 247 241 / 96%); backdrop-filter: blur(10px); }
+.navegacion a { position: relative; padding: 5px; color: #727b77; text-decoration: none; font-size: .76rem; font-weight: 800; }
+.navegacion a.activo { color: #315b4c; }
+.contador { display: inline-grid; min-width: 18px; height: 18px; place-items: center; border-radius: 9px; color: white; background: #b45d40; font-size: .65rem; }
+
+@media (max-width: 520px) {
+  .aplicacion { padding-inline: 16px; }
+  .tarjeta { align-items: flex-start; flex-wrap: wrap; }
+  .tarjeta__contenido { min-width: calc(100% - 78px); }
+  .boton-secundario { margin-left: 73px; }
+  .agregar { right: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}

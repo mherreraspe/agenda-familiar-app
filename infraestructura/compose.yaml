@@ -1,0 +1,67 @@
+name: agenda-familiar
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-desarrollo-local}
+      AUTENTICACION_DB_PASSWORD: ${AUTENTICACION_DB_PASSWORD:-desarrollo-local}
+      AGENDA_DB_PASSWORD: ${AGENDA_DB_PASSWORD:-desarrollo-local}
+    volumes:
+      - postgres_datos:/var/lib/postgresql/data
+      - ./postgres/inicializar-bases.sh:/docker-entrypoint-initdb.d/01-inicializar-bases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  autenticacion:
+    build:
+      context: ..
+      dockerfile: servicios/autenticacion/Dockerfile
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/autenticacion
+      SPRING_DATASOURCE_USERNAME: autenticacion
+      SPRING_DATASOURCE_PASSWORD: ${AUTENTICACION_DB_PASSWORD:-desarrollo-local}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
+    ports:
+      - "127.0.0.1:8101:8101"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  agenda:
+    build:
+      context: ..
+      dockerfile: servicios/agenda/Dockerfile
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/agenda_familiar
+      SPRING_DATASOURCE_USERNAME: agenda
+      SPRING_DATASOURCE_PASSWORD: ${AGENDA_DB_PASSWORD:-desarrollo-local}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
+    ports:
+      - "127.0.0.1:8102:8102"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+volumes:
+  postgres_datos:

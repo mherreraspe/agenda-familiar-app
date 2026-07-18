@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Agenda Familiar">
+  <rect width="512" height="512" rx="112" fill="#315b4c"/>
+  <path d="M126 155c0-25 20-45 45-45h170c25 0 45 20 45 45v220c0 25-20 45-45 45H171c-25 0-45-20-45-45V155Z" fill="#f7f4ec"/>
+  <path d="M126 194h260" stroke="#e09f5a" stroke-width="34"/>
+  <path d="M194 92v78M318 92v78" stroke="#f7f4ec" stroke-width="26" stroke-linecap="round"/>
+  <path d="m196 302 40 40 86-94" fill="none" stroke="#315b4c" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

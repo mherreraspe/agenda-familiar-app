@@ -1,0 +1,28 @@
+server:
+  port: ${PUERTO_AGENDA:8102}
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: servicio-agenda
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/agenda_familiar}
+    username: ${SPRING_DATASOURCE_USERNAME:agenda}
+    password: ${SPRING_DATASOURCE_PASSWORD:desarrollo-local}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

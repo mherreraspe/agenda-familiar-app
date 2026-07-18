@@ -6,6 +6,7 @@ Thumbs.db
 **/target/
 **/node_modules/
 **/dist/
+**/coverage/
 **/.env
 **/.env.*
 !**/.env.example
@@ -16,3 +17,8 @@ media/
 *.log
 *.key
 *.pem
+
+# Herramientas y caches locales
+.npm-cache/
+.local-tools/
+.auth-temp/

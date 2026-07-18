@@ -1,0 +1,24 @@
+server:
+  port: ${PUERTO_AUTENTICACION:8101}
+  servlet:
+    context-path: /api/v1/autenticacion
+
+spring:
+  application:
+    name: servicio-autenticacion
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/autenticacion}
+    username: ${SPRING_DATASOURCE_USERNAME:autenticacion}
+    password: ${SPRING_DATASOURCE_PASSWORD:desarrollo-local}
+  flyway:
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
