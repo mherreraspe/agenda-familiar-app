@@ -53,7 +53,11 @@ Este documento es el punto de relevo para continuar el proyecto en otro chat. No
 - [ ] Filtros por miembro y sección de vencimientos cercanos en “Hoy”.
 - [ ] Recurrencia de eventos y tareas sin perder el historial anterior.
 - [ ] Alta rápida de cita/actividad con solo título y fecha/hora obligatorios; persona, tipo, lugar, dirección y notas serán opcionales/progresivos.
-- [ ] Palabras clave normalizadas por familia para sugerir títulos y categorías usados anteriormente (por ejemplo, “Notaría” o “Pediatra”).
+- [ ] Después de guardar, procesar el registro de forma asíncrona y asociarle silenciosamente una o dos palabras clave canónicas mediante IA (por ejemplo, `pediatra` y `control`).
+- [ ] La extracción de palabras clave nunca bloqueará el guardado, no producirá texto visible ni modificará lo escrito por el usuario; si falla, el registro seguirá siendo válido.
+- [ ] Guardar palabra, origen (`IA`, `REGLA` o `USUARIO`), versión del extractor y entidad asociada para poder recalcular o auditar el índice.
+- [ ] Excluir nombres de personas, direcciones, diagnósticos y cantidades/dosis de las palabras clave automáticas; esos datos tienen campos y controles de privacidad propios.
+- [ ] Usar las palabras clave solo para recuperar títulos/lugares reales de la misma familia en el autocompletado; no generar ni inventar una respuesta al usuario.
 - [ ] Catálogo privado de lugares por familia con nombre, dirección opcional, última utilización y frecuencia de uso.
 - [ ] Al escribir un lugar conocido, sugerir sus ubicaciones anteriores; seleccionar una sugerencia rellenará la dirección, pero siempre podrá omitirse o editarse.
 - [ ] El autocompletado nunca mezclará ni revelará lugares, direcciones o palabras clave de otra familia.
