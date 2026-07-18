@@ -54,6 +54,10 @@ class MigracionesAgendaIT {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isEqualTo(1);
 
         Long otraFamilia = jdbc.queryForObject("INSERT INTO familias (id_publico, nombre) VALUES (gen_random_uuid(), 'otra') RETURNING id", Long.class);
+        jdbc.execute("CREATE ROLE prueba_rls NOLOGIN NOBYPASSRLS");
+        jdbc.execute("GRANT USAGE ON SCHEMA public TO prueba_rls");
+        jdbc.execute("GRANT SELECT ON ocurrencias_tratamiento, elementos_revision TO prueba_rls");
+        jdbc.execute("SET LOCAL ROLE prueba_rls");
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, otraFamilia.toString());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM elementos_revision", Integer.class)).isZero();
