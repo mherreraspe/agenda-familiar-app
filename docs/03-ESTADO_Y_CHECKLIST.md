@@ -44,6 +44,10 @@ Este documento es el punto de relevo para continuar el proyecto en otro chat. No
 ### Dominio y experiencia
 
 - [ ] Ocurrencias de tratamientos: pendiente, tomada, omitida, pospuesta y cancelada.
+- [ ] Alta rápida de tratamiento con persona, nombre libre y horario; no exigir que el medicamento exista previamente en el botiquín.
+- [ ] Vincular un tratamiento con un medicamento del botiquín será opcional y podrá hacerse después.
+- [ ] “Cantidad indicada en la receta” será texto opcional; la aplicación solo conserva lo escrito y nunca calcula o recomienda dosis.
+- [ ] Fotografía de receta y detalles como indicación, fechas o responsable alternativo serán campos opcionales/progresivos.
 - [ ] Bandeja “Revisar” para vencidos, tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
 - [ ] Acciones completar, omitir, posponer, reprogramar y cerrar con historial.
 - [ ] Filtros por miembro y sección de vencimientos cercanos en “Hoy”.
@@ -51,6 +55,8 @@ Este documento es el punto de relevo para continuar el proyecto en otro chat. No
 - [ ] Horarios/intervalos de tratamientos y responsable alternativo.
 - [ ] Estados calculados del botiquín: disponible, por vencer, vencido, agotado y descartado.
 - [ ] Gestión de perfiles, adultos, dependientes y permisos desde la interfaz.
+- [ ] Convertir Papá/Mamá/Hijo en filtros claros con opción “Todos”; no representan cambio de usuario.
+- [ ] Mostrar “para quién”, responsable y “agregado/modificado por” con historial de auditoría visible para adultos autorizados.
 
 ### Sincronización y avisos
 
