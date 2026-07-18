@@ -10,6 +10,10 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/autenticacion}
     username: ${SPRING_DATASOURCE_USERNAME:autenticacion}
     password: ${SPRING_DATASOURCE_PASSWORD:desarrollo-local}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
   flyway:
     locations: classpath:db/migration
 
@@ -22,3 +26,13 @@ management:
     health:
       probes:
         enabled: true
+
+seguridad:
+  jwt:
+    emisor: ${JWT_ISSUER:agenda-familiar-autenticacion}
+    secreto: ${JWT_SECRET:desarrollo-local-cambiar-esta-clave-antes-de-produccion-2026}
+    duracion-minutos: ${JWT_DURACION_MINUTOS:15}
+
+familia-test:
+  habilitada: ${FAMILIA_TEST_HABILITADA:false}
+  clave: ${FAMILIA_TEST_PASSWORD:}

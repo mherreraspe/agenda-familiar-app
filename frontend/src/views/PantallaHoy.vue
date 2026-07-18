@@ -1,104 +1,188 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
+import {
+  cerrarSesion as eliminarSesion,
+  completarTarea,
+  consultarHoy,
+  crearTarea,
+  iniciarSesion,
+  type RespuestaHoy,
+  type TareaResumen
+} from '../api'
 
+const correo = ref('papa@familia.test')
+const clave = ref('')
+const cargando = ref(false)
+const error = ref('')
 const mensaje = ref('')
+const sesionActiva = ref(false)
+const datos = ref<RespuestaHoy | null>(null)
+const mostrarFormulario = ref(false)
+const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '' })
+
 const fechaActual = new Intl.DateTimeFormat('es-PE', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long'
+  weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima'
 }).format(new Date())
 
-function completar(titulo: string) {
-  mensaje.value = `${titulo} quedó marcado como hecho.`
+const pendientes = computed(() => datos.value?.tareas.filter(tarea => tarea.estado === 'PENDIENTE') ?? [])
+const atrasadas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) < new Date()))
+const proximas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) >= new Date()))
+
+function hora(tarea: TareaResumen) {
+  return new Intl.DateTimeFormat('es-PE', {
+    weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos.value?.zonaHoraria ?? 'America/Lima'
+  }).format(new Date(tarea.fechaLimite))
+}
+
+async function entrar() {
+  cargando.value = true
+  error.value = ''
+  try {
+    await iniciarSesion(correo.value, clave.value)
+    sesionActiva.value = true
+    await cargar()
+    clave.value = ''
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo iniciar sesión'
+  } finally {
+    cargando.value = false
+  }
+}
+
+async function cargar() {
+  datos.value = await consultarHoy()
+  if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
+    nuevaTarea.perfilId = datos.value.perfiles[0].id
+  }
+}
+
+async function marcarHecho(tarea: TareaResumen) {
+  error.value = ''
+  try {
+    await completarTarea(tarea.id)
+    mensaje.value = `${tarea.titulo} quedó marcado como hecho.`
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo completar la tarea'
+  }
+}
+
+async function guardarTarea() {
+  cargando.value = true
+  error.value = ''
+  try {
+    await crearTarea({
+      ...nuevaTarea,
+      fechaLimite: new Date(nuevaTarea.fechaLimite).toISOString()
+    })
+    nuevaTarea.titulo = ''
+    nuevaTarea.descripcion = ''
+    nuevaTarea.fechaLimite = ''
+    mostrarFormulario.value = false
+    mensaje.value = 'La tarea fue agregada.'
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo guardar la tarea'
+  } finally {
+    cargando.value = false
+  }
+}
+
+function salir() {
+  eliminarSesion()
+  datos.value = null
+  sesionActiva.value = false
+  mensaje.value = ''
 }
 </script>
 
 <template>
-  <div class="aplicacion">
+  <main v-if="!sesionActiva" class="acceso">
+    <section class="panel-acceso">
+      <img src="/icono.svg" alt="" width="72" height="72" />
+      <p class="sobretitulo">OBU System</p>
+      <h1>Agenda Familiar</h1>
+      <p>Ingresa para ver únicamente la información de tu familia.</p>
+      <form @submit.prevent="entrar">
+        <label>Correo<input v-model.trim="correo" type="email" autocomplete="username" required /></label>
+        <label>Clave<input v-model="clave" type="password" autocomplete="current-password" minlength="12" required /></label>
+        <p v-if="error" class="error" role="alert">{{ error }}</p>
+        <button class="boton-principal" :disabled="cargando">{{ cargando ? 'Ingresando…' : 'Ingresar' }}</button>
+      </form>
+      <small>Las notificaciones bloqueadas nunca muestran información médica.</small>
+    </section>
+  </main>
+
+  <div v-else class="aplicacion">
     <header class="cabecera">
       <div>
         <p class="sobretitulo">{{ fechaActual }}</p>
         <h1>Buenos días</h1>
-        <p>Esto es lo importante para tu familia.</p>
+        <p>{{ datos?.familia }} · Esto es lo importante hoy.</p>
       </div>
-      <button type="button" class="avatar" aria-label="Abrir perfil">MH</button>
+      <button type="button" class="avatar" aria-label="Cerrar sesión" @click="salir">Salir</button>
     </header>
 
     <main>
+      <section class="miembros" aria-label="Miembros de la familia">
+        <span v-for="perfil in datos?.perfiles" :key="perfil.id" :style="{ borderColor: perfil.color }">
+          {{ perfil.nombre }}
+        </span>
+      </section>
+
       <section class="resumen" aria-label="Resumen del día">
-        <div><strong>3</strong><span>para hoy</span></div>
-        <div><strong>1</strong><span>por revisar</span></div>
-        <div><strong>2</strong><span>esta semana</span></div>
+        <div><strong>{{ pendientes.length }}</strong><span>pendientes</span></div>
+        <div><strong>{{ atrasadas.length }}</strong><span>por revisar</span></div>
+        <div><strong>{{ datos?.perfiles.length ?? 0 }}</strong><span>familiares</span></div>
       </section>
 
       <p v-if="mensaje" class="confirmacion" role="status">{{ mensaje }}</p>
+      <p v-if="error" class="error" role="alert">{{ error }}</p>
 
-      <section class="seccion seccion--alerta">
+      <section v-if="atrasadas.length" class="seccion seccion--alerta">
         <div class="titulo-seccion">
-          <div>
-            <span class="etiqueta">Necesita atención</span>
-            <h2>Atrasado</h2>
-          </div>
-          <a href="/revisar">Ver bandeja</a>
+          <div><span class="etiqueta">Necesita atención</span><h2>Atrasado</h2></div>
         </div>
         <TarjetaPendiente
-          hora="Ayer"
-          titulo="Confirmar tratamiento"
-          detalle="Una actividad sigue pendiente de revisión."
-          tono="atrasado"
-          @completar="completar('El tratamiento')"
+          v-for="tarea in atrasadas" :key="tarea.id" :hora="hora(tarea)" :titulo="tarea.titulo"
+          :detalle="`${tarea.responsable} · ${tarea.descripcion ?? 'Sin detalles'}`" tono="atrasado"
+          @completar="marcarHecho(tarea)"
         />
       </section>
 
       <section class="seccion">
         <div class="titulo-seccion">
-          <div>
-            <span class="etiqueta etiqueta--verde">En orden</span>
-            <h2>Hoy</h2>
-          </div>
-          <button class="filtro" type="button">Toda la familia</button>
+          <div><span class="etiqueta etiqueta--verde">En orden</span><h2>Próximos siete días</h2></div>
         </div>
         <TarjetaPendiente
-          hora="9:00"
-          titulo="Control médico"
-          detalle="Cita familiar · Clínica"
-          @completar="completar('La cita')"
+          v-for="tarea in proximas" :key="tarea.id" :hora="hora(tarea)" :titulo="tarea.titulo"
+          :detalle="`${tarea.responsable} · ${tarea.descripcion ?? 'Sin detalles'}`" tono="proximo"
+          @completar="marcarHecho(tarea)"
         />
-        <TarjetaPendiente
-          hora="18:30"
-          titulo="Medicamento de la tarde"
-          detalle="Recordatorio privado"
-          @completar="completar('El recordatorio')"
-        />
-      </section>
-
-      <section class="seccion">
-        <div class="titulo-seccion">
-          <div>
-            <span class="etiqueta etiqueta--arena">Próximamente</span>
-            <h2>Próximos siete días</h2>
-          </div>
-        </div>
-        <TarjetaPendiente
-          hora="Lun 20"
-          titulo="Comprar vitaminas"
-          detalle="Tarea · Responsable: Marco"
-          tono="proximo"
-          @completar="completar('La tarea')"
-        />
+        <p v-if="!proximas.length" class="estado-vacio">No hay pendientes para los próximos días.</p>
       </section>
     </main>
 
-    <button type="button" class="agregar" aria-label="Agregar cita, tarea, medicamento o tratamiento">
-      <span aria-hidden="true">+</span> Agregar
-    </button>
+    <dialog :open="mostrarFormulario" class="dialogo">
+      <form @submit.prevent="guardarTarea">
+        <div class="titulo-seccion"><h2>Nueva tarea</h2><button type="button" class="cerrar" @click="mostrarFormulario = false">×</button></div>
+        <label>Título<input v-model.trim="nuevaTarea.titulo" maxlength="180" required /></label>
+        <label>Responsable
+          <select v-model="nuevaTarea.perfilId" required>
+            <option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option>
+          </select>
+        </label>
+        <label>Fecha y hora<input v-model="nuevaTarea.fechaLimite" type="datetime-local" required /></label>
+        <label>Detalle<textarea v-model.trim="nuevaTarea.descripcion" maxlength="1000" rows="3" /></label>
+        <button class="boton-principal" :disabled="cargando">Guardar tarea</button>
+      </form>
+    </dialog>
 
+    <button type="button" class="agregar" @click="mostrarFormulario = true"><span aria-hidden="true">+</span> Agregar tarea</button>
     <nav class="navegacion" aria-label="Navegación principal">
-      <a class="activo" href="/">Hoy</a>
-      <a href="/calendario">Calendario</a>
-      <a href="/familia">Familia</a>
-      <a href="/revisar">Revisar <span class="contador">1</span></a>
+      <a class="activo" href="/">Hoy</a><a href="/calendario">Calendario</a><a href="/familia">Familia</a>
+      <a href="/revisar">Revisar <span v-if="atrasadas.length" class="contador">{{ atrasadas.length }}</span></a>
     </nav>
   </div>
 </template>

@@ -16,7 +16,6 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
-
 management:
   endpoints:
     web:
@@ -26,3 +25,8 @@ management:
     health:
       probes:
         enabled: true
+
+seguridad:
+  jwt:
+    emisor: ${JWT_ISSUER:agenda-familiar-autenticacion}
+    secreto: ${JWT_SECRET:desarrollo-local-cambiar-esta-clave-antes-de-produccion-2026}

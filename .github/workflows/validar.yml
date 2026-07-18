@@ -34,4 +34,4 @@ jobs:
           distribution: temurin
           java-version: 25
           cache: maven
-      - run: mvn --batch-mode verify
+      - run: mvn --batch-mode verify -Pintegracion

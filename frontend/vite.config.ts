@@ -32,6 +32,10 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    proxy: {
+      '/api/v1/autenticacion': 'http://localhost:8101',
+      '/api/v1': 'http://localhost:8102'
+    }
   }
 })
