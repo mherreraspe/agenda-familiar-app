@@ -30,7 +30,13 @@ class MigracionesAgendaIT {
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, familiaId.toString());
         Integer perfiles = jdbc.queryForObject("SELECT COUNT(*) FROM perfiles WHERE familia_id = ?", Integer.class, familiaId);
         Integer tareas = jdbc.queryForObject("SELECT COUNT(*) FROM tareas WHERE familia_id = ?", Integer.class, familiaId);
+        Integer medicamentos = jdbc.queryForObject("SELECT COUNT(*) FROM medicamentos WHERE familia_id = ?", Integer.class, familiaId);
+        Integer tratamientos = jdbc.queryForObject("SELECT COUNT(*) FROM tratamientos WHERE familia_id = ?", Integer.class, familiaId);
+        Integer eventos = jdbc.queryForObject("SELECT COUNT(*) FROM eventos WHERE familia_id = ?", Integer.class, familiaId);
         assertThat(perfiles).isEqualTo(3);
         assertThat(tareas).isEqualTo(1);
+        assertThat(medicamentos).isEqualTo(1);
+        assertThat(tratamientos).isEqualTo(1);
+        assertThat(eventos).isEqualTo(1);
     }
 }

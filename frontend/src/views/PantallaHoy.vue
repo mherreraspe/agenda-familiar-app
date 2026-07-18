@@ -4,9 +4,11 @@ import TarjetaPendiente from '../components/TarjetaPendiente.vue'
 import {
   cerrarSesion as eliminarSesion,
   completarTarea,
+  consultarCatalogo,
   consultarHoy,
   crearTarea,
   iniciarSesion,
+  type RespuestaCatalogo,
   type RespuestaHoy,
   type TareaResumen
 } from '../api'
@@ -18,6 +20,7 @@ const error = ref('')
 const mensaje = ref('')
 const sesionActiva = ref(false)
 const datos = ref<RespuestaHoy | null>(null)
+const catalogo = ref<RespuestaCatalogo | null>(null)
 const mostrarFormulario = ref(false)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '' })
 
@@ -51,7 +54,9 @@ async function entrar() {
 }
 
 async function cargar() {
-  datos.value = await consultarHoy()
+  const [hoy, detalle] = await Promise.all([consultarHoy(), consultarCatalogo()])
+  datos.value = hoy
+  catalogo.value = detalle
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
@@ -133,7 +138,7 @@ function salir() {
 
       <section class="resumen" aria-label="Resumen del día">
         <div><strong>{{ pendientes.length }}</strong><span>pendientes</span></div>
-        <div><strong>{{ atrasadas.length }}</strong><span>por revisar</span></div>
+        <div><strong>{{ catalogo?.tratamientos.length ?? 0 }}</strong><span>tratamientos</span></div>
         <div><strong>{{ datos?.perfiles.length ?? 0 }}</strong><span>familiares</span></div>
       </section>
 
@@ -162,6 +167,32 @@ function salir() {
         />
         <p v-if="!proximas.length" class="estado-vacio">No hay pendientes para los próximos días.</p>
       </section>
+
+      <section id="calendario" class="seccion">
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div></div>
+        <article v-for="evento in catalogo?.eventos" :key="evento.id" class="tarjeta tarjeta--proximo">
+          <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
+          <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ evento.persona }} · {{ evento.lugar || 'Lugar por confirmar' }}</p></div>
+          <span class="estado">{{ evento.estado }}</span>
+        </article>
+      </section>
+
+      <section id="tratamientos" class="seccion">
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div></div>
+        <article v-for="tratamiento in catalogo?.tratamientos" :key="tratamiento.id" class="tarjeta">
+          <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>{{ tratamiento.dosisIndicada }} · {{ tratamiento.frecuencia }}</p><small>{{ tratamiento.indicacion }}</small></div>
+          <span class="estado">{{ tratamiento.estado }}</span>
+        </article>
+        <p class="aviso-medico">La aplicación conserva el texto ingresado por la familia; no calcula ni recomienda dosis.</p>
+      </section>
+
+      <section id="botiquin" class="seccion">
+        <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div></div>
+        <article v-for="medicamento in catalogo?.medicamentos" :key="medicamento.id" class="tarjeta">
+          <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.presentacion }} · {{ medicamento.concentracion }}</p><small>{{ medicamento.cantidad }} {{ medicamento.unidad }} · vence {{ medicamento.fechaVencimiento || 'sin fecha' }}</small></div>
+          <span class="estado">{{ medicamento.estado }}</span>
+        </article>
+      </section>
     </main>
 
     <dialog :open="mostrarFormulario" class="dialogo">
@@ -181,8 +212,8 @@ function salir() {
 
     <button type="button" class="agregar" @click="mostrarFormulario = true"><span aria-hidden="true">+</span> Agregar tarea</button>
     <nav class="navegacion" aria-label="Navegación principal">
-      <a class="activo" href="/">Hoy</a><a href="/calendario">Calendario</a><a href="/familia">Familia</a>
-      <a href="/revisar">Revisar <span v-if="atrasadas.length" class="contador">{{ atrasadas.length }}</span></a>
+      <a class="activo" href="#top">Hoy</a><a href="#calendario">Calendario</a><a href="#botiquin">Botiquín</a>
+      <a href="#tratamientos">Tratamientos <span v-if="atrasadas.length" class="contador">{{ atrasadas.length }}</span></a>
     </nav>
   </div>
 </template>

@@ -28,6 +28,12 @@ export interface RespuestaHoy {
   tareas: TareaResumen[]
 }
 
+export interface RespuestaCatalogo {
+  medicamentos: Array<{ id: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: string }>
+  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId: string; medicamento: string; indicacion: string; dosisIndicada: string; frecuencia: string; fechaInicio: string; fechaFin?: string; estado: string }>
+  eventos: Array<{ id: string; perfilId: string; persona: string; titulo: string; tipo: string; lugar?: string; inicioEn: string; finEn?: string; estado: string }>
+}
+
 interface RespuestaSesion {
   accessToken: string
   expiraEn: string
@@ -64,6 +70,10 @@ export function cerrarSesion() {
 
 export function consultarHoy() {
   return solicitud<RespuestaHoy>(`/api/v1/familias/${FAMILIA_TEST_ID}/hoy`)
+}
+
+export function consultarCatalogo() {
+  return solicitud<RespuestaCatalogo>(`/api/v1/familias/${FAMILIA_TEST_ID}/catalogo`)
 }
 
 export function completarTarea(tareaId: string) {
