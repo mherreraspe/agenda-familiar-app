@@ -39,13 +39,19 @@ public class InicializadorFamiliaTest implements ApplicationRunner {
         if (claveInicial == null || claveInicial.length() < 12) {
             throw new IllegalStateException("FAMILIA_TEST_PASSWORD debe contener al menos 12 caracteres");
         }
-        crearSiFalta(PAPA_ID, "papa@familia.test");
-        crearSiFalta(MAMA_ID, "mama@familia.test");
+        sincronizar(PAPA_ID, "papa@familia.test");
+        sincronizar(MAMA_ID, "mama@familia.test");
     }
 
-    private void crearSiFalta(UUID id, String correo) {
-        if (usuarios.findByCorreoIgnoreCase(correo).isEmpty()) {
+    private void sincronizar(UUID id, String correo) {
+        var existente = usuarios.findByCorreoIgnoreCase(correo);
+        if (existente.isEmpty()) {
             usuarios.save(new Usuario(id, correo, claves.encode(claveInicial)));
+            return;
+        }
+        Usuario usuario = existente.get();
+        if (!claves.matches(claveInicial, usuario.getClaveHash())) {
+            usuario.actualizarClave(claves.encode(claveInicial));
         }
     }
 }
