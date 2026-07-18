@@ -31,9 +31,25 @@ export interface RespuestaHoy {
 
 export interface RespuestaCatalogo {
   medicamentos: Array<{ id: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: string }>
-  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; fechaInicio: string; fechaFin?: string; estado: string }>
-  eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; inicioEn: string; finEn?: string; estado: string }>
+  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; responsablePerfilId: string; responsable: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; fechaInicio: string; fechaFin?: string; estado: string }>
+  eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; estado: string }>
+  lugares: Array<{ id: string; nombre: string; direccion?: string; ultimaUtilizacion: string; frecuenciaUso: number }>
 }
+
+export interface EntradaAuditoria {
+  operacion: string
+  entidad: string
+  entidadId: string
+  titulo: string
+  actorId: string
+  actor: string
+  resumen: string
+  fecha: string
+}
+
+export interface RespuestaAuditoria { entradas: EntradaAuditoria[] }
+export interface SugerenciaFamiliar { tipo: 'EVENTO' | 'LUGAR'; entidadId: string; titulo: string; lugar?: string; direccion?: string }
+export interface RespuestaSugerencias { sugerencias: SugerenciaFamiliar[] }
 
 export type EstadoOcurrencia = 'PENDIENTE' | 'TOMADA' | 'OMITIDA' | 'POSPUESTA' | 'CANCELADA'
 
@@ -144,6 +160,14 @@ export function consultarCatalogo() {
 
 export function consultarOcurrencias() {
   return solicitud<RespuestaOcurrencias>(`/api/v1/familias/${FAMILIA_TEST_ID}/ocurrencias`)
+}
+
+export function consultarAuditoria() {
+  return solicitud<RespuestaAuditoria>(`/api/v1/familias/${FAMILIA_TEST_ID}/auditoria`)
+}
+
+export function consultarSugerencias(consulta: string) {
+  return solicitud<RespuestaSugerencias>(`/api/v1/familias/${FAMILIA_TEST_ID}/sugerencias?q=${encodeURIComponent(consulta)}`)
 }
 
 export function cambiarEstadoOcurrencia(ocurrenciaId: string, estado: Exclude<EstadoOcurrencia, 'PENDIENTE'>, pospuestaA?: string) {

@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,11 +29,14 @@ public class ServicioHoy {
     private final AccesoFamilia acceso;
     private final RepositorioPerfiles perfiles;
     private final RepositorioTareas tareas;
+    private final JdbcTemplate jdbc;
 
-    public ServicioHoy(AccesoFamilia acceso, RepositorioPerfiles perfiles, RepositorioTareas tareas) {
+    public ServicioHoy(AccesoFamilia acceso, RepositorioPerfiles perfiles, RepositorioTareas tareas,
+            JdbcTemplate jdbc) {
         this.acceso = acceso;
         this.perfiles = perfiles;
         this.tareas = tareas;
+        this.jdbc = jdbc;
     }
 
     @Transactional(readOnly = true)
@@ -52,6 +56,7 @@ public class ServicioHoy {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Perfil inválido"));
         Tarea tarea = tareas.save(new Tarea(UuidV7.nuevo(), familia.getId(), perfil.getId(), solicitud.titulo().trim(),
                 solicitud.descripcion(), solicitud.fechaLimite()));
+        auditar(familia.getId(), jwt, "CREAR", tarea.getIdPublico(), "Tarea familiar registrada");
         return resumenTarea(tarea, perfil);
     }
 
@@ -61,6 +66,8 @@ public class ServicioHoy {
         Tarea tarea = tareas.findByFamiliaIdAndIdPublico(familia.getId(), tareaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tarea no encontrada"));
         tarea.cambiarEstado(estado);
+        auditar(familia.getId(), jwt, estado.name(), tarea.getIdPublico(),
+                "Tarea marcada como " + estado.name().toLowerCase());
         Perfil perfil = perfiles.findById(tarea.getPerfilId()).orElseThrow();
         return resumenTarea(tarea, perfil);
     }
@@ -77,5 +84,10 @@ public class ServicioHoy {
     private RespuestaHoy.TareaResumen resumenTarea(Tarea tarea, Perfil perfil) {
         return new RespuestaHoy.TareaResumen(tarea.getIdPublico(), tarea.getTitulo(), tarea.getDescripcion(),
                 tarea.getFechaLimite(), tarea.getEstado().name(), perfil.getIdPublico(), perfil.getNombreVisible());
+    }
+
+    private void auditar(Long familiaId, Jwt jwt, String operacion, UUID entidadId, String resumen) {
+        jdbc.update("INSERT INTO auditoria (familia_id, actor_publico_id, operacion, entidad, entidad_publica_id, resumen_seguro) VALUES (?, ?, ?, 'TAREA', ?, ?)",
+                familiaId, UUID.fromString(jwt.getSubject()), operacion, entidadId, resumen);
     }
 }

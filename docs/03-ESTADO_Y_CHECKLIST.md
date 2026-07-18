@@ -2,15 +2,15 @@
 
 **Corte:** 2026-07-18 (America/Lima)  
 **Rama:** `main`  
-**Commit desplegado:** `3ddb3ae46ef6f25122c513ff0c63dcbe8123e33e`  
-**Versión del servidor:** `20260718T073448Z`  
+**Commit desplegado:** `2daaf08c2849440fdb57b89df9d0a9a68735cf16`
+**Versión del servidor:** `20260718T145740Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
 
-## Trabajo en curso — ocurrencias y bandeja Revisar
+## Bloque completado — ocurrencias y bandeja Revisar
 
-Rama local `feat/ocurrencias-y-revisar`, aún no desplegada:
+Integrado mediante los PR #3 y #4, desplegado y verificado en producción:
 
 - [x] Migración `V4` preparada con horarios, ocurrencias, acciones idempotentes y elementos de revisión, todos con RLS forzado.
 - [x] Estados de ocurrencia implementados: pendiente, tomada, omitida, pospuesta y cancelada.
@@ -21,7 +21,27 @@ Rama local `feat/ocurrencias-y-revisar`, aún no desplegada:
 - [x] Perfiles convertidos en filtros con opción `Todos` en la interfaz.
 - [x] Pruebas añadidas para RLS, materialización idempotente, transiciones, posposición y cierre desde `Revisar`.
 - [x] Validación local: Vitest, `vue-tsc`, build Vite y compilación de código/pruebas Java 21 aprobadas.
-- [x] CI con Java 25 y Testcontainers PostgreSQL 18 aprobado: ejecución `29648306004` (frontend 14 s, backend 47 s).
+- [x] CI con Java 25 y Testcontainers PostgreSQL 18 aprobado en el PR #3: ejecución `29648360959` (frontend 13 s, backend 48 s).
+- [x] El primer despliegue detectó un backfill incompatible con `FORCE RLS`; Flyway revirtió la transacción sin pérdida de datos y se restauró inmediatamente el release anterior.
+- [x] Hotfix del backfill por familia y prueba de migración con propietario `NOBYPASSRLS` integrados mediante el PR #4; CI `29648871628` aprobado (frontend 18 s, backend 45 s).
+- [x] PR integrado, despliegue y E2E móvil de este bloque aprobados.
+- [x] Producción: Flyway validó 4 migraciones, aplicó V4 una vez y Spring arrancó en 7,92 s; autenticación, agenda y frontend saludables.
+- [x] E2E HTTPS: login de Papá y Mamá 200, 3 perfiles, aislamiento de familia ajena 404, cita mínima 201, tratamiento rápido 201 y acción de ocurrencia idempotente verificada.
+- [x] Revisión PWA autenticada: filtros `Todos`/Hijo/Mamá/Papá, ocurrencias, bandeja `Revisar` y navegación móvil visibles; consola sin errores ni advertencias.
+
+## Trabajo en curso — auditoría y reutilización privada
+
+Rama local `feat/auditoria-lugares-palabras`, aún no desplegada:
+
+- [x] Migración `V5` preparada con catálogo privado de lugares, vínculo opcional desde eventos, palabras clave canónicas y `pg_trgm`; tablas con RLS forzado.
+- [x] Lugar y dirección reutilizados se guardan por familia con última utilización y frecuencia; las sugerencias proceden exclusivamente de registros reales de esa familia.
+- [x] Extractor asíncrono posterior al commit preparado con una lista conservadora de reglas; guarda como máximo dos palabras, origen, entidad y versión y nunca bloquea el alta.
+- [x] Nombres, direcciones, diagnósticos y cantidades/dosis quedan fuera del extractor automático; prueba unitaria específica añadida.
+- [x] Endpoint de autocompletado privado preparado para recuperar únicamente eventos y lugares existentes mediante historial, palabras clave y `pg_trgm`.
+- [x] Historial de auditoría preparado para adultos autorizados con actor Papá/Mamá, operación, entidad y fecha/hora; altas y cambios de tareas también se auditan.
+- [x] Tratamientos muestran por separado persona y responsable; el responsable alternativo puede elegirse en detalles progresivos.
+- [x] Validación local: Vitest, `vue-tsc`, build Vite y compilación/pruebas unitarias Java 21 aprobadas.
+- [x] Testcontainers PostgreSQL 18 y CI con Java 25 aprobados: ejecución `29650965749` (frontend 19 s, backend 56 s).
 - [ ] PR integrado, despliegue y E2E móvil de este bloque aprobados.
 
 No marcar los requisitos equivalentes de la lista general como terminados hasta completar CI, despliegue y E2E.
@@ -55,22 +75,25 @@ No marcar los requisitos equivalentes de la lista general como terminados hasta 
 - PR de sesiones y formularios: <https://github.com/mherreraspe/agenda-familiar-app/pull/1>
 - PR de sincronización idempotente de cuentas de prueba: <https://github.com/mherreraspe/agenda-familiar-app/pull/2>
 - E2E confirmó `PERFILES=3`, `MEDICAMENTOS=1`, `TRATAMIENTOS=1` y `EVENTOS=1`.
+- PR de ocurrencias y bandeja Revisar: <https://github.com/mherreraspe/agenda-familiar-app/pull/3>
+- PR del hotfix de migración bajo RLS forzado: <https://github.com/mherreraspe/agenda-familiar-app/pull/4>
+- Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Credenciales: se entregaron al propietario en el chat y están configuradas únicamente en el `.env` protegido del servidor.
 
 ## Pendiente del MVP según `docs/`
 
 ### Dominio y experiencia
 
-- [ ] Ocurrencias de tratamientos: pendiente, tomada, omitida, pospuesta y cancelada.
-- [ ] Alta rápida de tratamiento con persona, nombre libre y horario; no exigir que el medicamento exista previamente en el botiquín.
-- [ ] Vincular un tratamiento con un medicamento del botiquín será opcional y podrá hacerse después.
-- [ ] “Cantidad indicada en la receta” será texto opcional; la aplicación solo conserva lo escrito y nunca calcula o recomienda dosis.
+- [x] Ocurrencias de tratamientos: pendiente, tomada, omitida, pospuesta y cancelada.
+- [x] Alta rápida de tratamiento con persona, nombre libre y horario; no exigir que el medicamento exista previamente en el botiquín.
+- [x] Vincular un tratamiento con un medicamento del botiquín será opcional y podrá hacerse después.
+- [x] “Cantidad indicada en la receta” será texto opcional; la aplicación solo conserva lo escrito y nunca calcula o recomienda dosis.
 - [ ] Fotografía de receta y detalles como indicación, fechas o responsable alternativo serán campos opcionales/progresivos.
-- [ ] Bandeja “Revisar” para vencidos, tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
+- [x] Bandeja “Revisar” para vencidos, tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
 - [ ] Acciones completar, omitir, posponer, reprogramar y cerrar con historial.
 - [ ] Filtros por miembro y sección de vencimientos cercanos en “Hoy”.
 - [ ] Recurrencia de eventos y tareas sin perder el historial anterior.
-- [ ] Alta rápida de cita/actividad con solo título y fecha/hora obligatorios; persona, tipo, lugar, dirección y notas serán opcionales/progresivos.
+- [x] Alta rápida de cita/actividad con solo título y fecha/hora obligatorios; persona, tipo, lugar, dirección y notas serán opcionales/progresivos.
 - [ ] Después de guardar, procesar el registro de forma asíncrona y asociarle silenciosamente una o dos palabras clave canónicas mediante IA (por ejemplo, `pediatra` y `control`).
 - [ ] La extracción de palabras clave nunca bloqueará el guardado, no producirá texto visible ni modificará lo escrito por el usuario; si falla, el registro seguirá siendo válido.
 - [ ] Guardar palabra, origen (`IA`, `REGLA` o `USUARIO`), versión del extractor y entidad asociada para poder recalcular o auditar el índice.
@@ -82,7 +105,7 @@ No marcar los requisitos equivalentes de la lista general como terminados hasta 
 - [ ] Horarios/intervalos de tratamientos y responsable alternativo.
 - [ ] Estados calculados del botiquín: disponible, por vencer, vencido, agotado y descartado.
 - [ ] Gestión de perfiles, adultos, dependientes y permisos desde la interfaz.
-- [ ] Convertir Papá/Mamá/Hijo en filtros claros con opción “Todos”; no representan cambio de usuario.
+- [x] Convertir Papá/Mamá/Hijo en filtros claros con opción “Todos”; no representan cambio de usuario.
 - [ ] Mostrar “para quién”, responsable y “agregado/modificado por” con historial de auditoría visible para adultos autorizados.
 
 ### Sincronización y avisos
@@ -122,14 +145,13 @@ No marcar los requisitos equivalentes de la lista general como terminados hasta 
 
 ## Próximo bloque recomendado
 
-Implementar primero ocurrencias de tratamiento y bandeja “Revisar”:
+Completar trazabilidad y reutilización privada de datos familiares:
 
-1. Crear migración `V4` con horarios, ocurrencias y elementos de revisión, todos con RLS.
-2. Materializar ocurrencias próximas de forma idempotente.
-3. Exponer consulta y acciones tomada/omitida/pospuesta/cancelada.
-4. Incluir atrasados y vencimientos en “Hoy” y “Revisar”.
-5. Añadir pruebas de aislamiento, transición de estados e idempotencia.
-6. Publicar por PR, exigir CI verde, desplegar y repetir E2E.
+1. Mostrar “para quién”, responsable, agregado/modificado/resuelto por y fecha/hora con historial visible para adultos autorizados.
+2. Guardar catálogo privado de lugares y direcciones usados por la familia y sugerir únicamente valores reales de esa familia.
+3. Añadir palabras clave canónicas asíncronas con reglas conservadoras, origen, versión y aislamiento RLS; el guardado nunca dependerá del extractor.
+4. Completar pruebas de IDOR/RLS, auditoría, fallo del extractor y autocompletado entre familias.
+5. Publicar por PR, exigir CI verde, desplegar y repetir E2E móvil.
 
 ## Continuidad operativa
 

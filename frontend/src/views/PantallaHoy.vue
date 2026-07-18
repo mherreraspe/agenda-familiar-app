@@ -6,9 +6,11 @@ import {
   cambiarEstadoOcurrencia,
   cerrarElementoRevision,
   completarTarea,
+  consultarAuditoria,
   consultarCatalogo,
   consultarHoy,
   consultarOcurrencias,
+  consultarSugerencias,
   crearEvento,
   crearMedicamento,
   crearTarea,
@@ -18,9 +20,11 @@ import {
   type EstadoOcurrencia,
   type ElementoRevision,
   type OcurrenciaResumen,
+  type RespuestaAuditoria,
   type RespuestaCatalogo,
   type RespuestaHoy,
   type RespuestaOcurrencias,
+  type SugerenciaFamiliar,
   type TareaResumen
 } from '../api'
 
@@ -34,6 +38,8 @@ const restaurando = ref(true)
 const datos = ref<RespuestaHoy | null>(null)
 const catalogo = ref<RespuestaCatalogo | null>(null)
 const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
+const auditoria = ref<RespuestaAuditoria | null>(null)
+const sugerenciasTitulo = ref<SugerenciaFamiliar[]>([])
 const filtroPerfil = ref('TODOS')
 const formulario = ref<'tarea' | 'evento' | 'medicamento' | 'tratamiento' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '' })
@@ -58,9 +64,15 @@ const elementosRevision = computed(() => agendaTratamientos.value?.revisar.filte
   if (filtroPerfil.value === 'TODOS' || elemento.origen !== 'OCURRENCIA') return true
   return agendaTratamientos.value?.ocurrencias.some(ocurrencia => ocurrencia.id === elemento.entidadId && coincideFiltro(ocurrencia.perfilId))
 }) ?? [])
+const lugaresSugeridos = computed(() => {
+  const consulta = nuevoEvento.lugar.trim().toLocaleLowerCase('es-PE')
+  if (!consulta) return catalogo.value?.lugares.slice(0, 5) ?? []
+  return catalogo.value?.lugares.filter(lugar => lugar.nombre.toLocaleLowerCase('es-PE').includes(consulta)).slice(0, 5) ?? []
+})
 const tituloFormulario = computed(() => ({
   tarea: 'Nueva tarea', evento: 'Nuevo evento', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento'
 })[formulario.value ?? 'tarea'])
+let temporizadorSugerencias: number | undefined
 
 onMounted(async () => {
   try {
@@ -96,10 +108,13 @@ async function entrar() {
 }
 
 async function cargar() {
-  const [hoy, detalle, ocurrencias] = await Promise.all([consultarHoy(), consultarCatalogo(), consultarOcurrencias()])
+  const [hoy, detalle, ocurrencias, historial] = await Promise.all([
+    consultarHoy(), consultarCatalogo(), consultarOcurrencias(), consultarAuditoria()
+  ])
   datos.value = hoy
   catalogo.value = detalle
   agendaTratamientos.value = ocurrencias
+  auditoria.value = historial
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
@@ -176,10 +191,39 @@ async function guardarTratamiento() {
       frecuencia: nuevoTratamiento.frecuencia || undefined,
       horario: nuevoTratamiento.horario,
       fechaInicio: nuevoTratamiento.fechaInicio || undefined,
-      fechaFin: nuevoTratamiento.fechaFin || undefined
+      fechaFin: nuevoTratamiento.fechaFin || undefined,
+      responsablePerfilId: nuevoTratamiento.responsablePerfilId || undefined
     })
     Object.assign(nuevoTratamiento, { perfilId: nuevoTratamiento.perfilId, medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '' })
   }, 'El tratamiento fue agregado.')
+}
+
+function seleccionarLugar(lugar: { nombre: string; direccion?: string }) {
+  nuevoEvento.lugar = lugar.nombre
+  nuevoEvento.direccion = lugar.direccion ?? ''
+}
+
+function actualizarSugerenciasTitulo() {
+  window.clearTimeout(temporizadorSugerencias)
+  if (nuevoEvento.titulo.trim().length < 2) {
+    sugerenciasTitulo.value = []
+    return
+  }
+  temporizadorSugerencias = window.setTimeout(async () => {
+    try {
+      sugerenciasTitulo.value = (await consultarSugerencias(nuevoEvento.titulo)).sugerencias
+        .filter(sugerencia => sugerencia.tipo === 'EVENTO')
+    } catch {
+      sugerenciasTitulo.value = []
+    }
+  }, 250)
+}
+
+function seleccionarSugerencia(sugerencia: SugerenciaFamiliar) {
+  nuevoEvento.titulo = sugerencia.titulo
+  nuevoEvento.lugar = sugerencia.lugar ?? ''
+  nuevoEvento.direccion = sugerencia.direccion ?? ''
+  sugerenciasTitulo.value = []
 }
 
 async function resolverOcurrencia(ocurrencia: OcurrenciaResumen, estado: Exclude<EstadoOcurrencia, 'PENDIENTE'>) {
@@ -248,6 +292,7 @@ async function salir() {
     datos.value = null
     catalogo.value = null
     agendaTratamientos.value = null
+    auditoria.value = null
     sesionActiva.value = false
     mensaje.value = ''
   } catch (causa) {
@@ -375,7 +420,7 @@ async function salir() {
       <section id="tratamientos" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'tratamiento'">Agregar</button></div>
         <article v-for="tratamiento in tratamientosFiltrados" :key="tratamiento.id" class="tarjeta">
-          <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') || 'Horario definido por la familia' }}</p><small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small></div>
+          <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>Responsable: {{ tratamiento.responsable }}</p><p>{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') || 'Horario definido por la familia' }}</p><small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small></div>
           <span class="estado">{{ tratamiento.estado }}</span>
         </article>
         <p class="aviso-medico">La aplicación conserva el texto ingresado por la familia; no calcula ni recomienda dosis.</p>
@@ -387,6 +432,15 @@ async function salir() {
           <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.presentacion }} · {{ medicamento.concentracion }}</p><small>{{ medicamento.cantidad }} {{ medicamento.unidad }} · vence {{ medicamento.fechaVencimiento || 'sin fecha' }}</small></div>
           <span class="estado">{{ medicamento.estado }}</span>
         </article>
+      </section>
+
+      <section id="historial" class="seccion">
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Trazabilidad</span><h2>Historial familiar</h2></div></div>
+        <article v-for="entrada in auditoria?.entradas.slice(0, 20)" :key="`${entrada.entidad}-${entrada.entidadId}-${entrada.fecha}`" class="tarjeta">
+          <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(entrada.fecha)) }}</time>
+          <div class="tarjeta__contenido"><h3>{{ entrada.titulo }}</h3><p>{{ entrada.actor }} · {{ entrada.operacion.toLowerCase() }}</p><small>{{ entrada.resumen }}</small></div>
+        </article>
+        <p v-if="!auditoria?.entradas.length" class="estado-vacio">Todavía no hay cambios registrados.</p>
       </section>
     </main>
 
@@ -407,9 +461,19 @@ async function salir() {
 
       <form v-else-if="formulario === 'evento'" @submit.prevent="guardarEvento">
         <label>Persona opcional<select v-model="nuevoEvento.perfilId"><option value="">Toda la familia / sin asignar</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
-        <label>Título<input v-model.trim="nuevoEvento.titulo" maxlength="180" required /></label>
+        <label>Título<input v-model.trim="nuevoEvento.titulo" maxlength="180" autocomplete="off" required @input="actualizarSugerenciasTitulo" /></label>
+        <div v-if="sugerenciasTitulo.length" class="sugerencias" aria-label="Registros familiares anteriores">
+          <button v-for="sugerencia in sugerenciasTitulo" :key="`${sugerencia.tipo}-${sugerencia.entidadId}`" type="button" @click="seleccionarSugerencia(sugerencia)">
+            <strong>{{ sugerencia.titulo }}</strong><small>{{ sugerencia.lugar || 'Sin lugar guardado' }}</small>
+          </button>
+        </div>
         <label>Tipo opcional<select v-model="nuevoEvento.tipo"><option value="">Sin tipo</option><option value="CONSULTA">Consulta</option><option value="VACUNA">Vacuna</option><option value="CONTROL">Control</option><option value="OTRO">Otro</option></select></label>
-        <label>Lugar<input v-model.trim="nuevoEvento.lugar" maxlength="300" /></label>
+        <label>Lugar<input v-model.trim="nuevoEvento.lugar" maxlength="300" autocomplete="off" /></label>
+        <div v-if="lugaresSugeridos.length" class="sugerencias" aria-label="Lugares usados anteriormente">
+          <button v-for="lugar in lugaresSugeridos" :key="lugar.id" type="button" @click="seleccionarLugar(lugar)">
+            <strong>{{ lugar.nombre }}</strong><small>{{ lugar.direccion || 'Sin dirección guardada' }}</small>
+          </button>
+        </div>
         <label>Dirección opcional<input v-model.trim="nuevoEvento.direccion" maxlength="500" /></label>
         <label>Notas opcionales<textarea v-model.trim="nuevoEvento.notas" maxlength="1000" rows="2" /></label>
         <label>Inicio<input v-model="nuevoEvento.inicioEn" type="datetime-local" required /></label>
@@ -435,6 +499,7 @@ async function salir() {
           <label>Indicación<textarea v-model.trim="nuevoTratamiento.indicacion" maxlength="1000" rows="2" /></label>
           <label>Cantidad indicada en la receta<input v-model.trim="nuevoTratamiento.cantidadReceta" maxlength="300" /></label>
           <label>Frecuencia o notas del horario<input v-model.trim="nuevoTratamiento.frecuencia" maxlength="300" /></label>
+          <label>Responsable opcional<select v-model="nuevoTratamiento.responsablePerfilId"><option value="">La misma persona</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
           <div class="campos-dobles"><label>Inicio opcional<input v-model="nuevoTratamiento.fechaInicio" type="date" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
         </div></details>
         <button class="boton-principal" :disabled="cargando">Guardar tratamiento</button>

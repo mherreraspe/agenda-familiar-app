@@ -105,6 +105,9 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .dialogo details { padding: 12px; border: 1px solid #ded9ce; border-radius: 12px; }
 .dialogo summary { cursor: pointer; color: #315b4c; font-weight: 800; }
 .detalles-progresivos { display: grid; gap: 15px; margin-top: 15px; }
+.sugerencias { display: grid; gap: 6px; margin-top: -8px; }
+.sugerencias button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid #ded9ce; border-radius: 10px; color: #315b4c; background: white; text-align: left; }
+.sugerencias small { color: #63706b; }
 .campos-dobles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dialogo h2 { margin: 0; font-family: Georgia, serif; }
 .cerrar { width: 36px; height: 36px; border: 0; border-radius: 50%; color: #315b4c; background: #e5ece8; font-size: 1.4rem; }
