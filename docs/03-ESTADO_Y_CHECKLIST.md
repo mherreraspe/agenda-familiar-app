@@ -133,6 +133,7 @@ Implementar primero ocurrencias de tratamiento y bandeja “Revisar”:
 
 ## Continuidad operativa
 
+- El propietario suele operar remotamente desde el celular. Cuando GitHub requiera autorización web, iniciar el flujo oficial por código de dispositivo y entregar en el chat el enlace y el código temporal; no depender de una ventana local ni guardar el código, token o credencial.
 - Repositorio local: `C:\Users\marco\Documents\codex\Proyecto\agenda-familiar-app`
 - Clave SSH local protegida: `C:\Users\marco\Documents\codex\Proyecto\instanciaVM\ssh-key-2026-03-28.key`
 - Servidor: `ubuntu@148.116.110.18`
