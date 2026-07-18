@@ -15,7 +15,7 @@ public record RespuestaCatalogo(List<MedicamentoResumen> medicamentos,
             String medicamento, UUID responsablePerfilId, String responsable,
             UUID responsableAlternativoPerfilId, String responsableAlternativo,
             String indicacion, String dosisIndicada, String frecuencia, List<LocalTime> horarios, Integer intervaloHoras,
-            LocalDate fechaInicio, LocalDate fechaFin, String estado) { }
+            LocalDate fechaInicio, LocalDate fechaFin, String estado, UUID recetaId) { }
     public record EventoResumen(UUID id, UUID perfilId, String persona, String titulo, String tipo,
             String lugar, String direccion, String notas, Instant inicioEn, Instant finEn, String estado,
             boolean recurrente, UUID eventoOrigenId) { }

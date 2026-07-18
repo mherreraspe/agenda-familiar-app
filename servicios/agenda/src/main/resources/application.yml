@@ -16,6 +16,10 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 12MB
+      max-request-size: 12MB
 management:
   endpoints:
     web:
@@ -30,3 +34,7 @@ seguridad:
   jwt:
     emisor: ${JWT_ISSUER:agenda-familiar-autenticacion}
     secreto: ${JWT_SECRET:desarrollo-local-cambiar-esta-clave-antes-de-produccion-2026}
+
+archivos:
+  raiz: ${ARCHIVOS_RAIZ:${java.io.tmpdir}/agenda-familiar-archivos}
+  clave: ${ARCHIVOS_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}

@@ -11,6 +11,7 @@ import {
   completarTarea,
   consultarAuditoria,
   consultarConfiguracionFamilia,
+  consultarCuota,
   consultarCatalogo,
   consultarHoy,
   consultarOcurrencias,
@@ -20,8 +21,11 @@ import {
   crearMedicamento,
   crearTarea,
   crearTratamiento,
+  descargarReceta,
+  eliminarReceta,
   iniciarSesion,
   renovarSesion,
+  subirReceta,
   type EstadoOcurrencia,
   type ElementoRevision,
   type OcurrenciaResumen,
@@ -29,10 +33,12 @@ import {
   type RespuestaCatalogo,
   type RespuestaHoy,
   type RespuestaFamilia,
+  type RespuestaCuota,
   type RespuestaOcurrencias,
   type SugerenciaFamiliar,
   type TareaResumen
 } from '../api'
+import { reducirImagenReceta, validarImagenReceta } from '../imagen'
 
 const correo = ref('papa@familia.test')
 const clave = ref('')
@@ -46,6 +52,7 @@ const catalogo = ref<RespuestaCatalogo | null>(null)
 const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
 const auditoria = ref<RespuestaAuditoria | null>(null)
 const familia = ref<RespuestaFamilia | null>(null)
+const cuota = ref<RespuestaCuota | null>(null)
 const sugerenciasTitulo = ref<SugerenciaFamiliar[]>([])
 const filtroPerfil = ref('TODOS')
 const formulario = ref<'tarea' | 'evento' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
@@ -53,6 +60,8 @@ const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLi
 const nuevoEvento = reactive({ perfilId: '', titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
 const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+const recetaSeleccionada = ref<File | null>(null)
+const recetaVisible = ref<{ id: string; url: string } | null>(null)
 const perfilEditadoId = ref<string | null>(null)
 const nuevoPerfil = reactive({ nombre: '', tipo: 'DEPENDIENTE' as 'ADULTO' | 'DEPENDIENTE', color: '#315b4c', relacion: '', usuarioId: '', permiso: 'ADULTO' as 'ADMINISTRADOR_FAMILIAR' | 'ADULTO', activo: true })
 
@@ -125,14 +134,15 @@ async function entrar() {
 }
 
 async function cargar() {
-  const [hoy, detalle, ocurrencias, historial, configuracion] = await Promise.all([
-    consultarHoy(), consultarCatalogo(), consultarOcurrencias(), consultarAuditoria(), consultarConfiguracionFamilia()
+  const [hoy, detalle, ocurrencias, historial, configuracion, almacenamiento] = await Promise.all([
+    consultarHoy(), consultarCatalogo(), consultarOcurrencias(), consultarAuditoria(), consultarConfiguracionFamilia(), consultarCuota()
   ])
   datos.value = hoy
   catalogo.value = detalle
   agendaTratamientos.value = ocurrencias
   auditoria.value = historial
   familia.value = configuracion
+  cuota.value = almacenamiento
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
@@ -203,8 +213,9 @@ async function guardarMedicamento() {
 }
 
 async function guardarTratamiento() {
+  let avisoReceta = ''
   await ejecutarGuardado(async () => {
-    await crearTratamiento({
+    const creado = await crearTratamiento({
       perfilId: nuevoTratamiento.perfilId,
       medicamentoId: nuevoTratamiento.medicamentoId || undefined,
       nombre: nuevoTratamiento.nombre,
@@ -219,8 +230,89 @@ async function guardarTratamiento() {
       responsablePerfilId: nuevoTratamiento.responsablePerfilId || undefined,
       responsableAlternativoPerfilId: nuevoTratamiento.responsableAlternativoPerfilId || undefined
     })
+    if (recetaSeleccionada.value) {
+      try {
+        await subirReceta(creado.id, await reducirImagenReceta(recetaSeleccionada.value))
+      } catch (causa) {
+        avisoReceta = `El tratamiento fue creado, pero la receta no se guardó: ${causa instanceof Error ? causa.message : 'error desconocido'}`
+      }
+    }
     Object.assign(nuevoTratamiento, { perfilId: nuevoTratamiento.perfilId, medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+    recetaSeleccionada.value = null
   }, 'El tratamiento fue agregado.')
+  if (avisoReceta) mensaje.value = avisoReceta
+}
+
+function seleccionarReceta(evento: Event) {
+  const entrada = evento.target as HTMLInputElement
+  const archivo = entrada.files?.[0] ?? null
+  if (!archivo) {
+    recetaSeleccionada.value = null
+    return
+  }
+  try {
+    validarImagenReceta(archivo)
+    recetaSeleccionada.value = archivo
+    error.value = ''
+  } catch (causa) {
+    entrada.value = ''
+    recetaSeleccionada.value = null
+    error.value = causa instanceof Error ? causa.message : 'La fotografía no es válida'
+  }
+}
+
+async function verReceta(archivoId: string) {
+  cargando.value = true
+  error.value = ''
+  try {
+    cerrarRecetaVisible()
+    const blob = await descargarReceta(archivoId)
+    recetaVisible.value = { id: archivoId, url: URL.createObjectURL(blob) }
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo abrir la receta'
+  } finally {
+    cargando.value = false
+  }
+}
+
+async function agregarReceta(evento: Event, tratamientoId: string) {
+  const entrada = evento.target as HTMLInputElement
+  const archivo = entrada.files?.[0]
+  if (!archivo) return
+  cargando.value = true
+  error.value = ''
+  try {
+    validarImagenReceta(archivo)
+    await subirReceta(tratamientoId, await reducirImagenReceta(archivo))
+    mensaje.value = 'La fotografía de receta fue guardada de forma privada.'
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo guardar la receta'
+  } finally {
+    entrada.value = ''
+    cargando.value = false
+  }
+}
+
+function cerrarRecetaVisible() {
+  if (recetaVisible.value) URL.revokeObjectURL(recetaVisible.value.url)
+  recetaVisible.value = null
+}
+
+async function borrarReceta(archivoId: string) {
+  if (!window.confirm('¿Eliminar completamente esta fotografía de receta?')) return
+  cargando.value = true
+  error.value = ''
+  try {
+    cerrarRecetaVisible()
+    await eliminarReceta(archivoId)
+    mensaje.value = 'La fotografía de receta fue eliminada.'
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo eliminar la receta'
+  } finally {
+    cargando.value = false
+  }
 }
 
 function seleccionarLugar(lugar: { nombre: string; direccion?: string }) {
@@ -388,6 +480,8 @@ async function salir() {
     agendaTratamientos.value = null
     auditoria.value = null
     familia.value = null
+    cuota.value = null
+    cerrarRecetaVisible()
     sesionActiva.value = false
     mensaje.value = ''
   } catch (causa) {
@@ -537,7 +631,7 @@ async function salir() {
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'tratamiento'">Agregar</button></div>
         <article v-for="tratamiento in tratamientosFiltrados" :key="tratamiento.id" class="tarjeta">
           <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>Responsable: {{ tratamiento.responsable }}<span v-if="tratamiento.responsableAlternativo"> · alternativo: {{ tratamiento.responsableAlternativo }}</span></p><p>{{ tratamiento.intervaloHoras ? `Cada ${tratamiento.intervaloHoras} h desde ${tratamiento.horarios[0]}` : `Horarios: ${tratamiento.horarios.join(', ')}` }}</p><p v-if="tratamiento.dosisIndicada || tratamiento.frecuencia">{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') }}</p><small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small></div>
-          <div class="acciones-ocurrencia"><span class="estado">{{ tratamiento.estado }}</span><button v-if="tratamiento.estado === 'ACTIVO'" type="button" class="boton-secundario" :disabled="cargando" @click="cerrarTratamientoActivo(tratamiento)">Cerrar</button></div>
+          <div class="acciones-ocurrencia"><span class="estado">{{ tratamiento.estado }}</span><label v-if="!tratamiento.recetaId" class="boton-secundario boton-archivo">Agregar receta<input type="file" accept="image/jpeg,image/png" capture="environment" :disabled="cargando" @change="agregarReceta($event, tratamiento.id)" /></label><button v-if="tratamiento.recetaId" type="button" class="boton-secundario" :disabled="cargando" @click="verReceta(tratamiento.recetaId)">Ver receta</button><button v-if="tratamiento.recetaId" type="button" class="boton-secundario" :disabled="cargando" @click="borrarReceta(tratamiento.recetaId)">Eliminar receta</button><button v-if="tratamiento.estado === 'ACTIVO'" type="button" class="boton-secundario" :disabled="cargando" @click="cerrarTratamientoActivo(tratamiento)">Cerrar</button></div>
         </article>
         <p class="aviso-medico">La aplicación conserva el texto ingresado por la familia; no calcula ni recomienda dosis.</p>
       </section>
@@ -554,6 +648,11 @@ async function salir() {
 
       <section id="botiquin" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'medicamento'">Agregar</button></div>
+        <div v-if="cuota" class="cuota" :class="`cuota--${cuota.nivel.toLowerCase()}`" role="status">
+          <div><strong>Fotos privadas: {{ cuota.porcentaje }} %</strong><span>{{ (cuota.usadosBytes / 1048576).toFixed(1) }} MiB de {{ (cuota.cuotaBytes / 1073741824).toFixed(1) }} GiB</span></div>
+          <progress :value="cuota.porcentaje" max="100">{{ cuota.porcentaje }} %</progress>
+          <small v-if="cuota.porcentaje >= 70">El espacio disponible se está agotando. Elimina fotografías que ya no necesites.</small>
+        </div>
         <article v-for="medicamento in catalogo?.medicamentos" :key="medicamento.loteId || medicamento.id" class="tarjeta">
           <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.presentacion }} · {{ medicamento.concentracion }}</p><small>{{ medicamento.cantidad }} {{ medicamento.unidad }} · vence {{ medicamento.fechaVencimiento || 'sin fecha' }}</small></div>
           <span class="estado">{{ medicamento.estado.replace('_', ' ') }}</span>
@@ -651,6 +750,8 @@ async function salir() {
           <label>Intervalo en horas<input v-model="nuevoTratamiento.intervaloHoras" type="number" min="1" max="168" placeholder="Usa solo un horario inicial" /></label>
           <label>Responsable opcional<select v-model="nuevoTratamiento.responsablePerfilId"><option value="">La misma persona</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
           <label>Responsable alternativo<select v-model="nuevoTratamiento.responsableAlternativoPerfilId"><option value="">Sin alternativo</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
+          <label>Fotografía de receta opcional<input type="file" accept="image/jpeg,image/png" capture="environment" @change="seleccionarReceta" /><small>Se reduce y elimina ubicación/EXIF antes de guardarla cifrada.</small></label>
+          <p v-if="recetaSeleccionada" class="confirmacion">{{ recetaSeleccionada.name }} · {{ (recetaSeleccionada.size / 1048576).toFixed(1) }} MiB</p>
           <div class="campos-dobles"><label>Inicio opcional<input v-model="nuevoTratamiento.fechaInicio" type="date" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
         </div></details>
         <button class="boton-principal" :disabled="cargando">Guardar tratamiento</button>
@@ -667,6 +768,12 @@ async function salir() {
         <label class="opcion-linea"><input v-model="nuevoPerfil.activo" type="checkbox" /> Perfil activo</label>
         <button class="boton-principal" :disabled="cargando">Guardar perfil</button>
       </form>
+    </dialog>
+
+    <dialog :open="recetaVisible !== null" class="dialogo dialogo--receta">
+      <div class="titulo-seccion"><h2>Receta privada</h2><button type="button" class="cerrar" aria-label="Cerrar receta" @click="cerrarRecetaVisible">×</button></div>
+      <img v-if="recetaVisible" :src="recetaVisible.url" alt="Fotografía privada de receta" />
+      <p>Visible solo durante esta sesión autenticada.</p>
     </dialog>
 
     <button type="button" class="agregar" @click="formulario = 'tarea'"><span aria-hidden="true">+</span> Agregar tarea</button>

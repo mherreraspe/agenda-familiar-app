@@ -17,7 +17,13 @@ VARIABLES="/tmp/agenda-deploy-$MARCA.env"
 mkdir -p "$RESPALDO"
 docker exec agenda_familiar-postgres-1 pg_dump -U postgres -Fc -d agenda_familiar >"$RESPALDO/agenda_familiar.dump"
 docker exec agenda_familiar-postgres-1 pg_dump -U postgres -Fc -d autenticacion >"$RESPALDO/autenticacion.dump"
-sha256sum "$RESPALDO/agenda_familiar.dump" "$RESPALDO/autenticacion.dump" >"$RESPALDO/SHA256SUMS"
+ARTEFACTOS=("$RESPALDO/agenda_familiar.dump" "$RESPALDO/autenticacion.dump")
+if docker volume inspect agenda_familiar_archivos_datos >/dev/null 2>&1; then
+  PUNTO_ARCHIVOS=$(docker volume inspect -f '{{.Mountpoint}}' agenda_familiar_archivos_datos)
+  sudo tar -czf "$RESPALDO/archivos-cifrados.tar.gz" -C "$PUNTO_ARCHIVOS" .
+  ARTEFACTOS+=("$RESPALDO/archivos-cifrados.tar.gz")
+fi
+sha256sum "${ARTEFACTOS[@]}" >"$RESPALDO/SHA256SUMS"
 test -s "$RESPALDO/agenda_familiar.dump"
 test -s "$RESPALDO/autenticacion.dump"
 
