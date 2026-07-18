@@ -52,6 +52,7 @@ public class Usuario {
     }
 
     public UUID getIdPublico() { return idPublico; }
+    public Long getId() { return id; }
     public String getCorreo() { return correo; }
     public String getClaveHash() { return claveHash; }
     public String getEstado() { return estado; }

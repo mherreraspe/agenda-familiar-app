@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
 import {
   cerrarSesion as eliminarSesion,
   completarTarea,
   consultarCatalogo,
   consultarHoy,
+  crearEvento,
+  crearMedicamento,
   crearTarea,
+  crearTratamiento,
   iniciarSesion,
+  renovarSesion,
   type RespuestaCatalogo,
   type RespuestaHoy,
   type TareaResumen
@@ -19,10 +23,14 @@ const cargando = ref(false)
 const error = ref('')
 const mensaje = ref('')
 const sesionActiva = ref(false)
+const restaurando = ref(true)
 const datos = ref<RespuestaHoy | null>(null)
 const catalogo = ref<RespuestaCatalogo | null>(null)
-const mostrarFormulario = ref(false)
+const formulario = ref<'tarea' | 'evento' | 'medicamento' | 'tratamiento' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '' })
+const nuevoEvento = reactive({ perfilId: '', titulo: '', tipo: 'CONSULTA', lugar: '', inicioEn: '', finEn: '' })
+const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
+const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', indicacion: '', dosisIndicada: '', frecuencia: '', fechaInicio: '', fechaFin: '' })
 
 const fechaActual = new Intl.DateTimeFormat('es-PE', {
   weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima'
@@ -31,6 +39,21 @@ const fechaActual = new Intl.DateTimeFormat('es-PE', {
 const pendientes = computed(() => datos.value?.tareas.filter(tarea => tarea.estado === 'PENDIENTE') ?? [])
 const atrasadas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) < new Date()))
 const proximas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) >= new Date()))
+const tituloFormulario = computed(() => ({
+  tarea: 'Nueva tarea', evento: 'Nuevo evento', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento'
+})[formulario.value ?? 'tarea'])
+
+onMounted(async () => {
+  try {
+    await renovarSesion()
+    sesionActiva.value = true
+    await cargar()
+  } catch {
+    sesionActiva.value = false
+  } finally {
+    restaurando.value = false
+  }
+})
 
 function hora(tarea: TareaResumen) {
   return new Intl.DateTimeFormat('es-PE', {
@@ -60,6 +83,11 @@ async function cargar() {
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
+  if (!nuevoEvento.perfilId && datos.value.perfiles.length) nuevoEvento.perfilId = datos.value.perfiles[0].id
+  if (!nuevoTratamiento.perfilId && datos.value.perfiles.length) nuevoTratamiento.perfilId = datos.value.perfiles[0].id
+  if (!nuevoTratamiento.medicamentoId && catalogo.value.medicamentos.length) {
+    nuevoTratamiento.medicamentoId = catalogo.value.medicamentos[0].id
+  }
 }
 
 async function marcarHecho(tarea: TareaResumen) {
@@ -84,7 +112,7 @@ async function guardarTarea() {
     nuevaTarea.titulo = ''
     nuevaTarea.descripcion = ''
     nuevaTarea.fechaLimite = ''
-    mostrarFormulario.value = false
+    formulario.value = null
     mensaje.value = 'La tarea fue agregada.'
     await cargar()
   } catch (causa) {
@@ -94,16 +122,75 @@ async function guardarTarea() {
   }
 }
 
-function salir() {
-  eliminarSesion()
-  datos.value = null
-  sesionActiva.value = false
-  mensaje.value = ''
+async function guardarEvento() {
+  await ejecutarGuardado(async () => {
+    await crearEvento({
+      ...nuevoEvento,
+      inicioEn: new Date(nuevoEvento.inicioEn).toISOString(),
+      finEn: nuevoEvento.finEn ? new Date(nuevoEvento.finEn).toISOString() : undefined
+    })
+    Object.assign(nuevoEvento, { perfilId: nuevoEvento.perfilId, titulo: '', tipo: 'CONSULTA', lugar: '', inicioEn: '', finEn: '' })
+  }, 'El evento fue agregado.')
+}
+
+async function guardarMedicamento() {
+  await ejecutarGuardado(async () => {
+    await crearMedicamento({
+      ...nuevoMedicamento,
+      fechaVencimiento: nuevoMedicamento.fechaVencimiento || undefined
+    })
+    Object.assign(nuevoMedicamento, { nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
+  }, 'El medicamento fue agregado.')
+}
+
+async function guardarTratamiento() {
+  await ejecutarGuardado(async () => {
+    await crearTratamiento({
+      ...nuevoTratamiento,
+      fechaFin: nuevoTratamiento.fechaFin || undefined
+    })
+    Object.assign(nuevoTratamiento, { perfilId: nuevoTratamiento.perfilId, medicamentoId: nuevoTratamiento.medicamentoId, indicacion: '', dosisIndicada: '', frecuencia: '', fechaInicio: '', fechaFin: '' })
+  }, 'El tratamiento fue agregado.')
+}
+
+async function ejecutarGuardado(accion: () => Promise<void>, confirmacion: string) {
+  cargando.value = true
+  error.value = ''
+  try {
+    await accion()
+    formulario.value = null
+    mensaje.value = confirmacion
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo guardar la información'
+  } finally {
+    cargando.value = false
+  }
+}
+
+async function salir() {
+  error.value = ''
+  try {
+    await eliminarSesion()
+    datos.value = null
+    catalogo.value = null
+    sesionActiva.value = false
+    mensaje.value = ''
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo cerrar la sesión'
+  }
 }
 </script>
 
 <template>
-  <main v-if="!sesionActiva" class="acceso">
+  <main v-if="restaurando" class="acceso">
+    <section class="panel-acceso panel-acceso--cargando" aria-live="polite">
+      <img src="/icono.svg" alt="" width="72" height="72" />
+      <p>Recuperando tu sesión segura…</p>
+    </section>
+  </main>
+
+  <main v-else-if="!sesionActiva" class="acceso">
     <section class="panel-acceso">
       <img src="/icono.svg" alt="" width="72" height="72" />
       <p class="sobretitulo">OBU System</p>
@@ -169,7 +256,7 @@ function salir() {
       </section>
 
       <section id="calendario" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div></div>
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div><button type="button" class="boton-secundario" @click="formulario = 'evento'">Agregar</button></div>
         <article v-for="evento in catalogo?.eventos" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ evento.persona }} · {{ evento.lugar || 'Lugar por confirmar' }}</p></div>
@@ -178,7 +265,7 @@ function salir() {
       </section>
 
       <section id="tratamientos" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div></div>
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" :disabled="!catalogo?.medicamentos.length" @click="formulario = 'tratamiento'">Agregar</button></div>
         <article v-for="tratamiento in catalogo?.tratamientos" :key="tratamiento.id" class="tarjeta">
           <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>{{ tratamiento.dosisIndicada }} · {{ tratamiento.frecuencia }}</p><small>{{ tratamiento.indicacion }}</small></div>
           <span class="estado">{{ tratamiento.estado }}</span>
@@ -187,7 +274,7 @@ function salir() {
       </section>
 
       <section id="botiquin" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div></div>
+        <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'medicamento'">Agregar</button></div>
         <article v-for="medicamento in catalogo?.medicamentos" :key="medicamento.id" class="tarjeta">
           <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.presentacion }} · {{ medicamento.concentracion }}</p><small>{{ medicamento.cantidad }} {{ medicamento.unidad }} · vence {{ medicamento.fechaVencimiento || 'sin fecha' }}</small></div>
           <span class="estado">{{ medicamento.estado }}</span>
@@ -195,9 +282,10 @@ function salir() {
       </section>
     </main>
 
-    <dialog :open="mostrarFormulario" class="dialogo">
-      <form @submit.prevent="guardarTarea">
-        <div class="titulo-seccion"><h2>Nueva tarea</h2><button type="button" class="cerrar" @click="mostrarFormulario = false">×</button></div>
+    <dialog :open="formulario !== null" class="dialogo">
+      <div class="titulo-seccion"><h2>{{ tituloFormulario }}</h2><button type="button" class="cerrar" aria-label="Cerrar" @click="formulario = null">×</button></div>
+
+      <form v-if="formulario === 'tarea'" @submit.prevent="guardarTarea">
         <label>Título<input v-model.trim="nuevaTarea.titulo" maxlength="180" required /></label>
         <label>Responsable
           <select v-model="nuevaTarea.perfilId" required>
@@ -208,9 +296,38 @@ function salir() {
         <label>Detalle<textarea v-model.trim="nuevaTarea.descripcion" maxlength="1000" rows="3" /></label>
         <button class="boton-principal" :disabled="cargando">Guardar tarea</button>
       </form>
+
+      <form v-else-if="formulario === 'evento'" @submit.prevent="guardarEvento">
+        <label>Persona<select v-model="nuevoEvento.perfilId" required><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
+        <label>Título<input v-model.trim="nuevoEvento.titulo" maxlength="180" required /></label>
+        <label>Tipo<select v-model="nuevoEvento.tipo"><option value="CONSULTA">Consulta</option><option value="VACUNA">Vacuna</option><option value="CONTROL">Control</option><option value="OTRO">Otro</option></select></label>
+        <label>Lugar<input v-model.trim="nuevoEvento.lugar" maxlength="300" /></label>
+        <label>Inicio<input v-model="nuevoEvento.inicioEn" type="datetime-local" required /></label>
+        <label>Fin opcional<input v-model="nuevoEvento.finEn" type="datetime-local" /></label>
+        <button class="boton-principal" :disabled="cargando">Guardar evento</button>
+      </form>
+
+      <form v-else-if="formulario === 'medicamento'" @submit.prevent="guardarMedicamento">
+        <label>Nombre<input v-model.trim="nuevoMedicamento.nombre" maxlength="180" required /></label>
+        <label>Presentación<input v-model.trim="nuevoMedicamento.presentacion" maxlength="120" placeholder="Caja, frasco…" /></label>
+        <label>Concentración<input v-model.trim="nuevoMedicamento.concentracion" maxlength="120" placeholder="Texto del envase" /></label>
+        <div class="campos-dobles"><label>Cantidad<input v-model.number="nuevoMedicamento.cantidad" type="number" min="0" step="0.01" required /></label><label>Unidad<input v-model.trim="nuevoMedicamento.unidad" maxlength="40" required /></label></div>
+        <label>Vencimiento opcional<input v-model="nuevoMedicamento.fechaVencimiento" type="date" /></label>
+        <button class="boton-principal" :disabled="cargando">Guardar medicamento</button>
+      </form>
+
+      <form v-else-if="formulario === 'tratamiento'" @submit.prevent="guardarTratamiento">
+        <label>Persona<select v-model="nuevoTratamiento.perfilId" required><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
+        <label>Medicamento<select v-model="nuevoTratamiento.medicamentoId" required><option v-for="medicamento in catalogo?.medicamentos" :key="medicamento.id" :value="medicamento.id">{{ medicamento.nombre }} · {{ medicamento.concentracion }}</option></select></label>
+        <label>Indicación<textarea v-model.trim="nuevoTratamiento.indicacion" maxlength="1000" rows="2" required /></label>
+        <label>Dosis indicada<input v-model.trim="nuevoTratamiento.dosisIndicada" maxlength="300" required /></label>
+        <label>Frecuencia<input v-model.trim="nuevoTratamiento.frecuencia" maxlength="300" placeholder="Texto de la receta" required /></label>
+        <div class="campos-dobles"><label>Inicio<input v-model="nuevoTratamiento.fechaInicio" type="date" required /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
+        <button class="boton-principal" :disabled="cargando">Guardar tratamiento</button>
+      </form>
     </dialog>
 
-    <button type="button" class="agregar" @click="mostrarFormulario = true"><span aria-hidden="true">+</span> Agregar tarea</button>
+    <button type="button" class="agregar" @click="formulario = 'tarea'"><span aria-hidden="true">+</span> Agregar tarea</button>
     <nav class="navegacion" aria-label="Navegación principal">
       <a class="activo" href="#top">Hoy</a><a href="#calendario">Calendario</a><a href="#botiquin">Botiquín</a>
       <a href="#tratamientos">Tratamientos <span v-if="atrasadas.length" class="contador">{{ atrasadas.length }}</span></a>

@@ -32,6 +32,10 @@ seguridad:
     emisor: ${JWT_ISSUER:agenda-familiar-autenticacion}
     secreto: ${JWT_SECRET:desarrollo-local-cambiar-esta-clave-antes-de-produccion-2026}
     duracion-minutos: ${JWT_DURACION_MINUTOS:15}
+  refresh:
+    duracion-dias: ${REFRESH_DURACION_DIAS:30}
+  cookies:
+    secure: ${COOKIE_SECURE:true}
 
 familia-test:
   habilitada: ${FAMILIA_TEST_HABILITADA:false}

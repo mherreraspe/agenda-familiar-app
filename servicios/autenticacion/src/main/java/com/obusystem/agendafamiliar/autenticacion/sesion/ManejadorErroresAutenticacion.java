@@ -25,4 +25,12 @@ public class ManejadorErroresAutenticacion {
         problema.setTitle("Solicitud inválida");
         return problema;
     }
+
+    @ExceptionHandler(ExcepcionCsrf.class)
+    ProblemDetail csrfInvalido(ExcepcionCsrf excepcion) {
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, excepcion.getMessage());
+        problema.setTitle("Solicitud no autorizada");
+        problema.setType(URI.create("https://www.obusystem.com/problemas/csrf-invalido"));
+        return problema;
+    }
 }

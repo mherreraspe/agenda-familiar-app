@@ -1,15 +1,20 @@
 package com.obusystem.agendafamiliar.autenticacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+
+import com.obusystem.agendafamiliar.autenticacion.sesion.ServicioSesiones;
+import com.obusystem.agendafamiliar.autenticacion.sesion.SolicitudInicioSesion;
 
 @Testcontainers
 @SpringBootTest(properties = {
@@ -24,11 +29,39 @@ class MigracionesAutenticacionIT {
     @Autowired
     JdbcTemplate jdbc;
 
+    @Autowired
+    ServicioSesiones sesiones;
+
     @Test
     void creaLosDosAdultosConCredenciales() {
         Integer cantidad = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM usuarios WHERE correo IN ('papa@familia.test', 'mama@familia.test')",
                 Integer.class);
         assertThat(cantidad).isEqualTo(2);
+        Integer tablaSesiones = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'sesiones_refresh'",
+                Integer.class);
+        assertThat(tablaSesiones).isEqualTo(1);
+    }
+
+    @Test
+    void rotaYRevocaElRefreshTokenSinGuardarElSecreto() {
+        var primera = sesiones.iniciar(new SolicitudInicioSesion("papa@familia.test", "ClaveTemporalSegura2026!"));
+        var segunda = sesiones.renovar(primera.refreshToken(), primera.csrfToken(), primera.csrfToken());
+
+        Boolean primeraRevocada = jdbc.queryForObject(
+                "SELECT revocado_en IS NOT NULL FROM sesiones_refresh WHERE id = ?",
+                Boolean.class, primera.sesionId());
+        assertThat(primeraRevocada).isTrue();
+        assertThat(segunda.refreshToken()).isNotEqualTo(primera.refreshToken());
+        assertThatThrownBy(() -> sesiones.renovar(
+                primera.refreshToken(), primera.csrfToken(), primera.csrfToken()))
+                .isInstanceOf(BadCredentialsException.class);
+
+        sesiones.cerrar(segunda.refreshToken(), segunda.csrfToken(), segunda.csrfToken());
+        Boolean segundaRevocada = jdbc.queryForObject(
+                "SELECT revocado_en IS NOT NULL FROM sesiones_refresh WHERE id = ?",
+                Boolean.class, segunda.sesionId());
+        assertThat(segundaRevocada).isTrue();
     }
 }
