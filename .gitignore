@@ -22,3 +22,6 @@ media/
 .npm-cache/
 .local-tools/
 .auth-temp/
+
+# Paquetes de despliegue generados localmente
+/agenda-familiar-*.tar.gz
