@@ -38,12 +38,14 @@ class MigracionesAgendaIT {
         Integer tratamientos = jdbc.queryForObject("SELECT COUNT(*) FROM tratamientos WHERE familia_id = ?", Integer.class, familiaId);
         Integer eventos = jdbc.queryForObject("SELECT COUNT(*) FROM eventos WHERE familia_id = ?", Integer.class, familiaId);
         Integer horarios = jdbc.queryForObject("SELECT COUNT(*) FROM horarios_tratamiento WHERE familia_id = ?", Integer.class, familiaId);
+        Integer lugares = jdbc.queryForObject("SELECT COUNT(*) FROM lugares_familia WHERE familia_id = ?", Integer.class, familiaId);
         assertThat(perfiles).isEqualTo(3);
         assertThat(tareas).isEqualTo(1);
         assertThat(medicamentos).isEqualTo(1);
         assertThat(tratamientos).isEqualTo(1);
         assertThat(eventos).isEqualTo(1);
         assertThat(horarios).isEqualTo(1);
+        assertThat(lugares).isEqualTo(1);
     }
 
     @Test
@@ -60,11 +62,13 @@ class MigracionesAgendaIT {
         Long otraFamilia = jdbc.queryForObject("INSERT INTO familias (id_publico, nombre) VALUES (gen_random_uuid(), 'otra') RETURNING id", Long.class);
         jdbc.execute("CREATE ROLE prueba_rls NOLOGIN NOBYPASSRLS");
         jdbc.execute("GRANT USAGE ON SCHEMA public TO prueba_rls");
-        jdbc.execute("GRANT SELECT ON ocurrencias_tratamiento, elementos_revision TO prueba_rls");
+        jdbc.execute("GRANT SELECT ON ocurrencias_tratamiento, elementos_revision, lugares_familia, palabras_clave TO prueba_rls");
         jdbc.execute("SET LOCAL ROLE prueba_rls");
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, otraFamilia.toString());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM elementos_revision", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM lugares_familia", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM palabras_clave", Integer.class)).isZero();
     }
 
     @Test
