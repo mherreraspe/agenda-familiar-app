@@ -7,12 +7,23 @@ ALTER TABLE tratamientos ADD COLUMN nombre_libre VARCHAR(180);
 ALTER TABLE tratamientos ADD COLUMN responsable_perfil_id BIGINT REFERENCES perfiles(id);
 ALTER TABLE tratamientos ADD COLUMN cantidad_receta VARCHAR(300);
 
-UPDATE tratamientos t
-SET nombre_libre = m.nombre,
-    responsable_perfil_id = t.perfil_id,
-    cantidad_receta = NULLIF(t.dosis_indicada, '')
-FROM medicamentos m
-WHERE m.id = t.medicamento_id;
+DO $$
+DECLARE
+    familia RECORD;
+BEGIN
+    FOR familia IN SELECT id FROM familias LOOP
+        PERFORM set_config('agenda.familia_id', familia.id::TEXT, TRUE);
+        UPDATE tratamientos t
+        SET nombre_libre = m.nombre,
+            responsable_perfil_id = t.perfil_id,
+            cantidad_receta = NULLIF(t.dosis_indicada, '')
+        FROM medicamentos m
+        WHERE t.familia_id = familia.id
+          AND m.familia_id = familia.id
+          AND m.id = t.medicamento_id;
+    END LOOP;
+    PERFORM set_config('agenda.familia_id', '', TRUE);
+END $$;
 
 ALTER TABLE tratamientos ALTER COLUMN nombre_libre SET NOT NULL;
 ALTER TABLE tratamientos ALTER COLUMN responsable_perfil_id SET NOT NULL;
