@@ -19,7 +19,7 @@ tar -xzf "$ARCHIVO" -C "$DESTINO"
 install -m 600 "$VARIABLES" "$DESTINO/infraestructura/.env"
 
 cd "$DESTINO/infraestructura"
-if ! docker-compose --no-ansi --env-file .env -p agenda_familiar up -d --build >"$LOG" 2>&1; then
+if ! docker compose --ansi never --env-file .env -p agenda_familiar up -d --build >"$LOG" 2>&1; then
   tail -n 120 "$LOG" >&2
   exit 1
 fi
@@ -34,8 +34,8 @@ comprobar() {
     sleep 2
   done
   echo "No respondió: $nombre ($url)" >&2
-  docker-compose --no-ansi -p agenda_familiar ps >&2 || true
-  docker-compose --no-ansi -p agenda_familiar logs --tail=100 >&2 || true
+  docker compose --ansi never -p agenda_familiar ps >&2 || true
+  docker compose --ansi never -p agenda_familiar logs --tail=100 >&2 || true
   return 1
 }
 
