@@ -2,6 +2,10 @@ package com.obusystem.agendafamiliar.agenda;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -61,5 +65,30 @@ class MigracionesAgendaIT {
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, otraFamilia.toString());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM elementos_revision", Integer.class)).isZero();
+    }
+
+    @Test
+    void migraConElMismoTipoDeRolSinBypassQueProduccion() throws Exception {
+        jdbc.execute("CREATE ROLE migrador_rls LOGIN PASSWORD 'solo-prueba-rls' NOBYPASSRLS");
+        jdbc.execute("CREATE SCHEMA migracion_rls AUTHORIZATION migrador_rls");
+        String url = POSTGRES.getJdbcUrl() + (POSTGRES.getJdbcUrl().contains("?") ? "&" : "?")
+                + "currentSchema=migracion_rls";
+
+        Flyway.configure()
+                .dataSource(url, "migrador_rls", "solo-prueba-rls")
+                .locations("classpath:db/migration")
+                .load()
+                .migrate();
+
+        try (Connection conexion = DriverManager.getConnection(url, "migrador_rls", "solo-prueba-rls");
+                var consulta = conexion.createStatement()) {
+            consulta.execute("SELECT set_config('agenda.familia_id', '1', FALSE)");
+            try (var resultado = consulta.executeQuery(
+                    "SELECT COUNT(*), COUNT(*) FILTER (WHERE nombre_libre IS NULL) FROM tratamientos")) {
+                assertThat(resultado.next()).isTrue();
+                assertThat(resultado.getInt(1)).isEqualTo(1);
+                assertThat(resultado.getInt(2)).isZero();
+            }
+        }
     }
 }
