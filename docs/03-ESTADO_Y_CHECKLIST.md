@@ -21,7 +21,7 @@ Rama local `feat/ocurrencias-y-revisar`, aún no desplegada:
 - [x] Perfiles convertidos en filtros con opción `Todos` en la interfaz.
 - [x] Pruebas añadidas para RLS, materialización idempotente, transiciones, posposición y cierre desde `Revisar`.
 - [x] Validación local: Vitest, `vue-tsc`, build Vite y compilación de código/pruebas Java 21 aprobadas.
-- [ ] CI con Java 25 y Testcontainers PostgreSQL 18 aprobado.
+- [x] CI con Java 25 y Testcontainers PostgreSQL 18 aprobado: ejecución `29648306004` (frontend 14 s, backend 47 s).
 - [ ] PR integrado, despliegue y E2E móvil de este bloque aprobados.
 
 No marcar los requisitos equivalentes de la lista general como terminados hasta completar CI, despliegue y E2E.
