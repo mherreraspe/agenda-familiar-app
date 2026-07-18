@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('Resumen', 'Estado', 'Entorno', 'VerificarLocal', 'VerificarIntegracion', 'Servidor', 'E2EV5')]
+    [ValidateSet('Resumen', 'Estado', 'Entorno', 'VerificarLocal', 'VerificarIntegracion', 'Servidor', 'Desplegar', 'E2EV5')]
     [string]$Accion = 'Resumen',
 
     [string]$Servidor = '148.116.110.18',
@@ -215,6 +215,43 @@ switch ($Accion) {
             $scriptEstado = Join-Path $PSScriptRoot 'servidor\estado.sh'
             Get-Content -Encoding UTF8 $scriptEstado | Select-Object -Skip 1 | & ssh @argumentos $destino "sed '1s/^\xEF\xBB\xBF//; s/`r$//' | bash -s"
             if ($LASTEXITCODE -ne 0) { throw 'Falló la comprobación remota.' }
+        }
+    }
+    'Desplegar' {
+        $estado = @(Invocar-GitSeguro status --porcelain)
+        if ($estado.Count -gt 0) {
+            throw 'El despliegue exige un árbol de trabajo limpio.'
+        }
+        $commit = (Invocar-GitSeguro rev-parse HEAD).Trim()
+        $rama = (Invocar-GitSeguro branch --show-current).Trim()
+        if ($rama -ne 'main') {
+            throw 'El despliegue solo se permite desde main.'
+        }
+        New-Item -ItemType Directory -Force -Path $Temporal | Out-Null
+        $paquete = Join-Path $Temporal "agenda-familiar-$($commit.Substring(0, 7)).tar.gz"
+        try {
+            & git -c "safe.directory=$RaizRepositorio" archive --format=tar.gz --output=$paquete HEAD
+            if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el paquete del release.' }
+            Con-ClaveSsh {
+                param($clave)
+                $argumentos = Argumentos-Ssh $clave
+                $destino = "$UsuarioSsh@$Servidor"
+                $paqueteRemoto = "/tmp/agenda-familiar-$($commit.Substring(0, 7))-$PID.tar.gz"
+                $scriptRemoto = "/tmp/agenda-desplegar-$PID.sh"
+                $scriptLocal = Join-Path $PSScriptRoot 'servidor\desplegar.sh'
+                try {
+                    & scp @argumentos $paquete $scriptLocal "${destino}:/tmp/"
+                    if ($LASTEXITCODE -ne 0) { throw 'No se pudo copiar el release al servidor.' }
+                    & ssh @argumentos $destino "mv /tmp/$([IO.Path]::GetFileName($paquete)) $paqueteRemoto && mv /tmp/desplegar.sh $scriptRemoto && chmod 700 $scriptRemoto && $scriptRemoto $RaizRemota $paqueteRemoto $commit"
+                    if ($LASTEXITCODE -ne 0) { throw 'Falló el despliegue remoto.' }
+                }
+                finally {
+                    & ssh @argumentos $destino "rm -f $paqueteRemoto $scriptRemoto" | Out-Null
+                }
+            }
+        }
+        finally {
+            if (Test-Path -LiteralPath $paquete) { Remove-Item -LiteralPath $paquete -Force }
         }
     }
     'E2EV5' {

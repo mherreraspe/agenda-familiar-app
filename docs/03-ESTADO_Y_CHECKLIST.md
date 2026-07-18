@@ -49,7 +49,7 @@ Integrado mediante el PR #5, desplegado y verificado en producción:
 
 ## Bloque preparado — historial, botiquín y horarios
 
-Preparado en el PR #7; CI verde y pendiente de integración, despliegue y E2E móvil:
+Integrado mediante el PR #7; CI verde y pendiente de despliegue y E2E móvil:
 
 - [x] Reprogramación separada de la posposición rápida, con ocurrencia original inmutable y nueva ocurrencia enlazada.
 - [x] Cierre anticipado de tratamientos idempotente, con motivo opcional, actor visible y cancelación trazable de pendientes.
@@ -58,7 +58,8 @@ Preparado en el PR #7; CI verde y pendiente de integración, despliegue y E2E m�
 - [x] Varios horarios o intervalo de 1–168 horas y responsable alternativo opcional.
 - [x] Pruebas de transiciones competidoras, IDOR, RLS, estados, horarios e intervalos añadidas.
 - [x] Validación local rápida aprobada y CI `29657913288` aprobado (frontend 16 s, backend 1 min 4 s).
-- [ ] Integrar el PR #7, desplegar V6 y repetir E2E/revisión móvil.
+- [x] PR #7 integrado en `main` como `f7c27c9`.
+- [ ] Desplegar V6 y repetir E2E/revisión móvil.
 
 ## Completado y verificado
 
