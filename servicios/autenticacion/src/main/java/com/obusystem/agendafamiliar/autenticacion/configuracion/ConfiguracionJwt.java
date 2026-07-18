@@ -13,6 +13,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
@@ -30,6 +33,15 @@ public class ConfiguracionJwt {
     @Bean
     JwtEncoder codificadorJwt(SecretKey claveJwt) {
         return new NimbusJwtEncoder(new ImmutableSecret<>(claveJwt));
+    }
+
+    @Bean
+    JwtDecoder decodificadorJwt(SecretKey claveJwt, @Value("${seguridad.jwt.emisor}") String emisor) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(claveJwt)
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
+        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(emisor));
+        return decoder;
     }
 
     @Bean

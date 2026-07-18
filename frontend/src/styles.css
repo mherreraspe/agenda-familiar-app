@@ -27,6 +27,7 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .panel-acceso > p { color: #63706b; }
 .panel-acceso form { display: grid; gap: 16px; margin: 24px 0; }
 .panel-acceso small { color: #6e7773; }
+.panel-acceso--cargando { text-align: center; }
 .boton-principal { width: 100%; padding: 13px 18px; border: 0; border-radius: 12px; color: white; background: #315b4c; font-weight: 900; }
 .boton-principal:disabled { cursor: wait; opacity: .65; }
 .error { padding: 11px 14px; border-radius: 11px; color: #7d321f; background: #f7dfd7; }
@@ -98,6 +99,7 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .dialogo { position: fixed; inset: 50% auto auto 50%; z-index: 5; width: min(calc(100% - 32px), 460px); margin: 0; padding: 24px; transform: translate(-50%, -50%); border: 0; border-radius: 22px; background: #f9f7f1; box-shadow: 0 22px 80px rgb(0 0 0 / 32%); }
 .dialogo::backdrop { background: rgb(24 36 31 / 55%); }
 .dialogo form { display: grid; gap: 15px; }
+.campos-dobles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dialogo h2 { margin: 0; font-family: Georgia, serif; }
 .cerrar { width: 36px; height: 36px; border: 0; border-radius: 50%; color: #315b4c; background: #e5ece8; font-size: 1.4rem; }
 
@@ -115,6 +117,7 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
   .tarjeta__contenido { min-width: calc(100% - 78px); }
   .boton-secundario { margin-left: 73px; }
   .agregar { right: 16px; }
+  .campos-dobles { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
