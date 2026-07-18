@@ -51,6 +51,11 @@ public class Usuario {
         this.actualizadoEn = this.creadoEn;
     }
 
+    public void actualizarClave(String nuevaClaveHash) {
+        this.claveHash = nuevaClaveHash;
+        this.actualizadoEn = Instant.now();
+    }
+
     public UUID getIdPublico() { return idPublico; }
     public Long getId() { return id; }
     public String getCorreo() { return correo; }
