@@ -6,6 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -130,7 +132,8 @@ public class ServicioSesiones {
         jdbc.update("""
                 INSERT INTO sesiones_refresh (id, usuario_id, token_hash, csrf_hash, expira_en)
                 VALUES (?, ?, ?, ?, ?)
-                """, sesionId, usuario.getId(), hash(refreshToken), hash(csrfToken), expiraRefresh);
+                """, sesionId, usuario.getId(), hash(refreshToken), hash(csrfToken),
+                OffsetDateTime.ofInstant(expiraRefresh, ZoneOffset.UTC));
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(emisor)
