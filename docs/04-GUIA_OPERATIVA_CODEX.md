@@ -29,11 +29,16 @@ Ejecutar desde la raíz de `agenda-familiar-app`:
 # Release, contenedores, salud pública y migraciones
 .\tools\agenda-ops.cmd Servidor
 
+# Backup predeploy, paquete inmutable de main y despliegue por release
+.\tools\agenda-ops.cmd Desplegar
+
 # E2E de auditoría, lugares y palabras clave en producción
 .\tools\agenda-ops.cmd E2EV5
 ```
 
-`Servidor` y `E2EV5` crean una copia temporal restringida de la clave SSH y la eliminan en un bloque `finally`. El archivo original nunca se sube ni se usa directamente con OpenSSH. La primera conexión guarda la clave pública del host en `.auth-temp/known_hosts`; conexiones posteriores rechazan cambios en esa identidad.
+`Servidor`, `Desplegar` y `E2EV5` crean una copia temporal restringida de la clave SSH y la eliminan en un bloque `finally`. El archivo original nunca se sube ni se usa directamente con OpenSSH. La primera conexión guarda la clave pública del host en `.auth-temp/known_hosts`; conexiones posteriores rechazan cambios en esa identidad.
+
+`Desplegar` solo acepta un `main` limpio. Empaqueta únicamente archivos rastreados del commit, crea dumps custom de ambas bases con manifiesto SHA-256, reutiliza el `.env` remoto sin mostrarlo y activa el nuevo release solo después de comprobar los tres servicios.
 
 `E2EV5` tiene un efecto deliberado: crea un evento claramente etiquetado como E2E dentro de `familia_test`. Solo debe ejecutarse como validación autorizada de un release, no como consulta rutinaria de estado.
 

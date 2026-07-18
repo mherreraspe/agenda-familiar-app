@@ -12,18 +12,23 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 - Último bloque: auditoría visible, catálogo privado de lugares y sugerencias privadas por familia.
 - E2E V5 y revisión móvil autenticada: aprobados.
 
-## Trabajo local sin publicar
+## Integrado pendiente de despliegue
 
-- Rama: `agent/historial-estados-botiquin`.
+- PR #7 integrado en `main`: `f7c27c91b3a06ebe008747f713707cf502a49661`.
 - Migración V6: reprogramación enlazada, cierre idempotente y horarios/intervalos.
 - UI: historial con actor, posposición rápida, reprogramación, cierre anticipado y vencimientos cercanos.
 - Botiquín: estados calculados `DISPONIBLE`, `POR_VENCER`, `VENCIDO`, `AGOTADO` y `DESCARTADO`.
 - Tratamientos: varios horarios, intervalo y responsable alternativo.
 - `VerificarLocal`: aprobado. CI del PR #7: frontend y backend aprobados con Testcontainers.
 
+## Trabajo operativo en curso
+
+- Rama: `agent/despliegue-operativo-v6`.
+- Añadir `agenda-ops.cmd Desplegar` con backup predeploy y paquete inmutable.
+
 ## Siguiente paso
 
-1. Integrar el PR #7: <https://github.com/mherreraspe/agenda-familiar-app/pull/7>.
+1. Integrar la acción de despliegue con CI verde.
 2. Desplegar V6 y repetir E2E móvil.
 3. Actualizar el commit/release desplegado y reemplazar este relevo.
 
