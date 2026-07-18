@@ -30,3 +30,14 @@ docker compose -f infraestructura/compose.yaml up --build
 ```
 
 Los archivos `.env.example` documentan las variables requeridas. Ningún secreto real debe entrar al repositorio.
+
+## Operación reproducible
+
+Las sesiones de automatización deben comenzar con:
+
+```powershell
+.\tools\agenda-ops.cmd Resumen
+.\tools\agenda-ops.cmd Entorno
+```
+
+La guía [Operación para sesiones de Codex](docs/04-GUIA_OPERATIVA_CODEX.md) documenta permisos, herramientas locales, SSH, GitHub y los comandos reutilizables para validación, servidor y E2E.
