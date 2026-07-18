@@ -64,6 +64,20 @@ Integrado mediante los PR #7–#9, desplegado y verificado en producción:
 - [x] E2E HTTPS de regresión aprobado: aislamiento 404, evento, indexación, sugerencias, auditoría y responsables.
 - [x] Revisión PWA autenticada a 390 × 844: historial con actor, posposición, reprogramación, cierre y vencimientos visibles; sin desborde ni errores/advertencias de consola.
 
+## Bloque completado — recurrencia y administración familiar
+
+Integrado mediante el PR #11, desplegado y verificado en producción:
+
+- [x] Migración `V7` con series de tareas/eventos y acciones de agenda, ambas con RLS forzado.
+- [x] Recurrencia diaria, semanal y mensual materializada; cada instancia conserva estado e historial propios.
+- [x] Omitir y reprogramar tareas/eventos desde “Hoy”, “Revisar” y calendario; la sucesora queda enlazada a la original.
+- [x] Acciones idempotentes y transiciones condicionales ante solicitudes competidoras.
+- [x] Gestión de perfiles adultos/dependientes, cuentas vinculadas y permisos desde la PWA; cambios restringidos al administrador familiar.
+- [x] Pruebas de recurrencia, historial, idempotencia, concurrencia, permisos, IDOR y RLS con PostgreSQL 18.
+- [x] CI `29660227013` aprobado (frontend 13 s, backend 1 min 11 s) y PR #11 integrado como `e5beb0b`.
+- [x] Release `20260718T205050Z` activo; Flyway aplicó V7 una vez y todos los servicios están saludables.
+- [x] E2E HTTPS aprobado y PWA autenticada a 390 × 844 sin desborde ni errores/advertencias de consola.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -117,7 +131,7 @@ Integrado mediante los PR #7–#9, desplegado y verificado en producción:
 - [x] Bandeja “Revisar” para vencidos, tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
 - [x] Acciones completar, omitir, posponer, reprogramar y cerrar con historial.
 - [x] Filtros por miembro y sección de vencimientos cercanos en “Hoy”.
-- [ ] Recurrencia de eventos y tareas sin perder el historial anterior.
+- [x] Recurrencia de eventos y tareas sin perder el historial anterior.
 - [x] Alta rápida de cita/actividad con solo título y fecha/hora obligatorios; persona, tipo, lugar, dirección y notas serán opcionales/progresivos.
 - [x] Después de guardar, procesar el registro de forma asíncrona y asociarle silenciosamente una o dos palabras clave canónicas mediante IA o reglas (por ejemplo, `pediatra` y `control`).
 - [x] La extracción de palabras clave nunca bloquea el guardado, no produce texto visible ni modifica lo escrito por el usuario; si falla, el registro sigue siendo válido.
@@ -129,7 +143,7 @@ Integrado mediante los PR #7–#9, desplegado y verificado en producción:
 - [x] El autocompletado nunca mezcla ni revela lugares, direcciones o palabras clave de otra familia.
 - [x] Horarios/intervalos de tratamientos y responsable alternativo.
 - [x] Estados calculados del botiquín: disponible, por vencer, vencido, agotado y descartado.
-- [ ] Gestión de perfiles, adultos, dependientes y permisos desde la interfaz.
+- [x] Gestión de perfiles, adultos, dependientes y permisos desde la interfaz.
 - [x] Convertir Papá/Mamá/Hijo en filtros claros con opción “Todos”; no representan cambio de usuario.
 - [x] Mostrar “para quién”, responsable y “agregado/modificado por” con historial de auditoría visible para adultos autorizados.
 
@@ -170,12 +184,12 @@ Integrado mediante los PR #7–#9, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Completar recurrencia y administración familiar:
+Completar fotografías privadas y cuota familiar:
 
-1. Añadir recurrencia de eventos y tareas sin perder el historial anterior.
-2. Permitir omitir y reprogramar tareas/eventos desde “Hoy” y “Revisar”.
-3. Gestionar perfiles, adultos, dependientes y permisos desde la interfaz.
-4. Ampliar pruebas de recurrencia, transiciones, concurrencia e IDOR/RLS.
+1. Añadir fotografía opcional de receta desde la PWA con reducción y eliminación de EXIF/ubicación.
+2. Implementar almacenamiento privado, descarga autorizada, miniaturas y eliminación completa.
+3. Aplicar cuota familiar con avisos 70/85/95 % y bloqueo al 100 %.
+4. Añadir pruebas de archivos inválidos/maliciosos, aislamiento, cuota y concurrencia.
 5. Publicar por PR, exigir CI verde, desplegar y repetir E2E móvil.
 
 ## Continuidad operativa
