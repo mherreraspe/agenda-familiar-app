@@ -23,6 +23,7 @@ import com.obusystem.agendafamiliar.agenda.tarea.EstadoTarea;
 import com.obusystem.agendafamiliar.agenda.tarea.RepositorioTareas;
 import com.obusystem.agendafamiliar.agenda.tarea.Tarea;
 import com.obusystem.agendafamiliar.agenda.util.UuidV7;
+import com.obusystem.agendafamiliar.agenda.recurrencia.ServicioRecurrencias;
 
 @Service
 public class ServicioHoy {
@@ -30,13 +31,15 @@ public class ServicioHoy {
     private final RepositorioPerfiles perfiles;
     private final RepositorioTareas tareas;
     private final JdbcTemplate jdbc;
+    private final ServicioRecurrencias recurrencias;
 
     public ServicioHoy(AccesoFamilia acceso, RepositorioPerfiles perfiles, RepositorioTareas tareas,
-            JdbcTemplate jdbc) {
+            JdbcTemplate jdbc, ServicioRecurrencias recurrencias) {
         this.acceso = acceso;
         this.perfiles = perfiles;
         this.tareas = tareas;
         this.jdbc = jdbc;
+        this.recurrencias = recurrencias;
     }
 
     @Transactional(readOnly = true)
@@ -54,10 +57,19 @@ public class ServicioHoy {
         Familia familia = acceso.autorizar(familiaPublicaId, jwt);
         Perfil perfil = perfiles.findByFamiliaIdAndIdPublico(familia.getId(), solicitud.perfilId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Perfil inválido"));
-        Tarea tarea = tareas.save(new Tarea(UuidV7.nuevo(), familia.getId(), perfil.getId(), solicitud.titulo().trim(),
-                solicitud.descripcion(), solicitud.fechaLimite()));
-        auditar(familia.getId(), jwt, "CREAR", tarea.getIdPublico(), "Tarea familiar registrada");
-        return resumenTarea(tarea, perfil);
+        ServicioRecurrencias.Serie serie = recurrencias.crear(familia.getId(), "TAREA", solicitud.fechaLimite(),
+                familia.getZonaHoraria(), solicitud.recurrencia());
+        if (!perfil.isActivo()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El perfil está inactivo");
+        Tarea primera = null;
+        for (int indice = 0; indice < serie.fechas().size(); indice++) {
+            Tarea instancia = tareas.save(new Tarea(UuidV7.nuevo(), familia.getId(), perfil.getId(),
+                    solicitud.titulo().trim(), solicitud.descripcion(), serie.fechas().get(indice), serie.id(),
+                    serie.id() == null ? null : indice + 1));
+            if (primera == null) primera = instancia;
+        }
+        auditar(familia.getId(), jwt, "CREAR", primera.getIdPublico(), serie.id() == null
+                ? "Tarea familiar registrada" : "Serie de tareas registrada");
+        return resumenTarea(primera, perfil);
     }
 
     @Transactional
@@ -76,14 +88,21 @@ public class ServicioHoy {
         Map<Long, Perfil> perfilesPorId = perfilesFamilia.stream()
                 .collect(Collectors.toMap(Perfil::getId, Function.identity()));
         return new RespuestaHoy(familia.getIdPublico(), familia.getNombre(), familia.getZonaHoraria(),
-                perfilesFamilia.stream().map(perfil -> new RespuestaHoy.PerfilResumen(perfil.getIdPublico(),
+                perfilesFamilia.stream().filter(Perfil::isActivo).map(perfil -> new RespuestaHoy.PerfilResumen(perfil.getIdPublico(),
                         perfil.getNombreVisible(), perfil.getTipo(), perfil.getColor(), perfil.getRelacion())).toList(),
                 tareasFamilia.stream().map(tarea -> resumenTarea(tarea, perfilesPorId.get(tarea.getPerfilId()))).toList());
     }
 
     private RespuestaHoy.TareaResumen resumenTarea(Tarea tarea, Perfil perfil) {
         return new RespuestaHoy.TareaResumen(tarea.getIdPublico(), tarea.getTitulo(), tarea.getDescripcion(),
-                tarea.getFechaLimite(), tarea.getEstado().name(), perfil.getIdPublico(), perfil.getNombreVisible());
+                tarea.getFechaLimite(), tarea.getEstado().name(), perfil.getIdPublico(), perfil.getNombreVisible(),
+                tarea.getRecurrenciaId() != null, idPublicoOrigen(tarea.getTareaOrigenId()));
+    }
+
+    private UUID idPublicoOrigen(Long origenId) {
+        if (origenId == null) return null;
+        List<UUID> ids = jdbc.query("SELECT id_publico FROM tareas WHERE id=?", (rs, fila) -> rs.getObject(1, UUID.class), origenId);
+        return ids.isEmpty() ? null : ids.getFirst();
     }
 
     private void auditar(Long familiaId, Jwt jwt, String operacion, UUID entidadId, String resumen) {

@@ -8,5 +8,5 @@ public record RespuestaHoy(UUID familiaId, String familia, String zonaHoraria,
         List<PerfilResumen> perfiles, List<TareaResumen> tareas) {
     public record PerfilResumen(UUID id, String nombre, String tipo, String color, String relacion) { }
     public record TareaResumen(UUID id, String titulo, String descripcion, Instant fechaLimite,
-            String estado, UUID perfilId, String responsable) { }
+            String estado, UUID perfilId, String responsable, boolean recurrente, UUID tareaOrigenId) { }
 }

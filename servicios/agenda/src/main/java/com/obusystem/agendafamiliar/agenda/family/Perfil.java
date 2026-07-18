@@ -24,6 +24,8 @@ public class Perfil {
     private String tipo;
     private String color;
     private String relacion;
+    @Column(nullable = false)
+    private boolean activo;
 
     protected Perfil() { }
     public Long getId() { return id; }
@@ -32,4 +34,5 @@ public class Perfil {
     public String getTipo() { return tipo; }
     public String getColor() { return color; }
     public String getRelacion() { return relacion; }
+    public boolean isActivo() { return activo; }
 }

@@ -64,7 +64,7 @@ class MigracionesAgendaIT {
         Long otraFamilia = jdbc.queryForObject("INSERT INTO familias (id_publico, nombre) VALUES (gen_random_uuid(), 'otra') RETURNING id", Long.class);
         jdbc.execute("CREATE ROLE prueba_rls NOLOGIN NOBYPASSRLS");
         jdbc.execute("GRANT USAGE ON SCHEMA public TO prueba_rls");
-        jdbc.execute("GRANT SELECT ON ocurrencias_tratamiento, elementos_revision, acciones_tratamiento, lugares_familia, palabras_clave TO prueba_rls");
+        jdbc.execute("GRANT SELECT ON ocurrencias_tratamiento, elementos_revision, acciones_tratamiento, lugares_familia, palabras_clave, recurrencias_agenda, acciones_agenda TO prueba_rls");
         jdbc.execute("SET LOCAL ROLE prueba_rls");
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, otraFamilia.toString());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isZero();
@@ -72,6 +72,8 @@ class MigracionesAgendaIT {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM acciones_tratamiento", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM lugares_familia", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM palabras_clave", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM recurrencias_agenda", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM acciones_agenda", Integer.class)).isZero();
     }
 
     @Test

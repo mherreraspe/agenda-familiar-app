@@ -23,6 +23,7 @@ import com.obusystem.agendafamiliar.agenda.family.AccesoFamilia;
 import com.obusystem.agendafamiliar.agenda.family.Familia;
 import com.obusystem.agendafamiliar.agenda.tratamiento.ServicioOcurrencias;
 import com.obusystem.agendafamiliar.agenda.util.UuidV7;
+import com.obusystem.agendafamiliar.agenda.recurrencia.ServicioRecurrencias;
 
 @Service
 public class ServicioCatalogo {
@@ -30,13 +31,15 @@ public class ServicioCatalogo {
     private final JdbcTemplate jdbc;
     private final ServicioOcurrencias ocurrencias;
     private final ApplicationEventPublisher eventosAplicacion;
+    private final ServicioRecurrencias recurrencias;
 
     public ServicioCatalogo(AccesoFamilia acceso, JdbcTemplate jdbc, ServicioOcurrencias ocurrencias,
-            ApplicationEventPublisher eventosAplicacion) {
+            ApplicationEventPublisher eventosAplicacion, ServicioRecurrencias recurrencias) {
         this.acceso = acceso;
         this.jdbc = jdbc;
         this.ocurrencias = ocurrencias;
         this.eventosAplicacion = eventosAplicacion;
+        this.recurrencias = recurrencias;
     }
 
     @Transactional(readOnly = true)
@@ -106,14 +109,25 @@ public class ServicioCatalogo {
         String lugar = limpiar(solicitud.lugar());
         String direccion = limpiar(solicitud.direccion());
         Long lugarGuardado = guardarLugar(familia.getId(), lugar, direccion);
-        UUID id = UuidV7.nuevo();
-        jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, inicio_en, fin_en, lugar_guardado_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                id, familia.getId(), perfil, solicitud.titulo().trim(), limpiar(solicitud.tipo()), lugar, direccion,
-                limpiar(solicitud.notas()), Timestamp.from(solicitud.inicioEn()),
-                solicitud.finEn() == null ? null : Timestamp.from(solicitud.finEn()), lugarGuardado);
-        auditar(familia.getId(), jwt, "CREAR", "EVENTO", id, "Evento familiar registrado");
-        eventosAplicacion.publishEvent(new EventoCreado(familia.getId(), id));
-        return id;
+        ServicioRecurrencias.Serie serie = recurrencias.crear(familia.getId(), "EVENTO", solicitud.inicioEn(),
+                familia.getZonaHoraria(), solicitud.recurrencia());
+        java.time.Duration duracion = solicitud.finEn() == null ? null
+                : java.time.Duration.between(solicitud.inicioEn(), solicitud.finEn());
+        UUID primera = null;
+        for (int indice = 0; indice < serie.fechas().size(); indice++) {
+            UUID id = UuidV7.nuevo();
+            java.time.Instant inicio = serie.fechas().get(indice);
+            jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, inicio_en, fin_en, lugar_guardado_id, recurrencia_id, numero_ocurrencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    id, familia.getId(), perfil, solicitud.titulo().trim(), limpiar(solicitud.tipo()), lugar, direccion,
+                    limpiar(solicitud.notas()), Timestamp.from(inicio),
+                    duracion == null ? null : Timestamp.from(inicio.plus(duracion)), lugarGuardado, serie.id(),
+                    serie.id() == null ? null : indice + 1);
+            if (primera == null) primera = id;
+            eventosAplicacion.publishEvent(new EventoCreado(familia.getId(), id));
+        }
+        auditar(familia.getId(), jwt, "CREAR", "EVENTO", primera, serie.id() == null
+                ? "Evento familiar registrado" : "Serie de eventos registrada");
+        return primera;
     }
 
     private List<RespuestaCatalogo.MedicamentoResumen> medicamentos(Long familiaId) {
@@ -157,13 +171,14 @@ public class ServicioCatalogo {
     }
 
     private List<RespuestaCatalogo.EventoResumen> eventos(Long familiaId) {
-        return jdbc.query("SELECT e.id_publico, p.id_publico perfil_publico, p.nombre_visible, e.titulo, e.tipo, e.lugar, e.direccion, e.notas, e.inicio_en, e.fin_en, e.estado FROM eventos e LEFT JOIN perfiles p ON p.id=e.perfil_id WHERE e.familia_id=? AND e.inicio_en >= NOW() - INTERVAL '30 days' ORDER BY e.inicio_en",
+        return jdbc.query("SELECT e.id_publico, p.id_publico perfil_publico, p.nombre_visible, e.titulo, e.tipo, e.lugar, e.direccion, e.notas, e.inicio_en, e.fin_en, e.estado, e.recurrencia_id IS NOT NULL recurrente, origen.id_publico evento_origen_publico FROM eventos e LEFT JOIN perfiles p ON p.id=e.perfil_id LEFT JOIN eventos origen ON origen.id=e.evento_origen_id WHERE e.familia_id=? AND e.inicio_en >= NOW() - INTERVAL '30 days' ORDER BY e.inicio_en",
                 (rs, fila) -> new RespuestaCatalogo.EventoResumen(rs.getObject("id_publico", UUID.class),
                         rs.getObject("perfil_publico", UUID.class), rs.getString("nombre_visible"), rs.getString("titulo"),
                         rs.getString("tipo"), rs.getString("lugar"), rs.getString("direccion"), rs.getString("notas"),
                         rs.getTimestamp("inicio_en").toInstant(),
                         rs.getTimestamp("fin_en") == null ? null : rs.getTimestamp("fin_en").toInstant(),
-                        rs.getString("estado")), familiaId);
+                        rs.getString("estado"), rs.getBoolean("recurrente"),
+                        rs.getObject("evento_origen_publico", UUID.class)), familiaId);
     }
 
     private List<RespuestaCatalogo.LugarResumen> lugares(Long familiaId) {
@@ -182,7 +197,8 @@ public class ServicioCatalogo {
 
     private Long idInterno(String tabla, Long familiaId, UUID idPublico, String mensaje) {
         if (!List.of("perfiles", "medicamentos").contains(tabla)) throw new IllegalArgumentException("Tabla no permitida");
-        List<Long> ids = jdbc.query("SELECT id FROM " + tabla + " WHERE familia_id = ? AND id_publico = ?",
+        String activo = tabla.equals("perfiles") ? " AND activo" : "";
+        List<Long> ids = jdbc.query("SELECT id FROM " + tabla + " WHERE familia_id = ? AND id_publico = ?" + activo,
                 (rs, fila) -> rs.getLong(1), familiaId, idPublico);
         if (ids.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, mensaje);
         return ids.getFirst();

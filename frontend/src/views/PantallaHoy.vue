@@ -3,16 +3,20 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
 import {
   cerrarSesion as eliminarSesion,
+  actuarAgenda,
+  actualizarPerfil,
   cambiarEstadoOcurrencia,
   cerrarElementoRevision,
   cerrarTratamiento,
   completarTarea,
   consultarAuditoria,
+  consultarConfiguracionFamilia,
   consultarCatalogo,
   consultarHoy,
   consultarOcurrencias,
   consultarSugerencias,
   crearEvento,
+  crearPerfil,
   crearMedicamento,
   crearTarea,
   crearTratamiento,
@@ -24,6 +28,7 @@ import {
   type RespuestaAuditoria,
   type RespuestaCatalogo,
   type RespuestaHoy,
+  type RespuestaFamilia,
   type RespuestaOcurrencias,
   type SugerenciaFamiliar,
   type TareaResumen
@@ -40,13 +45,16 @@ const datos = ref<RespuestaHoy | null>(null)
 const catalogo = ref<RespuestaCatalogo | null>(null)
 const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
 const auditoria = ref<RespuestaAuditoria | null>(null)
+const familia = ref<RespuestaFamilia | null>(null)
 const sugerenciasTitulo = ref<SugerenciaFamiliar[]>([])
 const filtroPerfil = ref('TODOS')
-const formulario = ref<'tarea' | 'evento' | 'medicamento' | 'tratamiento' | null>(null)
-const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '' })
-const nuevoEvento = reactive({ perfilId: '', titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '' })
+const formulario = ref<'tarea' | 'evento' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
+const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
+const nuevoEvento = reactive({ perfilId: '', titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
 const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+const perfilEditadoId = ref<string | null>(null)
+const nuevoPerfil = reactive({ nombre: '', tipo: 'DEPENDIENTE' as 'ADULTO' | 'DEPENDIENTE', color: '#315b4c', relacion: '', usuarioId: '', permiso: 'ADULTO' as 'ADMINISTRADOR_FAMILIAR' | 'ADULTO', activo: true })
 
 const fechaActual = new Intl.DateTimeFormat('es-PE', {
   weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima'
@@ -56,7 +64,9 @@ const coincideFiltro = (perfilId?: string) => filtroPerfil.value === 'TODOS' || 
 const pendientes = computed(() => datos.value?.tareas.filter(tarea => tarea.estado === 'PENDIENTE' && coincideFiltro(tarea.perfilId)) ?? [])
 const atrasadas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) < new Date()))
 const proximas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) >= new Date()))
-const eventosFiltrados = computed(() => catalogo.value?.eventos.filter(evento => coincideFiltro(evento.perfilId)) ?? [])
+const eventosFiltrados = computed(() => catalogo.value?.eventos.filter(evento => evento.estado === 'PROGRAMADO' && new Date(evento.inicioEn) >= new Date() && coincideFiltro(evento.perfilId)) ?? [])
+const eventosAtrasados = computed(() => catalogo.value?.eventos.filter(evento => evento.estado === 'PROGRAMADO' && new Date(evento.inicioEn) < new Date() && coincideFiltro(evento.perfilId)) ?? [])
+const cantidadRevision = computed(() => elementosRevision.value.length + atrasadas.value.length + eventosAtrasados.value.length)
 const tratamientosFiltrados = computed(() => catalogo.value?.tratamientos.filter(tratamiento => coincideFiltro(tratamiento.perfilId)) ?? [])
 const ocurrenciasPendientes = computed(() => agendaTratamientos.value?.ocurrencias.filter(
   ocurrencia => ocurrencia.estado === 'PENDIENTE' && coincideFiltro(ocurrencia.perfilId)
@@ -77,7 +87,7 @@ const lugaresSugeridos = computed(() => {
   return catalogo.value?.lugares.filter(lugar => lugar.nombre.toLocaleLowerCase('es-PE').includes(consulta)).slice(0, 5) ?? []
 })
 const tituloFormulario = computed(() => ({
-  tarea: 'Nueva tarea', evento: 'Nuevo evento', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento'
+  tarea: 'Nueva tarea', evento: 'Nuevo evento', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento', perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil'
 })[formulario.value ?? 'tarea'])
 let temporizadorSugerencias: number | undefined
 
@@ -115,13 +125,14 @@ async function entrar() {
 }
 
 async function cargar() {
-  const [hoy, detalle, ocurrencias, historial] = await Promise.all([
-    consultarHoy(), consultarCatalogo(), consultarOcurrencias(), consultarAuditoria()
+  const [hoy, detalle, ocurrencias, historial, configuracion] = await Promise.all([
+    consultarHoy(), consultarCatalogo(), consultarOcurrencias(), consultarAuditoria(), consultarConfiguracionFamilia()
   ])
   datos.value = hoy
   catalogo.value = detalle
   agendaTratamientos.value = ocurrencias
   auditoria.value = historial
+  familia.value = configuracion
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
@@ -145,12 +156,15 @@ async function guardarTarea() {
   error.value = ''
   try {
     await crearTarea({
-      ...nuevaTarea,
-      fechaLimite: new Date(nuevaTarea.fechaLimite).toISOString()
+      titulo: nuevaTarea.titulo, descripcion: nuevaTarea.descripcion, perfilId: nuevaTarea.perfilId,
+      fechaLimite: new Date(nuevaTarea.fechaLimite).toISOString(),
+      recurrencia: nuevaTarea.repetir ? { frecuencia: nuevaTarea.frecuencia as 'DIARIA' | 'SEMANAL' | 'MENSUAL', intervalo: nuevaTarea.intervalo, hasta: new Date(nuevaTarea.hasta).toISOString() } : undefined
     })
     nuevaTarea.titulo = ''
     nuevaTarea.descripcion = ''
     nuevaTarea.fechaLimite = ''
+    nuevaTarea.repetir = false
+    nuevaTarea.hasta = ''
     formulario.value = null
     mensaje.value = 'La tarea fue agregada.'
     await cargar()
@@ -171,9 +185,10 @@ async function guardarEvento() {
       direccion: nuevoEvento.direccion || undefined,
       notas: nuevoEvento.notas || undefined,
       inicioEn: new Date(nuevoEvento.inicioEn).toISOString(),
-      finEn: nuevoEvento.finEn ? new Date(nuevoEvento.finEn).toISOString() : undefined
+      finEn: nuevoEvento.finEn ? new Date(nuevoEvento.finEn).toISOString() : undefined,
+      recurrencia: nuevoEvento.repetir ? { frecuencia: nuevoEvento.frecuencia as 'DIARIA' | 'SEMANAL' | 'MENSUAL', intervalo: nuevoEvento.intervalo, hasta: new Date(nuevoEvento.hasta).toISOString() } : undefined
     })
-    Object.assign(nuevoEvento, { perfilId: nuevoEvento.perfilId, titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '' })
+    Object.assign(nuevoEvento, { perfilId: nuevoEvento.perfilId, titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '', repetir: false, hasta: '' })
   }, 'El evento fue agregado.')
 }
 
@@ -299,6 +314,56 @@ async function resolverDesdeRevision(elemento: ElementoRevision, estado?: Exclud
   }
 }
 
+async function resolverAgenda(entidad: 'tareas' | 'eventos', elemento: { id: string; titulo: string }, accion: 'OMITIR' | 'REPROGRAMAR') {
+  let fechaNueva: string | undefined
+  if (accion === 'REPROGRAMAR') {
+    const valor = window.prompt('Nueva fecha y hora (AAAA-MM-DD HH:mm)')
+    if (!valor) return
+    const fecha = new Date(valor.replace(' ', 'T'))
+    if (Number.isNaN(fecha.getTime()) || fecha <= new Date()) {
+      error.value = 'La nueva fecha y hora debe ser válida y futura.'
+      return
+    }
+    fechaNueva = fecha.toISOString()
+  }
+  cargando.value = true
+  error.value = ''
+  try {
+    await actuarAgenda(entidad, elemento.id, accion, fechaNueva)
+    mensaje.value = `${elemento.titulo} quedó ${accion === 'OMITIR' ? 'omitido' : 'reprogramado'} sin borrar su historial.`
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo actualizar la agenda'
+  } finally {
+    cargando.value = false
+  }
+}
+
+function abrirPerfil(perfil?: RespuestaFamilia['perfiles'][number]) {
+  perfilEditadoId.value = perfil?.id ?? null
+  Object.assign(nuevoPerfil, {
+    nombre: perfil?.nombre ?? '', tipo: perfil?.tipo ?? 'DEPENDIENTE', color: perfil?.color ?? '#315b4c',
+    relacion: perfil?.relacion ?? '', usuarioId: perfil?.usuarioId ?? '', permiso: perfil?.permiso ?? 'ADULTO',
+    activo: perfil?.activo ?? true
+  })
+  formulario.value = 'perfil'
+}
+
+async function guardarPerfil() {
+  await ejecutarGuardado(async () => {
+    const datosPerfil = {
+      nombre: nuevoPerfil.nombre, tipo: nuevoPerfil.tipo, color: nuevoPerfil.color || undefined,
+      relacion: nuevoPerfil.relacion || undefined,
+      usuarioId: nuevoPerfil.tipo === 'ADULTO' && nuevoPerfil.usuarioId ? nuevoPerfil.usuarioId : undefined,
+      permiso: nuevoPerfil.tipo === 'ADULTO' && nuevoPerfil.usuarioId ? nuevoPerfil.permiso : undefined,
+      activo: nuevoPerfil.activo
+    }
+    if (perfilEditadoId.value) await actualizarPerfil(perfilEditadoId.value, datosPerfil)
+    else await crearPerfil(datosPerfil)
+    perfilEditadoId.value = null
+  }, 'La configuración familiar fue actualizada.')
+}
+
 async function ejecutarGuardado(accion: () => Promise<void>, confirmacion: string) {
   cargando.value = true
   error.value = ''
@@ -322,6 +387,7 @@ async function salir() {
     catalogo.value = null
     agendaTratamientos.value = null
     auditoria.value = null
+    familia.value = null
     sesionActiva.value = false
     mensaje.value = ''
   } catch (causa) {
@@ -377,7 +443,7 @@ async function salir() {
       <section class="resumen" aria-label="Resumen del día">
         <div><strong>{{ pendientes.length }}</strong><span>pendientes</span></div>
         <div><strong>{{ ocurrenciasPendientes.length }}</strong><span>tomas pendientes</span></div>
-        <div><strong>{{ elementosRevision.length }}</strong><span>por revisar</span></div>
+        <div><strong>{{ cantidadRevision }}</strong><span>por revisar</span></div>
       </section>
 
       <p v-if="mensaje" class="confirmacion" role="status">{{ mensaje }}</p>
@@ -390,7 +456,8 @@ async function salir() {
         <TarjetaPendiente
           v-for="tarea in atrasadas" :key="tarea.id" :hora="hora(tarea)" :titulo="tarea.titulo"
           :detalle="`${tarea.responsable} · ${tarea.descripcion ?? 'Sin detalles'}`" tono="atrasado"
-          @completar="marcarHecho(tarea)"
+          :recurrente="tarea.recurrente" @completar="marcarHecho(tarea)"
+          @omitir="resolverAgenda('tareas', tarea, 'OMITIR')" @reprogramar="resolverAgenda('tareas', tarea, 'REPROGRAMAR')"
         />
       </section>
 
@@ -401,7 +468,8 @@ async function salir() {
         <TarjetaPendiente
           v-for="tarea in proximas" :key="tarea.id" :hora="hora(tarea)" :titulo="tarea.titulo"
           :detalle="`${tarea.responsable} · ${tarea.descripcion ?? 'Sin detalles'}`" tono="proximo"
-          @completar="marcarHecho(tarea)"
+          :recurrente="tarea.recurrente" @completar="marcarHecho(tarea)"
+          @omitir="resolverAgenda('tareas', tarea, 'OMITIR')" @reprogramar="resolverAgenda('tareas', tarea, 'REPROGRAMAR')"
         />
         <p v-if="!proximas.length" class="estado-vacio">No hay pendientes para los próximos días.</p>
       </section>
@@ -432,6 +500,15 @@ async function salir() {
 
       <section id="revisar" class="seccion seccion--alerta">
         <div class="titulo-seccion"><div><span class="etiqueta">Necesita atención</span><h2>Revisar</h2></div></div>
+        <TarjetaPendiente v-for="tarea in atrasadas" :key="`revisar-${tarea.id}`" :hora="hora(tarea)"
+          :titulo="tarea.titulo" :detalle="`${tarea.responsable} · Tarea vencida`" tono="atrasado"
+          :recurrente="tarea.recurrente" @completar="marcarHecho(tarea)"
+          @omitir="resolverAgenda('tareas', tarea, 'OMITIR')" @reprogramar="resolverAgenda('tareas', tarea, 'REPROGRAMAR')" />
+        <article v-for="evento in eventosAtrasados" :key="`revisar-${evento.id}`" class="tarjeta tarjeta--atrasado">
+          <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
+          <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>Evento pendiente de revisión</p><small v-if="evento.recurrente">Recurrente</small></div>
+          <div class="acciones-ocurrencia"><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'OMITIR')">Omitir</button><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'REPROGRAMAR')">Reprogramar</button></div>
+        </article>
         <article v-for="elemento in elementosRevision" :key="elemento.id" class="tarjeta tarjeta--atrasado">
           <time v-if="elemento.fecha">{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(elemento.fecha)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ elemento.titulo }}</h3><p>{{ elemento.motivo.replaceAll('_', ' ').toLowerCase() }}</p></div>
@@ -444,15 +521,15 @@ async function salir() {
           </div>
           <button v-else type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento)">Cerrar</button>
         </article>
-        <p v-if="!elementosRevision.length" class="estado-vacio">No hay elementos por revisar.</p>
+        <p v-if="!elementosRevision.length && !atrasadas.length && !eventosAtrasados.length" class="estado-vacio">No hay elementos por revisar.</p>
       </section>
 
       <section id="calendario" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div><button type="button" class="boton-secundario" @click="formulario = 'evento'">Agregar</button></div>
         <article v-for="evento in eventosFiltrados" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
-          <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p></div>
-          <span class="estado">{{ evento.estado }}</span>
+          <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p><small v-if="evento.recurrente">Recurrente</small></div>
+          <div class="acciones-ocurrencia"><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'OMITIR')">Omitir</button><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'REPROGRAMAR')">Reprogramar</button></div>
         </article>
       </section>
 
@@ -491,6 +568,16 @@ async function salir() {
         </article>
         <p v-if="!auditoria?.entradas.length" class="estado-vacio">Todavía no hay cambios registrados.</p>
       </section>
+
+      <section id="familia" class="seccion">
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Familia</span><h2>Perfiles y permisos</h2></div><button v-if="familia?.puedeAdministrar" type="button" class="boton-secundario" @click="abrirPerfil()">Agregar</button></div>
+        <article v-for="perfil in familia?.perfiles" :key="perfil.id" class="tarjeta" :class="{ 'perfil-inactivo': !perfil.activo }">
+          <span class="muestra-color" :style="{ backgroundColor: perfil.color || '#c8d2ce' }" aria-hidden="true"></span>
+          <div class="tarjeta__contenido"><h3>{{ perfil.nombre }}</h3><p>{{ perfil.tipo === 'ADULTO' ? 'Adulto' : 'Dependiente' }} · {{ perfil.relacion || 'Sin relación indicada' }}</p><small>{{ perfil.permiso === 'ADMINISTRADOR_FAMILIAR' ? 'Administrador familiar' : perfil.usuarioId ? 'Adulto con acceso' : 'Sin cuenta vinculada' }}<span v-if="!perfil.activo"> · Inactivo</span></small></div>
+          <button v-if="familia?.puedeAdministrar" type="button" class="boton-secundario" @click="abrirPerfil(perfil)">Editar</button>
+        </article>
+        <p v-if="!familia?.puedeAdministrar" class="estado-vacio">Solo un administrador familiar puede cambiar perfiles y permisos.</p>
+      </section>
     </main>
 
     <dialog :open="formulario !== null" class="dialogo">
@@ -505,6 +592,12 @@ async function salir() {
         </label>
         <label>Fecha y hora<input v-model="nuevaTarea.fechaLimite" type="datetime-local" required /></label>
         <label>Detalle<textarea v-model.trim="nuevaTarea.descripcion" maxlength="1000" rows="3" /></label>
+        <label class="opcion-linea"><input v-model="nuevaTarea.repetir" type="checkbox" /> Repetir tarea</label>
+        <div v-if="nuevaTarea.repetir" class="campos-dobles">
+          <label>Frecuencia<select v-model="nuevaTarea.frecuencia"><option value="DIARIA">Diaria</option><option value="SEMANAL">Semanal</option><option value="MENSUAL">Mensual</option></select></label>
+          <label>Cada<input v-model.number="nuevaTarea.intervalo" type="number" min="1" max="30" required /></label>
+          <label>Hasta<input v-model="nuevaTarea.hasta" type="datetime-local" required /></label>
+        </div>
         <button class="boton-principal" :disabled="cargando">Guardar tarea</button>
       </form>
 
@@ -527,6 +620,12 @@ async function salir() {
         <label>Notas opcionales<textarea v-model.trim="nuevoEvento.notas" maxlength="1000" rows="2" /></label>
         <label>Inicio<input v-model="nuevoEvento.inicioEn" type="datetime-local" required /></label>
         <label>Fin opcional<input v-model="nuevoEvento.finEn" type="datetime-local" /></label>
+        <label class="opcion-linea"><input v-model="nuevoEvento.repetir" type="checkbox" /> Repetir evento</label>
+        <div v-if="nuevoEvento.repetir" class="campos-dobles">
+          <label>Frecuencia<select v-model="nuevoEvento.frecuencia"><option value="DIARIA">Diaria</option><option value="SEMANAL">Semanal</option><option value="MENSUAL">Mensual</option></select></label>
+          <label>Cada<input v-model.number="nuevoEvento.intervalo" type="number" min="1" max="30" required /></label>
+          <label>Hasta<input v-model="nuevoEvento.hasta" type="datetime-local" required /></label>
+        </div>
         <button class="boton-principal" :disabled="cargando">Guardar evento</button>
       </form>
 
@@ -556,12 +655,24 @@ async function salir() {
         </div></details>
         <button class="boton-principal" :disabled="cargando">Guardar tratamiento</button>
       </form>
+
+      <form v-else-if="formulario === 'perfil'" @submit.prevent="guardarPerfil">
+        <label>Nombre visible<input v-model.trim="nuevoPerfil.nombre" maxlength="120" required /></label>
+        <label>Tipo<select v-model="nuevoPerfil.tipo"><option value="ADULTO">Adulto</option><option value="DEPENDIENTE">Dependiente</option></select></label>
+        <div class="campos-dobles"><label>Relación<input v-model.trim="nuevoPerfil.relacion" maxlength="80" placeholder="Mamá, abuelo, hija…" /></label><label>Color<input v-model="nuevoPerfil.color" type="color" /></label></div>
+        <template v-if="nuevoPerfil.tipo === 'ADULTO'">
+          <label>ID de cuenta opcional<input v-model.trim="nuevoPerfil.usuarioId" type="text" placeholder="UUID de una cuenta existente" /></label>
+          <label v-if="nuevoPerfil.usuarioId">Permiso<select v-model="nuevoPerfil.permiso"><option value="ADULTO">Adulto</option><option value="ADMINISTRADOR_FAMILIAR">Administrador familiar</option></select></label>
+        </template>
+        <label class="opcion-linea"><input v-model="nuevoPerfil.activo" type="checkbox" /> Perfil activo</label>
+        <button class="boton-principal" :disabled="cargando">Guardar perfil</button>
+      </form>
     </dialog>
 
     <button type="button" class="agregar" @click="formulario = 'tarea'"><span aria-hidden="true">+</span> Agregar tarea</button>
     <nav class="navegacion" aria-label="Navegación principal">
-      <a class="activo" href="#top">Hoy</a><a href="#revisar">Revisar <span v-if="elementosRevision.length" class="contador">{{ elementosRevision.length }}</span></a><a href="#calendario">Calendario</a><a href="#botiquin">Botiquín</a>
-      <a href="#tratamientos">Tratamientos</a>
+      <a class="activo" href="#top">Hoy</a><a href="#revisar">Revisar <span v-if="cantidadRevision" class="contador">{{ cantidadRevision }}</span></a><a href="#calendario">Calendario</a><a href="#botiquin">Botiquín</a>
+      <a href="#tratamientos">Tratamientos</a><a href="#familia">Familia</a>
     </nav>
   </div>
 </template>

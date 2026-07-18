@@ -36,18 +36,31 @@ public class Tarea {
     private Instant creadoEn;
     @Column(name = "actualizado_en", nullable = false)
     private Instant actualizadoEn;
+    @Column(name = "recurrencia_id")
+    private Long recurrenciaId;
+    @Column(name = "numero_ocurrencia")
+    private Integer numeroOcurrencia;
+    @Column(name = "tarea_origen_id")
+    private Long tareaOrigenId;
     @Version
     private long version;
 
     protected Tarea() { }
 
     public Tarea(UUID idPublico, Long familiaId, Long perfilId, String titulo, String descripcion, Instant fechaLimite) {
+        this(idPublico, familiaId, perfilId, titulo, descripcion, fechaLimite, null, null);
+    }
+
+    public Tarea(UUID idPublico, Long familiaId, Long perfilId, String titulo, String descripcion, Instant fechaLimite,
+            Long recurrenciaId, Integer numeroOcurrencia) {
         this.idPublico = idPublico;
         this.familiaId = familiaId;
         this.perfilId = perfilId;
         this.titulo = titulo;
         this.descripcion = descripcion;
         this.fechaLimite = fechaLimite;
+        this.recurrenciaId = recurrenciaId;
+        this.numeroOcurrencia = numeroOcurrencia;
         this.estado = EstadoTarea.PENDIENTE;
         this.creadoEn = Instant.now();
         this.actualizadoEn = this.creadoEn;
@@ -64,4 +77,6 @@ public class Tarea {
     public String getDescripcion() { return descripcion; }
     public Instant getFechaLimite() { return fechaLimite; }
     public EstadoTarea getEstado() { return estado; }
+    public Long getRecurrenciaId() { return recurrenciaId; }
+    public Long getTareaOrigenId() { return tareaOrigenId; }
 }
