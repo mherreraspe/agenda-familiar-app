@@ -41,7 +41,8 @@ Rama local `feat/auditoria-lugares-palabras`, aún no desplegada:
 - [x] Historial de auditoría preparado para adultos autorizados con actor Papá/Mamá, operación, entidad y fecha/hora; altas y cambios de tareas también se auditan.
 - [x] Tratamientos muestran por separado persona y responsable; el responsable alternativo puede elegirse en detalles progresivos.
 - [x] Validación local: Vitest, `vue-tsc`, build Vite y compilación/pruebas unitarias Java 21 aprobadas.
-- [ ] Testcontainers PostgreSQL 18, CI, PR, despliegue y E2E móvil de este bloque aprobados.
+- [x] Testcontainers PostgreSQL 18 y CI con Java 25 aprobados: ejecución `29650965749` (frontend 19 s, backend 56 s).
+- [ ] PR integrado, despliegue y E2E móvil de este bloque aprobados.
 
 No marcar los requisitos equivalentes de la lista general como terminados hasta completar CI, despliegue y E2E.
 
