@@ -55,7 +55,8 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .avatar { flex-basis: auto; width: auto; padding: 0 15px; border-radius: 999px; }
 
 .miembros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.miembros span { padding: 7px 11px; border: 2px solid; border-radius: 999px; background: white; font-size: .8rem; font-weight: 800; }
+.miembros button { padding: 7px 11px; border: 2px solid #c8d2ce; border-radius: 999px; color: #315b4c; background: white; font-size: .8rem; font-weight: 800; }
+.miembros button.activo { color: white; background: #315b4c; box-shadow: 0 0 0 2px white, 0 0 0 4px #315b4c; }
 
 .resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
 
@@ -90,6 +91,8 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .tarjeta p { margin-top: 4px; color: #6e7773; font-size: .84rem; }
 .tarjeta small { display: block; margin-top: 7px; color: #6e7773; line-height: 1.4; }
 .boton-secundario { padding: 9px 13px; }
+.acciones-ocurrencia { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.acciones-ocurrencia .boton-secundario { padding: 7px 10px; font-size: .75rem; }
 .estado { padding: 6px 9px; border-radius: 999px; color: #315b4c; background: #e5ece8; font-size: .68rem; font-weight: 900; }
 .aviso-medico { padding: 12px 15px; border-radius: 12px; color: #76562f; background: #f3ead9; font-size: .8rem; }
 
@@ -99,6 +102,9 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .dialogo { position: fixed; inset: 50% auto auto 50%; z-index: 5; width: min(calc(100% - 32px), 460px); margin: 0; padding: 24px; transform: translate(-50%, -50%); border: 0; border-radius: 22px; background: #f9f7f1; box-shadow: 0 22px 80px rgb(0 0 0 / 32%); }
 .dialogo::backdrop { background: rgb(24 36 31 / 55%); }
 .dialogo form { display: grid; gap: 15px; }
+.dialogo details { padding: 12px; border: 1px solid #ded9ce; border-radius: 12px; }
+.dialogo summary { cursor: pointer; color: #315b4c; font-weight: 800; }
+.detalles-progresivos { display: grid; gap: 15px; margin-top: 15px; }
 .campos-dobles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dialogo h2 { margin: 0; font-family: Georgia, serif; }
 .cerrar { width: 36px; height: 36px; border: 0; border-radius: 50%; color: #315b4c; background: #e5ece8; font-size: 1.4rem; }
@@ -116,6 +122,8 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
   .tarjeta { align-items: flex-start; flex-wrap: wrap; }
   .tarjeta__contenido { min-width: calc(100% - 78px); }
   .boton-secundario { margin-left: 73px; }
+  .acciones-ocurrencia { width: 100%; justify-content: flex-start; margin-left: 73px; }
+  .acciones-ocurrencia .boton-secundario { margin-left: 0; }
   .agregar { right: 16px; }
   .campos-dobles { grid-template-columns: 1fr; }
 }

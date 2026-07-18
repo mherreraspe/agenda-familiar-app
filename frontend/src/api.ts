@@ -31,8 +31,38 @@ export interface RespuestaHoy {
 
 export interface RespuestaCatalogo {
   medicamentos: Array<{ id: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: string }>
-  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId: string; medicamento: string; indicacion: string; dosisIndicada: string; frecuencia: string; fechaInicio: string; fechaFin?: string; estado: string }>
-  eventos: Array<{ id: string; perfilId: string; persona: string; titulo: string; tipo: string; lugar?: string; inicioEn: string; finEn?: string; estado: string }>
+  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; fechaInicio: string; fechaFin?: string; estado: string }>
+  eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; inicioEn: string; finEn?: string; estado: string }>
+}
+
+export type EstadoOcurrencia = 'PENDIENTE' | 'TOMADA' | 'OMITIDA' | 'POSPUESTA' | 'CANCELADA'
+
+export interface OcurrenciaResumen {
+  id: string
+  tratamientoId: string
+  perfilId: string
+  persona: string
+  tratamiento: string
+  programadaEn: string
+  estado: EstadoOcurrencia
+  pospuestaA?: string
+  resueltaPor?: string
+  resueltaEn?: string
+}
+
+export interface ElementoRevision {
+  id: string
+  origen: 'OCURRENCIA' | 'TRATAMIENTO' | 'LOTE_MEDICAMENTO'
+  entidadId: string
+  motivo: string
+  titulo: string
+  fecha?: string
+  estado: 'PENDIENTE' | 'RESUELTO'
+}
+
+export interface RespuestaOcurrencias {
+  ocurrencias: OcurrenciaResumen[]
+  revisar: ElementoRevision[]
 }
 
 interface RespuestaSesion {
@@ -112,6 +142,25 @@ export function consultarCatalogo() {
   return solicitud<RespuestaCatalogo>(`/api/v1/familias/${FAMILIA_TEST_ID}/catalogo`)
 }
 
+export function consultarOcurrencias() {
+  return solicitud<RespuestaOcurrencias>(`/api/v1/familias/${FAMILIA_TEST_ID}/ocurrencias`)
+}
+
+export function cambiarEstadoOcurrencia(ocurrenciaId: string, estado: Exclude<EstadoOcurrencia, 'PENDIENTE'>, pospuestaA?: string) {
+  return solicitud<OcurrenciaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/ocurrencias/${ocurrenciaId}/estado/${estado}`, {
+    method: 'PATCH',
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    body: pospuestaA ? JSON.stringify({ pospuestaA }) : undefined
+  })
+}
+
+export function cerrarElementoRevision(elementoId: string) {
+  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/revisar/${elementoId}/cerrar`, {
+    method: 'PATCH',
+    headers: { 'Idempotency-Key': crypto.randomUUID() }
+  })
+}
+
 export function completarTarea(tareaId: string) {
   return solicitud<TareaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/tareas/${tareaId}/estado/COMPLETADA`, { method: 'PATCH' })
 }
@@ -120,7 +169,7 @@ export function crearTarea(datos: { titulo: string; descripcion: string; perfilI
   return solicitud<TareaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/tareas`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
-export function crearEvento(datos: { perfilId: string; titulo: string; tipo: string; lugar: string; inicioEn: string; finEn?: string }) {
+export function crearEvento(datos: { perfilId?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string }) {
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/eventos`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
@@ -128,6 +177,6 @@ export function crearMedicamento(datos: { nombre: string; presentacion: string; 
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/medicamentos`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
-export function crearTratamiento(datos: { perfilId: string; medicamentoId: string; indicacion: string; dosisIndicada: string; frecuencia: string; fechaInicio: string; fechaFin?: string }) {
+export function crearTratamiento(datos: { perfilId: string; medicamentoId?: string; nombre: string; indicacion?: string; cantidadReceta?: string; frecuencia?: string; horario: string; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string }) {
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos`, { method: 'POST', body: JSON.stringify(datos) })
 }

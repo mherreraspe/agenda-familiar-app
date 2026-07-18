@@ -33,10 +33,29 @@ class MigracionesAgendaIT {
         Integer medicamentos = jdbc.queryForObject("SELECT COUNT(*) FROM medicamentos WHERE familia_id = ?", Integer.class, familiaId);
         Integer tratamientos = jdbc.queryForObject("SELECT COUNT(*) FROM tratamientos WHERE familia_id = ?", Integer.class, familiaId);
         Integer eventos = jdbc.queryForObject("SELECT COUNT(*) FROM eventos WHERE familia_id = ?", Integer.class, familiaId);
+        Integer horarios = jdbc.queryForObject("SELECT COUNT(*) FROM horarios_tratamiento WHERE familia_id = ?", Integer.class, familiaId);
         assertThat(perfiles).isEqualTo(3);
         assertThat(tareas).isEqualTo(1);
         assertThat(medicamentos).isEqualTo(1);
         assertThat(tratamientos).isEqualTo(1);
         assertThat(eventos).isEqualTo(1);
+        assertThat(horarios).isEqualTo(1);
+    }
+
+    @Test
+    @Transactional
+    void rlsOcultaOcurrenciasYRevisionDeOtraFamilia() {
+        Long familiaId = jdbc.queryForObject(
+                "SELECT id FROM familias WHERE id_publico = '0197f100-0000-7000-8000-000000000001'", Long.class);
+        jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, familiaId.toString());
+        Long tratamientoId = jdbc.queryForObject("SELECT id FROM tratamientos WHERE familia_id=? LIMIT 1", Long.class, familiaId);
+        jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, programada_en) VALUES (gen_random_uuid(), ?, ?, NOW())",
+                familiaId, tratamientoId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isEqualTo(1);
+
+        Long otraFamilia = jdbc.queryForObject("INSERT INTO familias (id_publico, nombre) VALUES (gen_random_uuid(), 'otra') RETURNING id", Long.class);
+        jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, otraFamilia.toString());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM elementos_revision", Integer.class)).isZero();
     }
 }

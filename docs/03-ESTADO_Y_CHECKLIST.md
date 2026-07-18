@@ -8,6 +8,24 @@
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
 
+## Trabajo en curso — ocurrencias y bandeja Revisar
+
+Rama local `feat/ocurrencias-y-revisar`, aún no desplegada:
+
+- [x] Migración `V4` preparada con horarios, ocurrencias, acciones idempotentes y elementos de revisión, todos con RLS forzado.
+- [x] Estados de ocurrencia implementados: pendiente, tomada, omitida, pospuesta y cancelada.
+- [x] Materialización móvil de 30 días anteriores y 7 posteriores con restricción única para evitar duplicados.
+- [x] Bandeja `Revisar` preparada para tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
+- [x] Alta rápida de tratamiento preparada con persona, nombre libre y horario; botiquín, cantidad de receta, indicación, frecuencia y fechas opcionales.
+- [x] Citas flexibilizadas para exigir únicamente título e inicio; persona, tipo, lugar, dirección, notas y fin son opcionales.
+- [x] Perfiles convertidos en filtros con opción `Todos` en la interfaz.
+- [x] Pruebas añadidas para RLS, materialización idempotente, transiciones, posposición y cierre desde `Revisar`.
+- [x] Validación local: Vitest, `vue-tsc`, build Vite y compilación de código/pruebas Java 21 aprobadas.
+- [ ] CI con Java 25 y Testcontainers PostgreSQL 18 aprobado.
+- [ ] PR integrado, despliegue y E2E móvil de este bloque aprobados.
+
+No marcar los requisitos equivalentes de la lista general como terminados hasta completar CI, despliegue y E2E.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.

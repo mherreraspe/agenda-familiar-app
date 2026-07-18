@@ -3,17 +3,24 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
 import {
   cerrarSesion as eliminarSesion,
+  cambiarEstadoOcurrencia,
+  cerrarElementoRevision,
   completarTarea,
   consultarCatalogo,
   consultarHoy,
+  consultarOcurrencias,
   crearEvento,
   crearMedicamento,
   crearTarea,
   crearTratamiento,
   iniciarSesion,
   renovarSesion,
+  type EstadoOcurrencia,
+  type ElementoRevision,
+  type OcurrenciaResumen,
   type RespuestaCatalogo,
   type RespuestaHoy,
+  type RespuestaOcurrencias,
   type TareaResumen
 } from '../api'
 
@@ -26,19 +33,31 @@ const sesionActiva = ref(false)
 const restaurando = ref(true)
 const datos = ref<RespuestaHoy | null>(null)
 const catalogo = ref<RespuestaCatalogo | null>(null)
+const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
+const filtroPerfil = ref('TODOS')
 const formulario = ref<'tarea' | 'evento' | 'medicamento' | 'tratamiento' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '' })
-const nuevoEvento = reactive({ perfilId: '', titulo: '', tipo: 'CONSULTA', lugar: '', inicioEn: '', finEn: '' })
+const nuevoEvento = reactive({ perfilId: '', titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
-const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', indicacion: '', dosisIndicada: '', frecuencia: '', fechaInicio: '', fechaFin: '' })
+const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '' })
 
 const fechaActual = new Intl.DateTimeFormat('es-PE', {
   weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima'
 }).format(new Date())
 
-const pendientes = computed(() => datos.value?.tareas.filter(tarea => tarea.estado === 'PENDIENTE') ?? [])
+const coincideFiltro = (perfilId?: string) => filtroPerfil.value === 'TODOS' || perfilId === filtroPerfil.value
+const pendientes = computed(() => datos.value?.tareas.filter(tarea => tarea.estado === 'PENDIENTE' && coincideFiltro(tarea.perfilId)) ?? [])
 const atrasadas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) < new Date()))
 const proximas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) >= new Date()))
+const eventosFiltrados = computed(() => catalogo.value?.eventos.filter(evento => coincideFiltro(evento.perfilId)) ?? [])
+const tratamientosFiltrados = computed(() => catalogo.value?.tratamientos.filter(tratamiento => coincideFiltro(tratamiento.perfilId)) ?? [])
+const ocurrenciasPendientes = computed(() => agendaTratamientos.value?.ocurrencias.filter(
+  ocurrencia => ocurrencia.estado === 'PENDIENTE' && coincideFiltro(ocurrencia.perfilId)
+) ?? [])
+const elementosRevision = computed(() => agendaTratamientos.value?.revisar.filter(elemento => {
+  if (filtroPerfil.value === 'TODOS' || elemento.origen !== 'OCURRENCIA') return true
+  return agendaTratamientos.value?.ocurrencias.some(ocurrencia => ocurrencia.id === elemento.entidadId && coincideFiltro(ocurrencia.perfilId))
+}) ?? [])
 const tituloFormulario = computed(() => ({
   tarea: 'Nueva tarea', evento: 'Nuevo evento', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento'
 })[formulario.value ?? 'tarea'])
@@ -77,17 +96,15 @@ async function entrar() {
 }
 
 async function cargar() {
-  const [hoy, detalle] = await Promise.all([consultarHoy(), consultarCatalogo()])
+  const [hoy, detalle, ocurrencias] = await Promise.all([consultarHoy(), consultarCatalogo(), consultarOcurrencias()])
   datos.value = hoy
   catalogo.value = detalle
+  agendaTratamientos.value = ocurrencias
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
   if (!nuevoEvento.perfilId && datos.value.perfiles.length) nuevoEvento.perfilId = datos.value.perfiles[0].id
   if (!nuevoTratamiento.perfilId && datos.value.perfiles.length) nuevoTratamiento.perfilId = datos.value.perfiles[0].id
-  if (!nuevoTratamiento.medicamentoId && catalogo.value.medicamentos.length) {
-    nuevoTratamiento.medicamentoId = catalogo.value.medicamentos[0].id
-  }
 }
 
 async function marcarHecho(tarea: TareaResumen) {
@@ -126,10 +143,15 @@ async function guardarEvento() {
   await ejecutarGuardado(async () => {
     await crearEvento({
       ...nuevoEvento,
+      perfilId: nuevoEvento.perfilId || undefined,
+      tipo: nuevoEvento.tipo || undefined,
+      lugar: nuevoEvento.lugar || undefined,
+      direccion: nuevoEvento.direccion || undefined,
+      notas: nuevoEvento.notas || undefined,
       inicioEn: new Date(nuevoEvento.inicioEn).toISOString(),
       finEn: nuevoEvento.finEn ? new Date(nuevoEvento.finEn).toISOString() : undefined
     })
-    Object.assign(nuevoEvento, { perfilId: nuevoEvento.perfilId, titulo: '', tipo: 'CONSULTA', lugar: '', inicioEn: '', finEn: '' })
+    Object.assign(nuevoEvento, { perfilId: nuevoEvento.perfilId, titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '' })
   }, 'El evento fue agregado.')
 }
 
@@ -146,11 +168,62 @@ async function guardarMedicamento() {
 async function guardarTratamiento() {
   await ejecutarGuardado(async () => {
     await crearTratamiento({
-      ...nuevoTratamiento,
+      perfilId: nuevoTratamiento.perfilId,
+      medicamentoId: nuevoTratamiento.medicamentoId || undefined,
+      nombre: nuevoTratamiento.nombre,
+      indicacion: nuevoTratamiento.indicacion || undefined,
+      cantidadReceta: nuevoTratamiento.cantidadReceta || undefined,
+      frecuencia: nuevoTratamiento.frecuencia || undefined,
+      horario: nuevoTratamiento.horario,
+      fechaInicio: nuevoTratamiento.fechaInicio || undefined,
       fechaFin: nuevoTratamiento.fechaFin || undefined
     })
-    Object.assign(nuevoTratamiento, { perfilId: nuevoTratamiento.perfilId, medicamentoId: nuevoTratamiento.medicamentoId, indicacion: '', dosisIndicada: '', frecuencia: '', fechaInicio: '', fechaFin: '' })
+    Object.assign(nuevoTratamiento, { perfilId: nuevoTratamiento.perfilId, medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '' })
   }, 'El tratamiento fue agregado.')
+}
+
+async function resolverOcurrencia(ocurrencia: OcurrenciaResumen, estado: Exclude<EstadoOcurrencia, 'PENDIENTE'>) {
+  let pospuestaA: string | undefined
+  if (estado === 'POSPUESTA') {
+    const valor = window.prompt('Nueva fecha y hora (AAAA-MM-DD HH:mm)')
+    if (!valor) return
+    const fecha = new Date(valor.replace(' ', 'T'))
+    if (Number.isNaN(fecha.getTime())) {
+      error.value = 'La nueva fecha y hora no es válida.'
+      return
+    }
+    pospuestaA = fecha.toISOString()
+  }
+  cargando.value = true
+  error.value = ''
+  try {
+    await cambiarEstadoOcurrencia(ocurrencia.id, estado, pospuestaA)
+    mensaje.value = `${ocurrencia.tratamiento} quedó ${estado.toLowerCase()}.`
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo resolver la ocurrencia'
+  } finally {
+    cargando.value = false
+  }
+}
+
+async function resolverDesdeRevision(elemento: ElementoRevision, estado?: Exclude<EstadoOcurrencia, 'PENDIENTE'>) {
+  if (elemento.origen === 'OCURRENCIA' && estado) {
+    const ocurrencia = agendaTratamientos.value?.ocurrencias.find(item => item.id === elemento.entidadId)
+    if (ocurrencia) await resolverOcurrencia(ocurrencia, estado)
+    return
+  }
+  cargando.value = true
+  error.value = ''
+  try {
+    await cerrarElementoRevision(elemento.id)
+    mensaje.value = `${elemento.titulo} quedó cerrado.`
+    await cargar()
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo cerrar el elemento'
+  } finally {
+    cargando.value = false
+  }
 }
 
 async function ejecutarGuardado(accion: () => Promise<void>, confirmacion: string) {
@@ -174,6 +247,7 @@ async function salir() {
     await eliminarSesion()
     datos.value = null
     catalogo.value = null
+    agendaTratamientos.value = null
     sesionActiva.value = false
     mensaje.value = ''
   } catch (causa) {
@@ -217,16 +291,19 @@ async function salir() {
     </header>
 
     <main>
-      <section class="miembros" aria-label="Miembros de la familia">
-        <span v-for="perfil in datos?.perfiles" :key="perfil.id" :style="{ borderColor: perfil.color }">
+      <section class="miembros" aria-label="Filtrar agenda por persona">
+        <button type="button" :class="{ activo: filtroPerfil === 'TODOS' }" :aria-pressed="filtroPerfil === 'TODOS'" @click="filtroPerfil = 'TODOS'">Todos</button>
+        <button v-for="perfil in datos?.perfiles" :key="perfil.id" type="button"
+          :class="{ activo: filtroPerfil === perfil.id }" :aria-pressed="filtroPerfil === perfil.id"
+          :style="{ borderColor: perfil.color }" @click="filtroPerfil = perfil.id">
           {{ perfil.nombre }}
-        </span>
+        </button>
       </section>
 
       <section class="resumen" aria-label="Resumen del día">
         <div><strong>{{ pendientes.length }}</strong><span>pendientes</span></div>
-        <div><strong>{{ catalogo?.tratamientos.length ?? 0 }}</strong><span>tratamientos</span></div>
-        <div><strong>{{ datos?.perfiles.length ?? 0 }}</strong><span>familiares</span></div>
+        <div><strong>{{ ocurrenciasPendientes.length }}</strong><span>tomas pendientes</span></div>
+        <div><strong>{{ elementosRevision.length }}</strong><span>por revisar</span></div>
       </section>
 
       <p v-if="mensaje" class="confirmacion" role="status">{{ mensaje }}</p>
@@ -255,19 +332,50 @@ async function salir() {
         <p v-if="!proximas.length" class="estado-vacio">No hay pendientes para los próximos días.</p>
       </section>
 
+      <section id="ocurrencias" class="seccion">
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Tratamientos</span><h2>Ocurrencias</h2></div></div>
+        <article v-for="ocurrencia in ocurrenciasPendientes" :key="ocurrencia.id" class="tarjeta tarjeta--proximo">
+          <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.programadaEn)) }}</time>
+          <div class="tarjeta__contenido"><h3>{{ ocurrencia.tratamiento }}</h3><p>Para {{ ocurrencia.persona }}</p></div>
+          <div class="acciones-ocurrencia">
+            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'TOMADA')">Tomada</button>
+            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'OMITIDA')">Omitir</button>
+            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'POSPUESTA')">Posponer</button>
+            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'CANCELADA')">Cancelar</button>
+          </div>
+        </article>
+        <p v-if="!ocurrenciasPendientes.length" class="estado-vacio">No hay ocurrencias pendientes para este filtro.</p>
+      </section>
+
+      <section id="revisar" class="seccion seccion--alerta">
+        <div class="titulo-seccion"><div><span class="etiqueta">Necesita atención</span><h2>Revisar</h2></div></div>
+        <article v-for="elemento in elementosRevision" :key="elemento.id" class="tarjeta tarjeta--atrasado">
+          <time v-if="elemento.fecha">{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(elemento.fecha)) }}</time>
+          <div class="tarjeta__contenido"><h3>{{ elemento.titulo }}</h3><p>{{ elemento.motivo.replaceAll('_', ' ').toLowerCase() }}</p></div>
+          <div v-if="elemento.origen === 'OCURRENCIA'" class="acciones-ocurrencia">
+            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'TOMADA')">Tomada</button>
+            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'OMITIDA')">Omitir</button>
+            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'POSPUESTA')">Posponer</button>
+            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'CANCELADA')">Cancelar</button>
+          </div>
+          <button v-else type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento)">Cerrar</button>
+        </article>
+        <p v-if="!elementosRevision.length" class="estado-vacio">No hay elementos por revisar.</p>
+      </section>
+
       <section id="calendario" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div><button type="button" class="boton-secundario" @click="formulario = 'evento'">Agregar</button></div>
-        <article v-for="evento in catalogo?.eventos" :key="evento.id" class="tarjeta tarjeta--proximo">
+        <article v-for="evento in eventosFiltrados" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
-          <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ evento.persona }} · {{ evento.lugar || 'Lugar por confirmar' }}</p></div>
+          <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p></div>
           <span class="estado">{{ evento.estado }}</span>
         </article>
       </section>
 
       <section id="tratamientos" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" :disabled="!catalogo?.medicamentos.length" @click="formulario = 'tratamiento'">Agregar</button></div>
-        <article v-for="tratamiento in catalogo?.tratamientos" :key="tratamiento.id" class="tarjeta">
-          <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>{{ tratamiento.dosisIndicada }} · {{ tratamiento.frecuencia }}</p><small>{{ tratamiento.indicacion }}</small></div>
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'tratamiento'">Agregar</button></div>
+        <article v-for="tratamiento in tratamientosFiltrados" :key="tratamiento.id" class="tarjeta">
+          <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') || 'Horario definido por la familia' }}</p><small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small></div>
           <span class="estado">{{ tratamiento.estado }}</span>
         </article>
         <p class="aviso-medico">La aplicación conserva el texto ingresado por la familia; no calcula ni recomienda dosis.</p>
@@ -298,10 +406,12 @@ async function salir() {
       </form>
 
       <form v-else-if="formulario === 'evento'" @submit.prevent="guardarEvento">
-        <label>Persona<select v-model="nuevoEvento.perfilId" required><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
+        <label>Persona opcional<select v-model="nuevoEvento.perfilId"><option value="">Toda la familia / sin asignar</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
         <label>Título<input v-model.trim="nuevoEvento.titulo" maxlength="180" required /></label>
-        <label>Tipo<select v-model="nuevoEvento.tipo"><option value="CONSULTA">Consulta</option><option value="VACUNA">Vacuna</option><option value="CONTROL">Control</option><option value="OTRO">Otro</option></select></label>
+        <label>Tipo opcional<select v-model="nuevoEvento.tipo"><option value="">Sin tipo</option><option value="CONSULTA">Consulta</option><option value="VACUNA">Vacuna</option><option value="CONTROL">Control</option><option value="OTRO">Otro</option></select></label>
         <label>Lugar<input v-model.trim="nuevoEvento.lugar" maxlength="300" /></label>
+        <label>Dirección opcional<input v-model.trim="nuevoEvento.direccion" maxlength="500" /></label>
+        <label>Notas opcionales<textarea v-model.trim="nuevoEvento.notas" maxlength="1000" rows="2" /></label>
         <label>Inicio<input v-model="nuevoEvento.inicioEn" type="datetime-local" required /></label>
         <label>Fin opcional<input v-model="nuevoEvento.finEn" type="datetime-local" /></label>
         <button class="boton-principal" :disabled="cargando">Guardar evento</button>
@@ -318,19 +428,23 @@ async function salir() {
 
       <form v-else-if="formulario === 'tratamiento'" @submit.prevent="guardarTratamiento">
         <label>Persona<select v-model="nuevoTratamiento.perfilId" required><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
-        <label>Medicamento<select v-model="nuevoTratamiento.medicamentoId" required><option v-for="medicamento in catalogo?.medicamentos" :key="medicamento.id" :value="medicamento.id">{{ medicamento.nombre }} · {{ medicamento.concentracion }}</option></select></label>
-        <label>Indicación<textarea v-model.trim="nuevoTratamiento.indicacion" maxlength="1000" rows="2" required /></label>
-        <label>Dosis indicada<input v-model.trim="nuevoTratamiento.dosisIndicada" maxlength="300" required /></label>
-        <label>Frecuencia<input v-model.trim="nuevoTratamiento.frecuencia" maxlength="300" placeholder="Texto de la receta" required /></label>
-        <div class="campos-dobles"><label>Inicio<input v-model="nuevoTratamiento.fechaInicio" type="date" required /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
+        <label>Nombre del tratamiento o medicamento<input v-model.trim="nuevoTratamiento.nombre" maxlength="180" required /></label>
+        <label>Horario<input v-model="nuevoTratamiento.horario" type="time" required /></label>
+        <details><summary>Más detalles opcionales</summary><div class="detalles-progresivos">
+          <label>Vincular al botiquín<select v-model="nuevoTratamiento.medicamentoId"><option value="">Sin vincular</option><option v-for="medicamento in catalogo?.medicamentos" :key="medicamento.id" :value="medicamento.id">{{ medicamento.nombre }} · {{ medicamento.concentracion }}</option></select></label>
+          <label>Indicación<textarea v-model.trim="nuevoTratamiento.indicacion" maxlength="1000" rows="2" /></label>
+          <label>Cantidad indicada en la receta<input v-model.trim="nuevoTratamiento.cantidadReceta" maxlength="300" /></label>
+          <label>Frecuencia o notas del horario<input v-model.trim="nuevoTratamiento.frecuencia" maxlength="300" /></label>
+          <div class="campos-dobles"><label>Inicio opcional<input v-model="nuevoTratamiento.fechaInicio" type="date" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
+        </div></details>
         <button class="boton-principal" :disabled="cargando">Guardar tratamiento</button>
       </form>
     </dialog>
 
     <button type="button" class="agregar" @click="formulario = 'tarea'"><span aria-hidden="true">+</span> Agregar tarea</button>
     <nav class="navegacion" aria-label="Navegación principal">
-      <a class="activo" href="#top">Hoy</a><a href="#calendario">Calendario</a><a href="#botiquin">Botiquín</a>
-      <a href="#tratamientos">Tratamientos <span v-if="atrasadas.length" class="contador">{{ atrasadas.length }}</span></a>
+      <a class="activo" href="#top">Hoy</a><a href="#revisar">Revisar <span v-if="elementosRevision.length" class="contador">{{ elementosRevision.length }}</span></a><a href="#calendario">Calendario</a><a href="#botiquin">Botiquín</a>
+      <a href="#tratamientos">Tratamientos</a>
     </nav>
   </div>
 </template>
