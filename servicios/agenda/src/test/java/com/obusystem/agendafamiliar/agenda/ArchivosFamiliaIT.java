@@ -74,7 +74,8 @@ class ArchivosFamiliaIT {
         String ruta = jdbc.queryForObject("SELECT ruta_original FROM archivos_familia WHERE id_publico=?", String.class, respuesta.id());
         byte[] disco = Files.readAllBytes(RAIZ.resolve(ruta));
 
-        assertThat(descargada).startsWith((byte) 0xff, (byte) 0xd8).doesNotContain(marca);
+        assertThat(descargada).startsWith((byte) 0xff, (byte) 0xd8);
+        assertThat(new String(descargada, java.nio.charset.StandardCharsets.ISO_8859_1)).doesNotContain("GPS-PRIVADO");
         assertThat(miniatura.length).isLessThan(descargada.length);
         assertThat(java.util.Arrays.equals(java.util.Arrays.copyOf(disco, 2), new byte[] {(byte) 0xff, (byte) 0xd8})).isFalse();
         assertThat(new String(disco, java.nio.charset.StandardCharsets.ISO_8859_1)).doesNotContain("GPS-PRIVADO");
