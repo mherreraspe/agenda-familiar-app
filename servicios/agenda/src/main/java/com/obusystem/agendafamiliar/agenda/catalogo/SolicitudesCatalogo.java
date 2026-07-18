@@ -4,10 +4,13 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -25,8 +28,10 @@ public final class SolicitudesCatalogo {
             @Size(max = 1000) String indicacion,
             @Size(max = 300) String cantidadReceta,
             @Size(max = 300) String frecuencia,
-            @NotNull LocalTime horario,
-            LocalDate fechaInicio, LocalDate fechaFin, UUID responsablePerfilId) { }
+            LocalTime horario, @Size(max = 8) List<LocalTime> horarios,
+            @Min(1) @Max(168) Integer intervaloHoras,
+            LocalDate fechaInicio, LocalDate fechaFin, UUID responsablePerfilId,
+            UUID responsableAlternativoPerfilId) { }
 
     public record Evento(UUID perfilId, @NotBlank @Size(max = 180) String titulo,
             @Size(max = 40) String tipo, @Size(max = 300) String lugar,

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/familias/{familiaId}")
 public class ControladorOcurrencias {
@@ -46,5 +48,14 @@ public class ControladorOcurrencias {
             @RequestHeader("Idempotency-Key") String claveIdempotencia,
             @AuthenticationPrincipal Jwt jwt) {
         servicio.cerrarRevision(familiaId, elementoId, claveIdempotencia, jwt);
+    }
+
+    @PatchMapping("/tratamientos/{tratamientoId}/cerrar")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void cerrarTratamiento(@PathVariable UUID familiaId, @PathVariable UUID tratamientoId,
+            @RequestHeader("Idempotency-Key") String claveIdempotencia,
+            @Valid @RequestBody(required = false) SolicitudCierreTratamiento solicitud,
+            @AuthenticationPrincipal Jwt jwt) {
+        servicio.cerrarTratamiento(familiaId, tratamientoId, claveIdempotencia, solicitud, jwt);
     }
 }

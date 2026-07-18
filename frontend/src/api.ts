@@ -29,9 +29,11 @@ export interface RespuestaHoy {
   tareas: TareaResumen[]
 }
 
+export type EstadoBotiquin = 'DISPONIBLE' | 'POR_VENCER' | 'VENCIDO' | 'AGOTADO' | 'DESCARTADO'
+
 export interface RespuestaCatalogo {
-  medicamentos: Array<{ id: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: string }>
-  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; responsablePerfilId: string; responsable: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; fechaInicio: string; fechaFin?: string; estado: string }>
+  medicamentos: Array<{ id: string; loteId?: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: EstadoBotiquin }>
+  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; responsablePerfilId: string; responsable: string; responsableAlternativoPerfilId?: string; responsableAlternativo?: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string; estado: string }>
   eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; estado: string }>
   lugares: Array<{ id: string; nombre: string; direccion?: string; ultimaUtilizacion: string; frecuenciaUso: number }>
 }
@@ -51,7 +53,7 @@ export interface RespuestaAuditoria { entradas: EntradaAuditoria[] }
 export interface SugerenciaFamiliar { tipo: 'EVENTO' | 'LUGAR'; entidadId: string; titulo: string; lugar?: string; direccion?: string }
 export interface RespuestaSugerencias { sugerencias: SugerenciaFamiliar[] }
 
-export type EstadoOcurrencia = 'PENDIENTE' | 'TOMADA' | 'OMITIDA' | 'POSPUESTA' | 'CANCELADA'
+export type EstadoOcurrencia = 'PENDIENTE' | 'TOMADA' | 'OMITIDA' | 'POSPUESTA' | 'REPROGRAMADA' | 'CANCELADA'
 
 export interface OcurrenciaResumen {
   id: string
@@ -63,6 +65,7 @@ export interface OcurrenciaResumen {
   estado: EstadoOcurrencia
   pospuestaA?: string
   resueltaPor?: string
+  resueltaPorNombre?: string
   resueltaEn?: string
 }
 
@@ -185,6 +188,14 @@ export function cerrarElementoRevision(elementoId: string) {
   })
 }
 
+export function cerrarTratamiento(tratamientoId: string, motivo?: string) {
+  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos/${tratamientoId}/cerrar`, {
+    method: 'PATCH',
+    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    body: JSON.stringify({ motivo: motivo || undefined })
+  })
+}
+
 export function completarTarea(tareaId: string) {
   return solicitud<TareaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/tareas/${tareaId}/estado/COMPLETADA`, { method: 'PATCH' })
 }
@@ -201,6 +212,6 @@ export function crearMedicamento(datos: { nombre: string; presentacion: string; 
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/medicamentos`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
-export function crearTratamiento(datos: { perfilId: string; medicamentoId?: string; nombre: string; indicacion?: string; cantidadReceta?: string; frecuencia?: string; horario: string; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string }) {
+export function crearTratamiento(datos: { perfilId: string; medicamentoId?: string; nombre: string; indicacion?: string; cantidadReceta?: string; frecuencia?: string; horario: string; horarios?: string[]; intervaloHoras?: number; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos`, { method: 'POST', body: JSON.stringify(datos) })
 }

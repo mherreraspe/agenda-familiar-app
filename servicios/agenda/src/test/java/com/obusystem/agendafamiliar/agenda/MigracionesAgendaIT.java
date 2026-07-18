@@ -57,16 +57,19 @@ class MigracionesAgendaIT {
         Long tratamientoId = jdbc.queryForObject("SELECT id FROM tratamientos WHERE familia_id=? LIMIT 1", Long.class, familiaId);
         jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, programada_en) VALUES (gen_random_uuid(), ?, ?, NOW())",
                 familiaId, tratamientoId);
+        jdbc.update("INSERT INTO acciones_tratamiento (familia_id, tratamiento_id, clave_idempotencia, accion, actor_publico_id) VALUES (?, ?, 'rls-cierre-1', 'CERRAR', gen_random_uuid())",
+                familiaId, tratamientoId);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isEqualTo(1);
 
         Long otraFamilia = jdbc.queryForObject("INSERT INTO familias (id_publico, nombre) VALUES (gen_random_uuid(), 'otra') RETURNING id", Long.class);
         jdbc.execute("CREATE ROLE prueba_rls NOLOGIN NOBYPASSRLS");
         jdbc.execute("GRANT USAGE ON SCHEMA public TO prueba_rls");
-        jdbc.execute("GRANT SELECT ON ocurrencias_tratamiento, elementos_revision, lugares_familia, palabras_clave TO prueba_rls");
+        jdbc.execute("GRANT SELECT ON ocurrencias_tratamiento, elementos_revision, acciones_tratamiento, lugares_familia, palabras_clave TO prueba_rls");
         jdbc.execute("SET LOCAL ROLE prueba_rls");
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, otraFamilia.toString());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM elementos_revision", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM acciones_tratamiento", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM lugares_familia", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM palabras_clave", Integer.class)).isZero();
     }
