@@ -57,6 +57,9 @@ class OcurrenciasTratamientoIT {
         assertThatThrownBy(() -> servicio.cambiarEstado(FAMILIA, ocurrencia.id(), EstadoOcurrencia.OMITIDA,
                 "prueba-tomada-1", null, jwt())).isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("idempotencia");
+        assertThatThrownBy(() -> servicio.cambiarEstado(FAMILIA, ocurrencia.id(), EstadoOcurrencia.OMITIDA,
+                "prueba-tomada-competidora", null, jwt())).isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("ya fue resuelta");
     }
 
     @Test
@@ -73,6 +76,59 @@ class OcurrenciasTratamientoIT {
         assertThat(pospuesta.pospuestaA()).isEqualTo(nuevaFecha);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento WHERE programada_en=? AND estado='PENDIENTE'",
                 Integer.class, java.sql.Timestamp.from(nuevaFecha))).isEqualTo(1);
+    }
+
+    @Test
+    @Transactional
+    void reprogramarEnlazaLaNuevaOcurrenciaYExponeElActor() {
+        RespuestaOcurrencias respuesta = servicio.consultar(FAMILIA, jwt());
+        RespuestaOcurrencias.OcurrenciaResumen original = respuesta.ocurrencias().getLast();
+        Instant nuevaFecha = Instant.now().plusSeconds(259200).truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+
+        RespuestaOcurrencias.OcurrenciaResumen reprogramada = servicio.cambiarEstado(FAMILIA, original.id(),
+                EstadoOcurrencia.REPROGRAMADA, "prueba-reprogramar-1",
+                new SolicitudAccionOcurrencia(nuevaFecha), jwt());
+
+        assertThat(reprogramada.estado()).isEqualTo("REPROGRAMADA");
+        assertThat(reprogramada.resueltaPorNombre()).isEqualTo("Papá");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento nueva JOIN ocurrencias_tratamiento original ON original.id=nueva.ocurrencia_origen_id WHERE original.id_publico=? AND nueva.programada_en=? AND nueva.estado='PENDIENTE'",
+                Integer.class, original.id(), java.sql.Timestamp.from(nuevaFecha))).isEqualTo(1);
+    }
+
+    @Test
+    @Transactional
+    void permiteCerrarAnticipadamenteConHistorialIdempotente() {
+        RespuestaOcurrencias respuesta = servicio.consultar(FAMILIA, jwt());
+        UUID tratamiento = respuesta.ocurrencias().getFirst().tratamientoId();
+
+        servicio.cerrarTratamiento(FAMILIA, tratamiento, "cerrar-anticipado-1",
+                new com.obusystem.agendafamiliar.agenda.tratamiento.SolicitudCierreTratamiento("Cambio indicado por la familia"), jwt());
+        servicio.cerrarTratamiento(FAMILIA, tratamiento, "cerrar-anticipado-1",
+                new com.obusystem.agendafamiliar.agenda.tratamiento.SolicitudCierreTratamiento("Cambio indicado por la familia"), jwt());
+
+        assertThat(jdbc.queryForObject("SELECT estado FROM tratamientos WHERE id_publico=?", String.class, tratamiento))
+                .isEqualTo("CERRADO");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id WHERE t.id_publico=? AND o.estado='PENDIENTE'",
+                Integer.class, tratamiento)).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM acciones_tratamiento WHERE clave_idempotencia='cerrar-anticipado-1'",
+                Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    @Transactional
+    void rechazaAccionesSobreUnaFamiliaAjena() {
+        RespuestaOcurrencias.OcurrenciaResumen ocurrencia = servicio.consultar(FAMILIA, jwt()).ocurrencias().getFirst();
+        UUID otraFamilia = jdbc.queryForObject(
+                "INSERT INTO familias (id_publico, nombre) VALUES (gen_random_uuid(), 'Familia ajena') RETURNING id_publico",
+                UUID.class);
+
+        assertThatThrownBy(() -> servicio.cambiarEstado(otraFamilia, ocurrencia.id(),
+                EstadoOcurrencia.REPROGRAMADA, "idor-reprogramar-1",
+                new SolicitudAccionOcurrencia(Instant.now().plusSeconds(7200)), jwt()))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("Familia no encontrada");
+        assertThatThrownBy(() -> servicio.cerrarTratamiento(otraFamilia, ocurrencia.tratamientoId(),
+                "idor-cerrar-1", null, jwt()))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("Familia no encontrada");
     }
 
     @Test

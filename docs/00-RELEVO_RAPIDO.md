@@ -14,17 +14,18 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 
 ## Trabajo local sin publicar
 
-- Checklist actualizado después del despliegue.
-- Guía operativa y comandos reutilizables para futuras sesiones.
-- E2E V5 promovido de archivo temporal a `tools/e2e/validar-v5.py`.
-- Optimización de contexto y logs completada: relevo corto y validaciones resumidas con logs locales.
+- Rama: `agent/historial-estados-botiquin`.
+- Migración V6: reprogramación enlazada, cierre idempotente y horarios/intervalos.
+- UI: historial con actor, posposición rápida, reprogramación, cierre anticipado y vencimientos cercanos.
+- Botiquín: estados calculados `DISPONIBLE`, `POR_VENCER`, `VENCIDO`, `AGOTADO` y `DESCARTADO`.
+- Tratamientos: varios horarios, intervalo y responsable alternativo.
+- `VerificarLocal`: aprobado. CI del PR #7: frontend y backend aprobados con Testcontainers.
 
-## Siguiente bloque funcional
+## Siguiente paso
 
-1. Historial completo para completar, omitir, posponer, reprogramar y cerrar.
-2. Vencimientos cercanos y estados calculados del botiquín.
-3. Horarios/intervalos y responsable alternativo.
-4. Pruebas de transiciones, concurrencia e IDOR/RLS.
+1. Integrar el PR #7: <https://github.com/mherreraspe/agenda-familiar-app/pull/7>.
+2. Desplegar V6 y repetir E2E móvil.
+3. Actualizar el commit/release desplegado y reemplazar este relevo.
 
 ## Entrada operativa
 

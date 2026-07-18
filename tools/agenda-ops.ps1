@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('Resumen', 'Estado', 'Entorno', 'VerificarLocal', 'Servidor', 'E2EV5')]
+    [ValidateSet('Resumen', 'Estado', 'Entorno', 'VerificarLocal', 'VerificarIntegracion', 'Servidor', 'E2EV5')]
     [string]$Accion = 'Resumen',
 
     [string]$Servidor = '148.116.110.18',
@@ -189,6 +189,18 @@ switch ($Accion) {
         try {
             Invocar-Registrado 'maven-verify' {
                 & (Join-Path $Maven 'bin\mvn.cmd') "-Dmaven.repo.local=$CacheMaven" verify
+            } @('Tests run:', 'BUILD SUCCESS', 'Total time:')
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    'VerificarIntegracion' {
+        Inicializar-Entorno
+        Push-Location $RaizRepositorio
+        try {
+            Invocar-Registrado 'maven-integracion' {
+                & (Join-Path $Maven 'bin\mvn.cmd') "-Dmaven.repo.local=$CacheMaven" verify -Pintegracion
             } @('Tests run:', 'BUILD SUCCESS', 'Total time:')
         }
         finally {

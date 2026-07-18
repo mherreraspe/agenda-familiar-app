@@ -23,6 +23,9 @@ Ejecutar desde la raíz de `agenda-familiar-app`:
 # Solo para diagnosticar un fallo que el resumen no explique
 .\tools\agenda-ops.cmd VerificarLocal -Detallado
 
+# Integración con PostgreSQL/Testcontainers, migraciones y RLS
+.\tools\agenda-ops.cmd VerificarIntegracion
+
 # Release, contenedores, salud pública y migraciones
 .\tools\agenda-ops.cmd Servidor
 
@@ -34,7 +37,7 @@ Ejecutar desde la raíz de `agenda-familiar-app`:
 
 `E2EV5` tiene un efecto deliberado: crea un evento claramente etiquetado como E2E dentro de `familia_test`. Solo debe ejecutarse como validación autorizada de un release, no como consulta rutinaria de estado.
 
-`VerificarLocal` escribe la salida íntegra en `.auth-temp/logs/` y solo devuelve estados y líneas de resumen. Ante un fallo muestra las últimas 120 líneas y conserva la ruta del log. Así se mantiene la evidencia exacta sin cargarla de forma preventiva en el contexto.
+`VerificarLocal` y `VerificarIntegracion` escriben la salida íntegra en `.auth-temp/logs/` y solo devuelven estados y líneas de resumen. Ante un fallo muestran las últimas 120 líneas y conservan la ruta del log. Así se mantiene la evidencia exacta sin cargarla de forma preventiva en el contexto.
 
 ## Presupuesto de contexto
 

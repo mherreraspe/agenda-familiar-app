@@ -1,7 +1,7 @@
 # Estado y checklist de continuidad
 
 **Corte:** 2026-07-18 (America/Lima)  
-**Rama:** `main`  
+**Rama:** `agent/historial-estados-botiquin`
 **Commit desplegado:** `231a411f9edc193570697234919424ad09999c19`
 **Versión del servidor:** `20260718T163608Z`
 **Producción:** <https://www.obusystem.com>
@@ -47,6 +47,19 @@ Integrado mediante el PR #5, desplegado y verificado en producción:
 - [x] E2E HTTPS: evento 201 en 35 ms, indexación asíncrona, sugerencia de registro real, lugar privado, auditoría coincidente para Papá/Mamá, responsable e aislamiento de familia ajena 404.
 - [x] Revisión PWA autenticada a 390 × 844: filtros, responsable, historial y evento E2E visibles; sin desborde horizontal ni errores o advertencias de consola.
 
+## Bloque preparado — historial, botiquín y horarios
+
+Preparado en el PR #7; CI verde y pendiente de integración, despliegue y E2E móvil:
+
+- [x] Reprogramación separada de la posposición rápida, con ocurrencia original inmutable y nueva ocurrencia enlazada.
+- [x] Cierre anticipado de tratamientos idempotente, con motivo opcional, actor visible y cancelación trazable de pendientes.
+- [x] Historial de ocurrencias resueltas visible por persona, estado, actor y fecha.
+- [x] Estados del botiquín calculados con precedencia explícita y vencimientos cercanos a 30 días en “Hoy”.
+- [x] Varios horarios o intervalo de 1–168 horas y responsable alternativo opcional.
+- [x] Pruebas de transiciones competidoras, IDOR, RLS, estados, horarios e intervalos añadidas.
+- [x] Validación local rápida aprobada y CI `29657913288` aprobado (frontend 16 s, backend 1 min 4 s).
+- [ ] Integrar el PR #7, desplegar V6 y repetir E2E/revisión móvil.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -79,6 +92,8 @@ Integrado mediante el PR #5, desplegado y verificado en producción:
 - PR de ocurrencias y bandeja Revisar: <https://github.com/mherreraspe/agenda-familiar-app/pull/3>
 - PR del hotfix de migración bajo RLS forzado: <https://github.com/mherreraspe/agenda-familiar-app/pull/4>
 - PR de auditoría visible y sugerencias privadas por familia: <https://github.com/mherreraspe/agenda-familiar-app/pull/5>
+- PR de historial, estados del botiquín y horarios: <https://github.com/mherreraspe/agenda-familiar-app/pull/7>
+- CI del PR #7: ejecución `29657913288`, frontend y backend aprobados con Testcontainers PostgreSQL 18.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Credenciales: se entregaron al propietario en el chat y están configuradas únicamente en el `.env` protegido del servidor.
@@ -93,8 +108,8 @@ Integrado mediante el PR #5, desplegado y verificado en producción:
 - [x] “Cantidad indicada en la receta” será texto opcional; la aplicación solo conserva lo escrito y nunca calcula o recomienda dosis.
 - [ ] Fotografía de receta y detalles como indicación, fechas o responsable alternativo serán campos opcionales/progresivos.
 - [x] Bandeja “Revisar” para vencidos, tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
-- [ ] Acciones completar, omitir, posponer, reprogramar y cerrar con historial.
-- [ ] Filtros por miembro y sección de vencimientos cercanos en “Hoy”.
+- [x] Acciones completar, omitir, posponer, reprogramar y cerrar con historial.
+- [x] Filtros por miembro y sección de vencimientos cercanos en “Hoy”.
 - [ ] Recurrencia de eventos y tareas sin perder el historial anterior.
 - [x] Alta rápida de cita/actividad con solo título y fecha/hora obligatorios; persona, tipo, lugar, dirección y notas serán opcionales/progresivos.
 - [x] Después de guardar, procesar el registro de forma asíncrona y asociarle silenciosamente una o dos palabras clave canónicas mediante IA o reglas (por ejemplo, `pediatra` y `control`).
@@ -105,8 +120,8 @@ Integrado mediante el PR #5, desplegado y verificado en producción:
 - [x] Catálogo privado de lugares por familia con nombre, dirección opcional, última utilización y frecuencia de uso.
 - [x] Al escribir un lugar conocido, sugerir sus ubicaciones anteriores; seleccionar una sugerencia rellena la dirección, pero siempre puede omitirse o editarse.
 - [x] El autocompletado nunca mezcla ni revela lugares, direcciones o palabras clave de otra familia.
-- [ ] Horarios/intervalos de tratamientos y responsable alternativo.
-- [ ] Estados calculados del botiquín: disponible, por vencer, vencido, agotado y descartado.
+- [x] Horarios/intervalos de tratamientos y responsable alternativo.
+- [x] Estados calculados del botiquín: disponible, por vencer, vencido, agotado y descartado.
 - [ ] Gestión de perfiles, adultos, dependientes y permisos desde la interfaz.
 - [x] Convertir Papá/Mamá/Hijo en filtros claros con opción “Todos”; no representan cambio de usuario.
 - [x] Mostrar “para quién”, responsable y “agregado/modificado por” con historial de auditoría visible para adultos autorizados.

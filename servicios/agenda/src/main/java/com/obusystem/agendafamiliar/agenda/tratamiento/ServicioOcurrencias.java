@@ -4,6 +4,7 @@ import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -73,7 +74,8 @@ public class ServicioOcurrencias {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La ocurrencia ya fue resuelta");
         }
         Instant pospuestaA = solicitud == null ? null : solicitud.pospuestaA();
-        if (estado == EstadoOcurrencia.POSPUESTA && (pospuestaA == null || !pospuestaA.isAfter(Instant.now()))) {
+        if ((estado == EstadoOcurrencia.POSPUESTA || estado == EstadoOcurrencia.REPROGRAMADA)
+                && (pospuestaA == null || !pospuestaA.isAfter(Instant.now()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La nueva fecha debe estar en el futuro");
         }
         UUID actor = actor(jwt);
@@ -86,15 +88,61 @@ public class ServicioOcurrencias {
         } catch (DuplicateKeyException error) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "La clave de idempotencia ya fue usada");
         }
-        if (estado == EstadoOcurrencia.POSPUESTA) {
-            jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, programada_en) VALUES (?, ?, ?, ?) ON CONFLICT (familia_id, tratamiento_id, programada_en) DO NOTHING",
-                    UuidV7.nuevo(), familia.getId(), ocurrencia.tratamientoId(), Timestamp.from(pospuestaA));
+        if (estado == EstadoOcurrencia.POSPUESTA || estado == EstadoOcurrencia.REPROGRAMADA) {
+            jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, ocurrencia_origen_id, programada_en) VALUES (?, ?, ?, ?, ?) ON CONFLICT (familia_id, tratamiento_id, programada_en) DO NOTHING",
+                    UuidV7.nuevo(), familia.getId(), ocurrencia.tratamientoId(), ocurrencia.id(), Timestamp.from(pospuestaA));
         }
         jdbc.update("UPDATE elementos_revision SET estado='RESUELTO', resuelto_por=?, resuelto_en=NOW(), actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND origen='OCURRENCIA' AND entidad_publica_id=? AND estado='PENDIENTE'",
                 actor, familia.getId(), ocurrenciaId);
+        String resumen = "Ocurrencia marcada como " + estado.name().toLowerCase();
+        if (pospuestaA != null) resumen += " para " + pospuestaA;
         jdbc.update("INSERT INTO auditoria (familia_id, actor_publico_id, operacion, entidad, entidad_publica_id, resumen_seguro) VALUES (?, ?, ?, 'OCURRENCIA_TRATAMIENTO', ?, ?)",
-                familia.getId(), actor, estado.name(), ocurrenciaId, "Ocurrencia marcada como " + estado.name().toLowerCase());
+                familia.getId(), actor, estado.name(), ocurrenciaId, resumen);
         return buscarOcurrencia(familia.getId(), ocurrenciaId);
+    }
+
+    @Transactional
+    public void cerrarTratamiento(UUID familiaId, UUID tratamientoId, String claveIdempotencia,
+            SolicitudCierreTratamiento solicitud, Jwt jwt) {
+        Familia familia = acceso.autorizar(familiaId, jwt);
+        String clave = validarClave(claveIdempotencia);
+        List<AccionTratamientoExistente> anteriores = jdbc.query(
+                "SELECT t.id_publico, a.accion FROM acciones_tratamiento a JOIN tratamientos t ON t.id=a.tratamiento_id WHERE a.familia_id=? AND a.clave_idempotencia=?",
+                (rs, fila) -> new AccionTratamientoExistente(rs.getObject(1, UUID.class), rs.getString(2)),
+                familia.getId(), clave);
+        if (!anteriores.isEmpty()) {
+            AccionTratamientoExistente anterior = anteriores.getFirst();
+            if (!anterior.tratamientoId().equals(tratamientoId) || !anterior.accion().equals("CERRAR")) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "La clave de idempotencia ya fue usada para otra acción");
+            }
+            return;
+        }
+        List<TratamientoInterno> tratamientos = jdbc.query(
+                "SELECT id, estado FROM tratamientos WHERE familia_id=? AND id_publico=?",
+                (rs, fila) -> new TratamientoInterno(rs.getLong(1), rs.getString(2)), familia.getId(), tratamientoId);
+        if (tratamientos.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tratamiento no encontrado");
+        TratamientoInterno tratamiento = tratamientos.getFirst();
+        if (!tratamiento.estado().equals("ACTIVO")) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El tratamiento ya está cerrado");
+        }
+        UUID actor = actor(jwt);
+        String motivo = solicitud == null ? null : limpiar(solicitud.motivo());
+        int actualizados = jdbc.update("UPDATE tratamientos SET estado='CERRADO', fecha_fin=LEAST(COALESCE(fecha_fin, CURRENT_DATE), CURRENT_DATE), actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND id=? AND estado='ACTIVO'",
+                familia.getId(), tratamiento.id());
+        if (actualizados != 1) throw new ResponseStatusException(HttpStatus.CONFLICT, "El tratamiento cambió al mismo tiempo");
+        jdbc.update("UPDATE ocurrencias_tratamiento SET estado='CANCELADA', resuelta_por=?, resuelta_en=NOW(), actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND tratamiento_id=? AND estado='PENDIENTE'",
+                actor, familia.getId(), tratamiento.id());
+        try {
+            jdbc.update("INSERT INTO acciones_tratamiento (familia_id, tratamiento_id, clave_idempotencia, accion, actor_publico_id, motivo) VALUES (?, ?, ?, 'CERRAR', ?, ?)",
+                    familia.getId(), tratamiento.id(), clave, actor, motivo);
+        } catch (DuplicateKeyException error) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La clave de idempotencia ya fue usada");
+        }
+        jdbc.update("UPDATE elementos_revision SET estado='RESUELTO', resuelto_por=?, resuelto_en=NOW(), actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND origen='TRATAMIENTO' AND entidad_publica_id=? AND estado='PENDIENTE'",
+                actor, familia.getId(), tratamientoId);
+        String resumen = motivo == null ? "Tratamiento cerrado" : "Tratamiento cerrado: " + motivo;
+        jdbc.update("INSERT INTO auditoria (familia_id, actor_publico_id, operacion, entidad, entidad_publica_id, resumen_seguro) VALUES (?, ?, 'CERRAR', 'TRATAMIENTO', ?, ?)",
+                familia.getId(), actor, tratamientoId, resumen);
     }
 
     @Transactional
@@ -139,19 +187,35 @@ public class ServicioOcurrencias {
     }
 
     private void materializar(Familia familia, Long tratamientoId) {
-        String sql = "SELECT t.id tratamiento_id, t.fecha_inicio, t.fecha_fin, h.id horario_id, h.hora_local "
+        String sql = "SELECT t.id tratamiento_id, t.fecha_inicio, t.fecha_fin, h.id horario_id, h.hora_local, h.intervalo_horas "
                 + "FROM tratamientos t JOIN horarios_tratamiento h ON h.tratamiento_id=t.id AND h.activo "
                 + "WHERE t.familia_id=? AND t.estado='ACTIVO'" + (tratamientoId == null ? "" : " AND t.id=?");
         Object[] parametros = tratamientoId == null ? new Object[] { familia.getId() } : new Object[] { familia.getId(), tratamientoId };
         List<Horario> horarios = jdbc.query(sql, (rs, fila) -> new Horario(rs.getLong("tratamiento_id"),
                 rs.getObject("fecha_inicio", LocalDate.class), rs.getObject("fecha_fin", LocalDate.class),
-                rs.getLong("horario_id"), rs.getObject("hora_local", LocalTime.class)), parametros);
+                rs.getLong("horario_id"), rs.getObject("hora_local", LocalTime.class),
+                rs.getObject("intervalo_horas", Integer.class)), parametros);
         ZoneId zona = ZoneId.of(familia.getZonaHoraria());
         LocalDate hoy = LocalDate.now(zona);
         for (Horario horario : horarios) {
             LocalDate desde = horario.inicio().isAfter(hoy.minusDays(30)) ? horario.inicio() : hoy.minusDays(30);
             LocalDate limite = hoy.plusDays(7);
             LocalDate hasta = horario.fin() != null && horario.fin().isBefore(limite) ? horario.fin() : limite;
+            if (desde.isAfter(hasta)) continue;
+            if (horario.intervaloHoras() != null) {
+                Instant base = horario.inicio().atTime(horario.hora()).atZone(zona).toInstant();
+                Instant ventana = desde.atStartOfDay(zona).toInstant();
+                long intervaloSegundos = horario.intervaloHoras() * 3600L;
+                long diferencia = Math.max(0, Duration.between(base, ventana).getSeconds());
+                long saltos = (diferencia + intervaloSegundos - 1) / intervaloSegundos;
+                Instant finExclusivo = hasta.plusDays(1).atStartOfDay(zona).toInstant();
+                for (Instant instante = base.plusSeconds(saltos * intervaloSegundos);
+                        instante.isBefore(finExclusivo); instante = instante.plusSeconds(intervaloSegundos)) {
+                    jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, horario_id, programada_en) VALUES (?, ?, ?, ?, ?) ON CONFLICT (familia_id, tratamiento_id, programada_en) DO NOTHING",
+                            UuidV7.nuevo(), familia.getId(), horario.tratamientoId(), horario.horarioId(), Timestamp.from(instante));
+                }
+                continue;
+            }
             for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
                 Instant instante = fecha.atTime(horario.hora()).atZone(zona).toInstant();
                 jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, horario_id, programada_en) VALUES (?, ?, ?, ?, ?) ON CONFLICT (familia_id, tratamiento_id, programada_en) DO NOTHING",
@@ -176,8 +240,9 @@ public class ServicioOcurrencias {
     }
 
     private List<RespuestaOcurrencias.OcurrenciaResumen> consultarOcurrencias(Long familiaId) {
-        return jdbc.query("SELECT o.id_publico, t.id_publico tratamiento_publico, p.id_publico perfil_publico, p.nombre_visible, t.nombre_libre, o.programada_en, o.estado, o.pospuesta_a, o.resuelta_por, o.resuelta_en "
+        return jdbc.query("SELECT o.id_publico, t.id_publico tratamiento_publico, p.id_publico perfil_publico, p.nombre_visible, t.nombre_libre, o.programada_en, o.estado, o.pospuesta_a, o.resuelta_por, COALESCE(actor.nombre_visible, 'Adulto autorizado') resuelta_por_nombre, o.resuelta_en "
                 + "FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id JOIN perfiles p ON p.id=t.perfil_id "
+                + "LEFT JOIN miembros_familia mf ON mf.familia_id=o.familia_id AND mf.usuario_publico_id=o.resuelta_por LEFT JOIN perfiles actor ON actor.id=mf.perfil_id "
                 + "WHERE o.familia_id=? AND o.programada_en BETWEEN NOW() - INTERVAL '30 days' AND NOW() + INTERVAL '7 days' ORDER BY o.programada_en",
                 (rs, fila) -> mapearOcurrencia(rs), familiaId);
     }
@@ -200,8 +265,10 @@ public class ServicioOcurrencias {
     }
 
     private RespuestaOcurrencias.OcurrenciaResumen buscarOcurrencia(Long familiaId, UUID id) {
-        List<RespuestaOcurrencias.OcurrenciaResumen> resultado = jdbc.query("SELECT o.id_publico, t.id_publico tratamiento_publico, p.id_publico perfil_publico, p.nombre_visible, t.nombre_libre, o.programada_en, o.estado, o.pospuesta_a, o.resuelta_por, o.resuelta_en "
-                + "FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id JOIN perfiles p ON p.id=t.perfil_id WHERE o.familia_id=? AND o.id_publico=?",
+        List<RespuestaOcurrencias.OcurrenciaResumen> resultado = jdbc.query("SELECT o.id_publico, t.id_publico tratamiento_publico, p.id_publico perfil_publico, p.nombre_visible, t.nombre_libre, o.programada_en, o.estado, o.pospuesta_a, o.resuelta_por, COALESCE(actor.nombre_visible, 'Adulto autorizado') resuelta_por_nombre, o.resuelta_en "
+                + "FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id JOIN perfiles p ON p.id=t.perfil_id "
+                + "LEFT JOIN miembros_familia mf ON mf.familia_id=o.familia_id AND mf.usuario_publico_id=o.resuelta_por LEFT JOIN perfiles actor ON actor.id=mf.perfil_id "
+                + "WHERE o.familia_id=? AND o.id_publico=?",
                 (rs, fila) -> mapearOcurrencia(rs), familiaId, id);
         if (resultado.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Ocurrencia no encontrada");
         return resultado.getFirst();
@@ -212,7 +279,8 @@ public class ServicioOcurrencias {
                 rs.getObject("tratamiento_publico", UUID.class), rs.getObject("perfil_publico", UUID.class),
                 rs.getString("nombre_visible"), rs.getString("nombre_libre"), rs.getTimestamp("programada_en").toInstant(),
                 rs.getString("estado"), rs.getTimestamp("pospuesta_a") == null ? null : rs.getTimestamp("pospuesta_a").toInstant(),
-                rs.getObject("resuelta_por", UUID.class), rs.getTimestamp("resuelta_en") == null ? null : rs.getTimestamp("resuelta_en").toInstant());
+                rs.getObject("resuelta_por", UUID.class), rs.getString("resuelta_por_nombre"),
+                rs.getTimestamp("resuelta_en") == null ? null : rs.getTimestamp("resuelta_en").toInstant());
     }
 
     private OcurrenciaInterna buscarInterna(Long familiaId, UUID id) {
@@ -227,8 +295,23 @@ public class ServicioOcurrencias {
         catch (RuntimeException error) { throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Identidad inválida"); }
     }
 
-    private record Horario(Long tratamientoId, LocalDate inicio, LocalDate fin, Long horarioId, LocalTime hora) { }
+    private String validarClave(String claveIdempotencia) {
+        String clave = claveIdempotencia == null ? "" : claveIdempotencia.trim();
+        if (clave.isEmpty() || clave.length() > 120) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Idempotency-Key es obligatorio y admite hasta 120 caracteres");
+        }
+        return clave;
+    }
+
+    private String limpiar(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
+    }
+
+    private record Horario(Long tratamientoId, LocalDate inicio, LocalDate fin, Long horarioId, LocalTime hora,
+            Integer intervaloHoras) { }
     private record OcurrenciaInterna(Long id, Long tratamientoId, String estado) { }
     private record AccionExistente(UUID ocurrenciaId, String accion) { }
+    private record AccionTratamientoExistente(UUID tratamientoId, String accion) { }
+    private record TratamientoInterno(Long id, String estado) { }
     private record RevisionInterna(Long id, String origen, UUID entidadId, String estado) { }
 }
