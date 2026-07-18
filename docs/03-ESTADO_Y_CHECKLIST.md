@@ -8,6 +8,24 @@
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
 
+## Trabajo en curso — ocurrencias y bandeja Revisar
+
+Rama local `feat/ocurrencias-y-revisar`, aún no desplegada:
+
+- [x] Migración `V4` preparada con horarios, ocurrencias, acciones idempotentes y elementos de revisión, todos con RLS forzado.
+- [x] Estados de ocurrencia implementados: pendiente, tomada, omitida, pospuesta y cancelada.
+- [x] Materialización móvil de 30 días anteriores y 7 posteriores con restricción única para evitar duplicados.
+- [x] Bandeja `Revisar` preparada para tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
+- [x] Alta rápida de tratamiento preparada con persona, nombre libre y horario; botiquín, cantidad de receta, indicación, frecuencia y fechas opcionales.
+- [x] Citas flexibilizadas para exigir únicamente título e inicio; persona, tipo, lugar, dirección, notas y fin son opcionales.
+- [x] Perfiles convertidos en filtros con opción `Todos` en la interfaz.
+- [x] Pruebas añadidas para RLS, materialización idempotente, transiciones, posposición y cierre desde `Revisar`.
+- [x] Validación local: Vitest, `vue-tsc`, build Vite y compilación de código/pruebas Java 21 aprobadas.
+- [x] CI con Java 25 y Testcontainers PostgreSQL 18 aprobado: ejecución `29648306004` (frontend 14 s, backend 47 s).
+- [ ] PR integrado, despliegue y E2E móvil de este bloque aprobados.
+
+No marcar los requisitos equivalentes de la lista general como terminados hasta completar CI, despliegue y E2E.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -115,6 +133,7 @@ Implementar primero ocurrencias de tratamiento y bandeja “Revisar”:
 
 ## Continuidad operativa
 
+- El propietario suele operar remotamente desde el celular. Cuando GitHub requiera autorización web, iniciar el flujo oficial por código de dispositivo y entregar en el chat el enlace y el código temporal; no depender de una ventana local ni guardar el código, token o credencial.
 - Repositorio local: `C:\Users\marco\Documents\codex\Proyecto\agenda-familiar-app`
 - Clave SSH local protegida: `C:\Users\marco\Documents\codex\Proyecto\instanciaVM\ssh-key-2026-03-28.key`
 - Servidor: `ubuntu@148.116.110.18`

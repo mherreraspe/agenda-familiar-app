@@ -1,7 +1,10 @@
 package com.obusystem.agendafamiliar.agenda.catalogo;
 
 import java.sql.Date;
+import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,16 +17,19 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.obusystem.agendafamiliar.agenda.family.AccesoFamilia;
 import com.obusystem.agendafamiliar.agenda.family.Familia;
+import com.obusystem.agendafamiliar.agenda.tratamiento.ServicioOcurrencias;
 import com.obusystem.agendafamiliar.agenda.util.UuidV7;
 
 @Service
 public class ServicioCatalogo {
     private final AccesoFamilia acceso;
     private final JdbcTemplate jdbc;
+    private final ServicioOcurrencias ocurrencias;
 
-    public ServicioCatalogo(AccesoFamilia acceso, JdbcTemplate jdbc) {
+    public ServicioCatalogo(AccesoFamilia acceso, JdbcTemplate jdbc, ServicioOcurrencias ocurrencias) {
         this.acceso = acceso;
         this.jdbc = jdbc;
+        this.ocurrencias = ocurrencias;
     }
 
     @Transactional(readOnly = true)
@@ -38,7 +44,8 @@ public class ServicioCatalogo {
         UUID medicamentoId = UuidV7.nuevo();
         UUID loteId = UuidV7.nuevo();
         jdbc.update("INSERT INTO medicamentos (id_publico, familia_id, nombre, presentacion, concentracion) VALUES (?, ?, ?, ?, ?)",
-                medicamentoId, familia.getId(), solicitud.nombre().trim(), solicitud.presentacion(), solicitud.concentracion());
+                medicamentoId, familia.getId(), solicitud.nombre().trim(), limpiar(solicitud.presentacion()),
+                limpiar(solicitud.concentracion()));
         Long interno = jdbc.queryForObject("SELECT id FROM medicamentos WHERE familia_id = ? AND id_publico = ?", Long.class,
                 familia.getId(), medicamentoId);
         jdbc.update("INSERT INTO lotes_medicamento (id_publico, familia_id, medicamento_id, cantidad, unidad, fecha_vencimiento) VALUES (?, ?, ?, ?, ?, ?)",
@@ -51,15 +58,27 @@ public class ServicioCatalogo {
     @Transactional
     public UUID crearTratamiento(UUID familiaId, SolicitudesCatalogo.Tratamiento solicitud, Jwt jwt) {
         Familia familia = acceso.autorizar(familiaId, jwt);
-        validarRango(solicitud.fechaInicio(), solicitud.fechaFin());
+        LocalDate inicio = solicitud.fechaInicio() == null
+                ? LocalDate.now(ZoneId.of(familia.getZonaHoraria())) : solicitud.fechaInicio();
+        validarRango(inicio, solicitud.fechaFin());
         Long perfil = idInterno("perfiles", familia.getId(), solicitud.perfilId(), "Perfil inválido");
-        Long medicamento = idInterno("medicamentos", familia.getId(), solicitud.medicamentoId(), "Medicamento inválido");
+        Long responsable = solicitud.responsablePerfilId() == null ? perfil
+                : idInterno("perfiles", familia.getId(), solicitud.responsablePerfilId(), "Responsable inválido");
+        Long medicamento = solicitud.medicamentoId() == null ? null
+                : idInterno("medicamentos", familia.getId(), solicitud.medicamentoId(), "Medicamento inválido");
         UUID id = UuidV7.nuevo();
-        jdbc.update("INSERT INTO tratamientos (id_publico, familia_id, perfil_id, medicamento_id, indicacion, dosis_indicada, frecuencia, fecha_inicio, fecha_fin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                id, familia.getId(), perfil, medicamento, solicitud.indicacion().trim(), solicitud.dosisIndicada().trim(),
-                solicitud.frecuencia().trim(), Date.valueOf(solicitud.fechaInicio()),
+        jdbc.update("INSERT INTO tratamientos (id_publico, familia_id, perfil_id, medicamento_id, nombre_libre, responsable_perfil_id, indicacion, dosis_indicada, cantidad_receta, frecuencia, fecha_inicio, fecha_fin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                id, familia.getId(), perfil, medicamento, solicitud.nombre().trim(), responsable,
+                limpiar(solicitud.indicacion()), limpiar(solicitud.cantidadReceta()), limpiar(solicitud.cantidadReceta()),
+                limpiar(solicitud.frecuencia()), Date.valueOf(inicio),
                 solicitud.fechaFin() == null ? null : Date.valueOf(solicitud.fechaFin()));
-        auditar(familia.getId(), jwt, "CREAR", "TRATAMIENTO", id, "Tratamiento registrado sin interpretar la indicación");
+        Long tratamientoInterno = jdbc.queryForObject(
+                "SELECT id FROM tratamientos WHERE familia_id=? AND id_publico=?", Long.class, familia.getId(), id);
+        jdbc.update("INSERT INTO horarios_tratamiento (id_publico, familia_id, tratamiento_id, hora_local) VALUES (?, ?, ?, ?)",
+                UuidV7.nuevo(), familia.getId(), tratamientoInterno, Time.valueOf(solicitud.horario()));
+        ocurrencias.materializarTratamiento(familia, tratamientoInterno);
+        auditar(familia.getId(), jwt, "CREAR", "TRATAMIENTO", id,
+                "Tratamiento registrado sin interpretar la indicación");
         return id;
     }
 
@@ -69,10 +88,12 @@ public class ServicioCatalogo {
         if (solicitud.finEn() != null && solicitud.finEn().isBefore(solicitud.inicioEn())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha final no puede ser anterior al inicio");
         }
-        Long perfil = idInterno("perfiles", familia.getId(), solicitud.perfilId(), "Perfil inválido");
+        Long perfil = solicitud.perfilId() == null ? null
+                : idInterno("perfiles", familia.getId(), solicitud.perfilId(), "Perfil inválido");
         UUID id = UuidV7.nuevo();
-        jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, inicio_en, fin_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                id, familia.getId(), perfil, solicitud.titulo().trim(), solicitud.tipo(), solicitud.lugar(),
+        jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, inicio_en, fin_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                id, familia.getId(), perfil, solicitud.titulo().trim(), limpiar(solicitud.tipo()),
+                limpiar(solicitud.lugar()), limpiar(solicitud.direccion()), limpiar(solicitud.notas()),
                 Timestamp.from(solicitud.inicioEn()), solicitud.finEn() == null ? null : Timestamp.from(solicitud.finEn()));
         auditar(familia.getId(), jwt, "CREAR", "EVENTO", id, "Evento familiar registrado");
         return id;
@@ -80,42 +101,47 @@ public class ServicioCatalogo {
 
     private List<RespuestaCatalogo.MedicamentoResumen> medicamentos(Long familiaId) {
         return jdbc.query("SELECT m.id_publico, m.nombre, m.presentacion, m.concentracion, l.cantidad, l.unidad, l.fecha_vencimiento, l.estado FROM medicamentos m LEFT JOIN lotes_medicamento l ON l.medicamento_id=m.id WHERE m.familia_id=? ORDER BY m.nombre, l.fecha_vencimiento",
-                (rs, fila) -> new RespuestaCatalogo.MedicamentoResumen(rs.getObject("id_publico", UUID.class), rs.getString("nombre"),
-                        rs.getString("presentacion"), rs.getString("concentracion"), rs.getBigDecimal("cantidad"),
-                        rs.getString("unidad"), rs.getObject("fecha_vencimiento", java.time.LocalDate.class), rs.getString("estado")), familiaId);
+                (rs, fila) -> new RespuestaCatalogo.MedicamentoResumen(rs.getObject("id_publico", UUID.class),
+                        rs.getString("nombre"), rs.getString("presentacion"), rs.getString("concentracion"),
+                        rs.getBigDecimal("cantidad"), rs.getString("unidad"),
+                        rs.getObject("fecha_vencimiento", LocalDate.class), rs.getString("estado")), familiaId);
     }
 
     private List<RespuestaCatalogo.TratamientoResumen> tratamientos(Long familiaId) {
-        return jdbc.query("SELECT t.id_publico, p.id_publico perfil_publico, p.nombre_visible, m.id_publico medicamento_publico, m.nombre medicamento, t.indicacion, t.dosis_indicada, t.frecuencia, t.fecha_inicio, t.fecha_fin, t.estado FROM tratamientos t JOIN perfiles p ON p.id=t.perfil_id JOIN medicamentos m ON m.id=t.medicamento_id WHERE t.familia_id=? ORDER BY t.fecha_inicio DESC",
+        return jdbc.query("SELECT t.id_publico, p.id_publico perfil_publico, p.nombre_visible, m.id_publico medicamento_publico, t.nombre_libre medicamento, t.indicacion, COALESCE(t.cantidad_receta, t.dosis_indicada) dosis_indicada, t.frecuencia, t.fecha_inicio, t.fecha_fin, t.estado FROM tratamientos t JOIN perfiles p ON p.id=t.perfil_id LEFT JOIN medicamentos m ON m.id=t.medicamento_id WHERE t.familia_id=? ORDER BY t.fecha_inicio DESC",
                 (rs, fila) -> new RespuestaCatalogo.TratamientoResumen(rs.getObject("id_publico", UUID.class),
                         rs.getObject("perfil_publico", UUID.class), rs.getString("nombre_visible"),
-                        rs.getObject("medicamento_publico", UUID.class), rs.getString("medicamento"), rs.getString("indicacion"),
-                        rs.getString("dosis_indicada"), rs.getString("frecuencia"), rs.getObject("fecha_inicio", java.time.LocalDate.class),
-                        rs.getObject("fecha_fin", java.time.LocalDate.class), rs.getString("estado")), familiaId);
+                        rs.getObject("medicamento_publico", UUID.class), rs.getString("medicamento"),
+                        rs.getString("indicacion"), rs.getString("dosis_indicada"), rs.getString("frecuencia"),
+                        rs.getObject("fecha_inicio", LocalDate.class), rs.getObject("fecha_fin", LocalDate.class),
+                        rs.getString("estado")), familiaId);
     }
 
     private List<RespuestaCatalogo.EventoResumen> eventos(Long familiaId) {
-        return jdbc.query("SELECT e.id_publico, p.id_publico perfil_publico, p.nombre_visible, e.titulo, e.tipo, e.lugar, e.inicio_en, e.fin_en, e.estado FROM eventos e JOIN perfiles p ON p.id=e.perfil_id WHERE e.familia_id=? AND e.inicio_en >= NOW() - INTERVAL '30 days' ORDER BY e.inicio_en",
+        return jdbc.query("SELECT e.id_publico, p.id_publico perfil_publico, p.nombre_visible, e.titulo, e.tipo, e.lugar, e.inicio_en, e.fin_en, e.estado FROM eventos e LEFT JOIN perfiles p ON p.id=e.perfil_id WHERE e.familia_id=? AND e.inicio_en >= NOW() - INTERVAL '30 days' ORDER BY e.inicio_en",
                 (rs, fila) -> new RespuestaCatalogo.EventoResumen(rs.getObject("id_publico", UUID.class),
                         rs.getObject("perfil_publico", UUID.class), rs.getString("nombre_visible"), rs.getString("titulo"),
                         rs.getString("tipo"), rs.getString("lugar"), rs.getTimestamp("inicio_en").toInstant(),
-                        rs.getTimestamp("fin_en") == null ? null : rs.getTimestamp("fin_en").toInstant(), rs.getString("estado")), familiaId);
+                        rs.getTimestamp("fin_en") == null ? null : rs.getTimestamp("fin_en").toInstant(),
+                        rs.getString("estado")), familiaId);
     }
 
     private Long idInterno(String tabla, Long familiaId, UUID idPublico, String mensaje) {
-        if (!List.of("perfiles", "medicamentos").contains(tabla)) {
-            throw new IllegalArgumentException("Tabla no permitida");
-        }
+        if (!List.of("perfiles", "medicamentos").contains(tabla)) throw new IllegalArgumentException("Tabla no permitida");
         List<Long> ids = jdbc.query("SELECT id FROM " + tabla + " WHERE familia_id = ? AND id_publico = ?",
                 (rs, fila) -> rs.getLong(1), familiaId, idPublico);
         if (ids.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, mensaje);
         return ids.getFirst();
     }
 
-    private void validarRango(java.time.LocalDate inicio, java.time.LocalDate fin) {
+    private void validarRango(LocalDate inicio, LocalDate fin) {
         if (fin != null && fin.isBefore(inicio)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha final no puede ser anterior al inicio");
         }
+    }
+
+    private String limpiar(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
     private void auditar(Long familiaId, Jwt jwt, String operacion, String entidad, UUID entidadId, String resumen) {
