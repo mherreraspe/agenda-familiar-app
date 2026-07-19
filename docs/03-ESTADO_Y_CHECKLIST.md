@@ -78,6 +78,20 @@ Integrado mediante el PR #11, desplegado y verificado en producción:
 - [x] Release `20260718T205050Z` activo; Flyway aplicó V7 una vez y todos los servicios están saludables.
 - [x] E2E HTTPS aprobado y PWA autenticada a 390 × 844 sin desborde ni errores/advertencias de consola.
 
+## Bloque completado — fotografías privadas y cuota familiar
+
+Integrado mediante los PR #13–#15, desplegado y verificado en producción:
+
+- [x] Migración `V8` con archivos familiares, UUID impredecibles, SHA-256, cuota y RLS forzado.
+- [x] Captura/selección JPEG/PNG y reducción en la PWA; re-encodeado elimina EXIF, ubicación y datos anexos.
+- [x] Original y miniatura cifrados con AES-256-GCM, descarga autenticada y eliminación física completa.
+- [x] Deduplicación limitada a la familia y una receta activa por tratamiento, ambas seguras ante concurrencia.
+- [x] Cuota inicial de 1 GiB serializada con avisos 70/85/95 % y bloqueo de nuevas fotos al límite.
+- [x] Pruebas PostgreSQL 18 para formatos inválidos, tamaño, cifrado, cuota, concurrencia, IDOR y RLS.
+- [x] CI verde: `29667840551`, `29668127678` y `29669240800`; `main` final en `5622571`.
+- [x] Release `20260719T033351Z` activa, V8 aplicada y backup `pre-5622571-20260719T033351Z`.
+- [x] E2E HTTPS de archivos/cuota aprobado y PWA a 390 × 844 sin desborde ni errores de consola.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -127,7 +141,7 @@ Integrado mediante el PR #11, desplegado y verificado en producción:
 - [x] Alta rápida de tratamiento con persona, nombre libre y horario; no exigir que el medicamento exista previamente en el botiquín.
 - [x] Vincular un tratamiento con un medicamento del botiquín será opcional y podrá hacerse después.
 - [x] “Cantidad indicada en la receta” será texto opcional; la aplicación solo conserva lo escrito y nunca calcula o recomienda dosis.
-- [ ] Fotografía de receta y detalles como indicación, fechas o responsable alternativo serán campos opcionales/progresivos.
+- [x] Fotografía de receta y detalles como indicación, fechas o responsable alternativo son campos opcionales/progresivos.
 - [x] Bandeja “Revisar” para vencidos, tomas sin confirmar, tratamientos finalizados y medicamentos vencidos.
 - [x] Acciones completar, omitir, posponer, reprogramar y cerrar con historial.
 - [x] Filtros por miembro y sección de vencimientos cercanos en “Hoy”.
@@ -156,11 +170,11 @@ Integrado mediante el PR #11, desplegado y verificado en producción:
 
 ### Fotografías y cuota
 
-- [ ] Captura/selección y reducción en la PWA.
-- [ ] Eliminar EXIF/ubicación, validar tipo y rechazar imágenes enormes o inválidas.
-- [ ] Almacenamiento privado cifrado, identificadores impredecibles y descarga autorizada.
-- [ ] Miniaturas, eliminación completa y deduplicación limitada a una familia.
-- [ ] Cuota inicial de 1 GiB con avisos 70/85/95 % y bloqueo de nuevas fotos al 100 %.
+- [x] Captura/selección y reducción en la PWA.
+- [x] Eliminar EXIF/ubicación, validar tipo y rechazar imágenes enormes o inválidas.
+- [x] Almacenamiento privado cifrado, identificadores impredecibles y descarga autorizada.
+- [x] Miniaturas, eliminación completa y deduplicación limitada a una familia.
+- [x] Cuota inicial de 1 GiB con avisos 70/85/95 % y bloqueo de nuevas fotos al 100 %.
 
 ### Seguridad y administración
 
@@ -184,13 +198,13 @@ Integrado mediante el PR #11, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Completar fotografías privadas y cuota familiar:
+Completar sincronización y notificaciones privadas:
 
-1. Añadir fotografía opcional de receta desde la PWA con reducción y eliminación de EXIF/ubicación.
-2. Implementar almacenamiento privado, descarga autorizada, miniaturas y eliminación completa.
-3. Aplicar cuota familiar con avisos 70/85/95 % y bloqueo al 100 %.
-4. Añadir pruebas de archivos inválidos/maliciosos, aislamiento, cuota y concurrencia.
-5. Publicar por PR, exigir CI verde, desplegar y repetir E2E móvil.
+1. Añadir SSE con reconexión para reflejar cambios entre dispositivos abiertos.
+2. Incorporar caché de lectura PWA y aviso claro sin conexión, sin escrituras offline.
+3. Implementar Web Push genérico en pantalla bloqueada y contenido privado tras autenticar.
+4. Añadir preferencias, horario silencioso, deduplicación y reintentos.
+5. Probar reconexión, privacidad, concurrencia entre dispositivos y experiencia offline; publicar por PR y desplegar con CI verde.
 
 ## Continuidad operativa
 
