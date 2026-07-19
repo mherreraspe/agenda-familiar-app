@@ -159,7 +159,17 @@ class ArchivosFamiliaIT {
             }
             assertThat(archivos.cuota(FAMILIA, jwt()).usadosBytes()).isLessThanOrEqualTo(cuotaUna).isPositive();
         } finally {
-            jdbc.update("UPDATE familias SET cuota_bytes=1073741824 WHERE id=?", familiaInterna);
+            try {
+                jdbc.queryForList("""
+                        SELECT a.id_publico
+                        FROM archivos_familia a
+                        JOIN tratamientos t ON t.id=a.tratamiento_id
+                        WHERE t.id_publico IN (?, ?) AND a.estado='ACTIVO'
+                        """, UUID.class, primero, segundo)
+                        .forEach(id -> archivos.eliminar(FAMILIA, id, jwt()));
+            } finally {
+                jdbc.update("UPDATE familias SET cuota_bytes=1073741824 WHERE id=?", familiaInterna);
+            }
         }
     }
 
