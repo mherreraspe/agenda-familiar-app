@@ -48,6 +48,14 @@ services:
           memory: 768M
     mem_limit: 768m
 
+  archivos-permisos:
+    image: alpine:3.22
+    restart: "no"
+    user: "0:0"
+    command: ["sh", "-c", "chown -R 10001:10001 /archivos"]
+    volumes:
+      - archivos_datos:/archivos
+
   agenda:
     build:
       context: ..
@@ -68,6 +76,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      archivos-permisos:
+        condition: service_completed_successfully
     deploy:
       resources:
         limits:
