@@ -29,6 +29,9 @@ test -s "$RESPALDO/autenticacion.dump"
 
 cp "$ACTUAL/infraestructura/.env" "$VARIABLES"
 chmod 600 "$VARIABLES"
+if ! grep -q '^ARCHIVOS_ENCRYPTION_KEY=' "$VARIABLES"; then
+  printf 'ARCHIVOS_ENCRYPTION_KEY=%s\n' "$(openssl rand -base64 32)" >>"$VARIABLES"
+fi
 bash "$ACTUAL/infraestructura/desplegar-servidor.sh" "$ARCHIVO" "$VARIABLES"
 
 echo "BACKUP_OK=$RESPALDO"
