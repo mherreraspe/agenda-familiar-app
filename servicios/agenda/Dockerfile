@@ -7,7 +7,7 @@ COPY servicios/agenda/src servicios/agenda/src
 RUN mvn -pl servicios/agenda -am -DskipTests package
 
 FROM eclipse-temurin:25-jre-alpine
-RUN addgroup -S aplicacion && adduser -S aplicacion -G aplicacion
+RUN addgroup -S -g 10001 aplicacion && adduser -S -u 10001 aplicacion -G aplicacion
 USER aplicacion
 WORKDIR /aplicacion
 COPY --from=construccion /codigo/servicios/agenda/target/servicio-agenda-*.jar aplicacion.jar
