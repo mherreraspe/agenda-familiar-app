@@ -147,7 +147,7 @@ public class ServicioCatalogo {
     }
 
     private List<RespuestaCatalogo.TratamientoResumen> tratamientos(Long familiaId) {
-        return jdbc.query("SELECT t.id tratamiento_interno, t.id_publico, p.id_publico perfil_publico, p.nombre_visible, m.id_publico medicamento_publico, t.nombre_libre medicamento, rp.id_publico responsable_publico, rp.nombre_visible responsable, rap.id_publico responsable_alternativo_publico, rap.nombre_visible responsable_alternativo, t.indicacion, COALESCE(t.cantidad_receta, t.dosis_indicada) dosis_indicada, t.frecuencia, t.fecha_inicio, t.fecha_fin, t.estado FROM tratamientos t JOIN perfiles p ON p.id=t.perfil_id JOIN perfiles rp ON rp.id=t.responsable_perfil_id LEFT JOIN perfiles rap ON rap.id=t.responsable_alternativo_perfil_id LEFT JOIN medicamentos m ON m.id=t.medicamento_id WHERE t.familia_id=? ORDER BY t.fecha_inicio DESC",
+        return jdbc.query("SELECT t.id tratamiento_interno, t.id_publico, p.id_publico perfil_publico, p.nombre_visible, m.id_publico medicamento_publico, t.nombre_libre medicamento, rp.id_publico responsable_publico, rp.nombre_visible responsable, rap.id_publico responsable_alternativo_publico, rap.nombre_visible responsable_alternativo, t.indicacion, COALESCE(t.cantidad_receta, t.dosis_indicada) dosis_indicada, t.frecuencia, t.fecha_inicio, t.fecha_fin, t.estado, ar.id_publico receta_publica FROM tratamientos t JOIN perfiles p ON p.id=t.perfil_id JOIN perfiles rp ON rp.id=t.responsable_perfil_id LEFT JOIN perfiles rap ON rap.id=t.responsable_alternativo_perfil_id LEFT JOIN medicamentos m ON m.id=t.medicamento_id LEFT JOIN archivos_familia ar ON ar.tratamiento_id=t.id AND ar.familia_id=t.familia_id AND ar.estado='ACTIVO' WHERE t.familia_id=? ORDER BY t.fecha_inicio DESC",
                 (rs, fila) -> new RespuestaCatalogo.TratamientoResumen(rs.getObject("id_publico", UUID.class),
                         rs.getObject("perfil_publico", UUID.class), rs.getString("nombre_visible"),
                         rs.getObject("medicamento_publico", UUID.class), rs.getString("medicamento"),
@@ -156,7 +156,7 @@ public class ServicioCatalogo {
                         rs.getString("indicacion"), rs.getString("dosis_indicada"), rs.getString("frecuencia"),
                         horarios(rs.getLong("tratamiento_interno")), intervalo(rs.getLong("tratamiento_interno")),
                         rs.getObject("fecha_inicio", LocalDate.class), rs.getObject("fecha_fin", LocalDate.class),
-                        rs.getString("estado")), familiaId);
+                        rs.getString("estado"), rs.getObject("receta_publica", UUID.class)), familiaId);
     }
 
     private List<LocalTime> horarios(Long tratamientoId) {

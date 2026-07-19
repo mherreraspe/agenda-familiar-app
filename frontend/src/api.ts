@@ -35,7 +35,7 @@ export type EstadoBotiquin = 'DISPONIBLE' | 'POR_VENCER' | 'VENCIDO' | 'AGOTADO'
 
 export interface RespuestaCatalogo {
   medicamentos: Array<{ id: string; loteId?: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: EstadoBotiquin }>
-  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; responsablePerfilId: string; responsable: string; responsableAlternativoPerfilId?: string; responsableAlternativo?: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string; estado: string }>
+  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; responsablePerfilId: string; responsable: string; responsableAlternativoPerfilId?: string; responsableAlternativo?: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string; estado: string; recetaId?: string }>
   eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; estado: string; recurrente: boolean; eventoOrigenId?: string }>
   lugares: Array<{ id: string; nombre: string; direccion?: string; ultimaUtilizacion: string; frecuenciaUso: number }>
 }
@@ -91,6 +91,8 @@ export interface RecurrenciaSolicitud { frecuencia: FrecuenciaRecurrencia; inter
 export interface PerfilAdministrado { id: string; nombre: string; tipo: 'ADULTO' | 'DEPENDIENTE'; color?: string; relacion?: string; usuarioId?: string; permiso?: 'ADMINISTRADOR_FAMILIAR' | 'ADULTO'; activo: boolean }
 export interface RespuestaFamilia { puedeAdministrar: boolean; perfiles: PerfilAdministrado[] }
 export type DatosPerfil = Omit<PerfilAdministrado, 'id'>
+export interface RespuestaCuota { cuotaBytes: number; usadosBytes: number; disponiblesBytes: number; porcentaje: number; nivel: 'NORMAL' | 'MEDIA' | 'ALTA' | 'CRITICA' | 'BLOQUEADA' }
+export interface RespuestaArchivo { id: string; tratamientoId: string; ancho: number; alto: number; bytesAlmacenados: number; creadoEn: string }
 
 interface RespuestaSesion {
   accessToken: string
@@ -131,7 +133,7 @@ export async function renovarSesion() {
 async function solicitud<T>(ruta: string, opciones: RequestInit = {}, reintentar = true): Promise<T> {
   const encabezados = new Headers(opciones.headers)
   encabezados.set('Accept', 'application/json')
-  if (opciones.body) encabezados.set('Content-Type', 'application/json')
+  if (opciones.body && !(opciones.body instanceof FormData)) encabezados.set('Content-Type', 'application/json')
   if (accessToken) encabezados.set('Authorization', `Bearer ${accessToken}`)
 
   const respuesta = await fetch(ruta, { ...opciones, headers: encabezados, credentials: 'same-origin' })
@@ -179,6 +181,10 @@ export function consultarAuditoria() {
 
 export function consultarConfiguracionFamilia() {
   return solicitud<RespuestaFamilia>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion`)
+}
+
+export function consultarCuota() {
+  return solicitud<RespuestaCuota>(`/api/v1/familias/${FAMILIA_TEST_ID}/archivos/cuota`)
 }
 
 export function consultarSugerencias(consulta: string) {
@@ -241,4 +247,30 @@ export function crearMedicamento(datos: { nombre: string; presentacion: string; 
 
 export function crearTratamiento(datos: { perfilId: string; medicamentoId?: string; nombre: string; indicacion?: string; cantidadReceta?: string; frecuencia?: string; horario: string; horarios?: string[]; intervaloHoras?: number; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos`, { method: 'POST', body: JSON.stringify(datos) })
+}
+
+export function subirReceta(tratamientoId: string, archivo: Blob) {
+  const formulario = new FormData()
+  formulario.append('archivo', archivo, 'receta.jpg')
+  return solicitud<RespuestaArchivo>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos/${tratamientoId}/receta`, {
+    method: 'POST', body: formulario
+  })
+}
+
+export function eliminarReceta(archivoId: string) {
+  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/archivos/${archivoId}`, { method: 'DELETE' })
+}
+
+export async function descargarReceta(archivoId: string, miniatura = false, reintentar = true): Promise<Blob> {
+  const encabezados = new Headers({ Accept: 'image/jpeg' })
+  if (accessToken) encabezados.set('Authorization', `Bearer ${accessToken}`)
+  const respuesta = await fetch(`/api/v1/familias/${FAMILIA_TEST_ID}/archivos/${archivoId}?miniatura=${miniatura}`, {
+    headers: encabezados, credentials: 'same-origin'
+  })
+  if (respuesta.status === 401 && reintentar && accessToken) {
+    await renovarSesion()
+    return descargarReceta(archivoId, miniatura, false)
+  }
+  if (!respuesta.ok) throw await problema(respuesta)
+  return respuesta.blob()
 }

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import datetime as dt
 import json
+import struct
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
+import zlib
 
 BASE = "https://www.obusystem.com/api/v1"
 FAMILIA = "0197f100-0000-7000-8000-000000000001"
@@ -20,11 +23,10 @@ def password(path):
     raise RuntimeError("Credencial de prueba no configurada")
 
 
-def request(method, path, token=None, body=None, expected=(200,)):
-    data = None if body is None else json.dumps(body).encode()
+def request_raw(method, path, token=None, data=None, content_type=None, expected=(200,)):
     headers = {"Accept": "application/json"}
-    if data is not None:
-        headers["Content-Type"] = "application/json"
+    if content_type:
+        headers["Content-Type"] = content_type
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(BASE + path, data=data, headers=headers, method=method)
@@ -36,7 +38,31 @@ def request(method, path, token=None, body=None, expected=(200,)):
     if status not in expected:
         excerpt = content.decode(errors="replace")[:400]
         raise AssertionError(f"{method} {path}: HTTP {status}: {excerpt}")
+    return status, content
+
+
+def request(method, path, token=None, body=None, expected=(200,)):
+    data = None if body is None else json.dumps(body).encode()
+    status, content = request_raw(method, path, token, data,
+                                  "application/json" if data is not None else None, expected)
     return status, json.loads(content) if content else None
+
+
+def test_png():
+    def chunk(name, data):
+        return struct.pack(">I", len(data)) + name + data + struct.pack(">I", zlib.crc32(name + data) & 0xffffffff)
+    pixels = b"\x00\x31\x5b\x4c\x31\x5b\x4c\x00\x31\x5b\x4c\x31\x5b\x4c"
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 2, 2, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b"")
+
+
+def upload_recipe(treatment_id, token):
+    boundary = "agenda-e2e-" + uuid.uuid4().hex
+    photo = test_png()
+    body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"archivo\"; filename=\"receta.png\"\r\n"
+            "Content-Type: image/png\r\n\r\n").encode() + photo + f"\r\n--{boundary}--\r\n".encode()
+    status, content = request_raw("POST", f"/familias/{FAMILIA}/tratamientos/{treatment_id}/receta",
+                                  token, body, f"multipart/form-data; boundary={boundary}", expected=(201,))
+    return status, json.loads(content)
 
 
 def login(email, secret):
@@ -95,6 +121,18 @@ def main(env_path):
     assert saved_place["direccion"] == address
     assert all(item.get("responsable") for item in catalog["tratamientos"])
 
+    treatment = next(item for item in catalog["tratamientos"] if not item.get("recetaId"))
+    _, quota_before = request("GET", f"/familias/{FAMILIA}/archivos/cuota", papa)
+    upload_status, recipe = upload_recipe(treatment["id"], papa)
+    _, downloaded = request_raw("GET", f"/familias/{FAMILIA}/archivos/{recipe['id']}", mama)
+    assert downloaded.startswith(b"\xff\xd8")
+    _, quota_with_photo = request("GET", f"/familias/{FAMILIA}/archivos/cuota", papa)
+    assert quota_with_photo["usadosBytes"] > quota_before["usadosBytes"]
+    file_isolation, _ = request_raw("GET", f"/familias/{OTRA}/archivos/{recipe['id']}", papa, expected=(403, 404))
+    request("DELETE", f"/familias/{FAMILIA}/archivos/{recipe['id']}", papa, expected=(204,))
+    _, quota_after = request("GET", f"/familias/{FAMILIA}/archivos/cuota", papa)
+    assert quota_after["usadosBytes"] == quota_before["usadosBytes"]
+
     _, papa_audit = request("GET", f"/familias/{FAMILIA}/auditoria", papa)
     _, mama_audit = request("GET", f"/familias/{FAMILIA}/auditoria", mama)
     papa_entry = next(item for item in papa_audit["entradas"] if item["entidadId"] == event_id)
@@ -113,9 +151,12 @@ def main(env_path):
                 "actor": papa_entry["actor"],
                 "aislamiento_otra_familia": isolation_status,
                 "alta_evento": event_status,
+                "alta_receta": upload_status,
                 "auditoria_papa_mama": papa_entry["fecha"] == mama_entry["fecha"],
                 "guardado_segundos": round(save_seconds, 3),
                 "indexacion_asincrona": True,
+                "aislamiento_archivo": file_isolation,
+                "cifrado_descarga_y_borrado": True,
                 "lugar_privado_guardado": saved_place["nombre"] == place,
                 "responsables_tratamientos": True,
                 "sugerencia_registro_real": found["entidadId"] == event_id,

@@ -17,6 +17,9 @@ sudo mkdir -p "$DESTINO"
 sudo chown -R "$USER":"$USER" "$RAIZ"
 tar -xzf "$ARCHIVO" -C "$DESTINO"
 install -m 600 "$VARIABLES" "$DESTINO/infraestructura/.env"
+if ! grep -q '^ARCHIVOS_ENCRYPTION_KEY=' "$DESTINO/infraestructura/.env"; then
+  printf 'ARCHIVOS_ENCRYPTION_KEY=%s\n' "$(openssl rand -base64 32)" >>"$DESTINO/infraestructura/.env"
+fi
 
 cd "$DESTINO/infraestructura"
 if ! docker compose --ansi never --env-file .env -p agenda_familiar up -d --build >"$LOG" 2>&1; then

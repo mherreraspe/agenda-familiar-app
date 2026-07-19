@@ -58,7 +58,11 @@ services:
       SPRING_DATASOURCE_USERNAME: agenda
       SPRING_DATASOURCE_PASSWORD: ${AGENDA_DB_PASSWORD:-desarrollo-local}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET es obligatorio}
+      ARCHIVOS_ENCRYPTION_KEY: ${ARCHIVOS_ENCRYPTION_KEY:?ARCHIVOS_ENCRYPTION_KEY es obligatorio}
+      ARCHIVOS_RAIZ: /var/lib/agenda-familiar/archivos
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
+    volumes:
+      - archivos_datos:/var/lib/agenda-familiar/archivos
     ports:
       - "127.0.0.1:8102:8102"
     depends_on:
@@ -88,3 +92,4 @@ services:
 
 volumes:
   postgres_datos:
+  archivos_datos:
