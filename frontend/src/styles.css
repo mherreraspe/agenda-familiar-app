@@ -41,6 +41,38 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
   box-shadow: 0 0 48px rgb(38 49 45 / 9%);
 }
 
+.app-shell { min-height: 100vh; background: #f9f7f1; }
+.app-shell__contenido { width: min(100%, 1200px); margin: 0 auto; }
+.app-shell__cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 22px 12px; }
+.app-shell__cabecera h1 { margin: 3px 0; font-family: Georgia, serif; font-size: clamp(1.8rem, 6vw, 2.45rem); }
+.app-shell__cabecera p { margin: 0; color: #63706b; }
+.app-shell__acciones { display: flex; align-items: center; gap: 9px; }
+.app-shell__principal { width: 100%; padding: 8px 22px 112px; outline: none; }
+.app-shell__navegacion { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; align-items: stretch; justify-content: space-around; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #ded9ce; background: rgb(249 247 241 / 97%); backdrop-filter: blur(12px); }
+.app-shell__navegacion a { position: relative; display: grid; min-width: 74px; min-height: 52px; place-items: center; align-content: center; gap: 2px; border-radius: 12px; color: #727b77; text-decoration: none; font-size: .76rem; font-weight: 800; }
+.app-shell__navegacion a > span[aria-hidden] { font-size: 1.15rem; line-height: 1; }
+.app-shell__navegacion a.router-link-exact-active { color: #315b4c; background: #e5ece8; }
+.app-shell__navegacion .contador { position: absolute; top: 3px; right: 8px; }
+.app-shell__marca { display: none; }
+.boton-anadir { display: inline-flex; min-height: 44px; align-items: center; gap: 5px; padding: 9px 14px; border-radius: 999px; color: white; background: #315b4c; font-weight: 900; list-style: none; cursor: pointer; }
+.boton-anadir::-webkit-details-marker, .menu-desplegable--avatar summary::-webkit-details-marker { display: none; }
+.menu-desplegable { position: relative; }
+.menu-desplegable > summary { list-style: none; }
+.menu-desplegable__panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 6; display: grid; width: max-content; min-width: 210px; padding: 8px; border: 1px solid #ded9ce; border-radius: 14px; background: white; box-shadow: 0 16px 38px rgb(38 49 45 / 18%); }
+.menu-desplegable__panel a, .menu-desplegable__panel button { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 9px; color: #315b4c; background: transparent; text-align: left; text-decoration: none; font-weight: 800; }
+.menu-desplegable__panel a:hover, .menu-desplegable__panel a:focus-visible, .menu-desplegable__panel button:hover, .menu-desplegable__panel button:focus-visible { background: #eef2ef; outline: 2px solid #315b4c; outline-offset: -2px; }
+.menu-desplegable--avatar .avatar { display: inline-grid; min-width: 52px; min-height: 44px; place-items: center; }
+
+@media (min-width: 840px) {
+  .app-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+  .app-shell__navegacion { position: sticky; top: 0; right: auto; bottom: auto; display: flex; height: 100vh; flex-direction: column; justify-content: flex-start; gap: 6px; padding: 28px 18px; border-top: 0; border-right: 1px solid #ded9ce; background: #f3f0e8; backdrop-filter: none; }
+  .app-shell__marca { display: block; margin: 0 8px 24px; color: #315b4c; font-family: Georgia, serif; font-size: 1.15rem; }
+  .app-shell__navegacion a { display: flex; min-width: 0; min-height: 48px; justify-content: flex-start; gap: 12px; padding: 10px 14px; font-size: .9rem; }
+  .app-shell__navegacion .contador { position: static; margin-left: auto; }
+  .app-shell__cabecera { padding-top: 34px; }
+  .app-shell__principal { padding-bottom: 48px; }
+}
+
 .cabecera, .titulo-seccion, .tarjeta, .navegacion { display: flex; align-items: center; }
 
 .cabecera { justify-content: space-between; gap: 18px; margin-bottom: 28px; }
@@ -155,6 +187,15 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .contador { display: inline-grid; min-width: 18px; height: 18px; place-items: center; border-radius: 9px; color: white; background: #b45d40; font-size: .65rem; }
 
 @media (max-width: 520px) {
+  .app-shell__cabecera { align-items: center; padding-inline: 16px; }
+  .app-shell__cabecera > div:first-child { min-width: 0; }
+  .app-shell__cabecera h1 { font-size: 1.75rem; }
+  .app-shell__cabecera .sobretitulo { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-shell__cabecera > div:first-child > p:last-child { display: none; }
+  .app-shell__principal { padding-inline: 16px; }
+  .boton-anadir { padding-inline: 12px; }
+  .menu-desplegable--avatar .avatar { width: 44px; padding: 0; overflow: hidden; color: transparent; }
+  .menu-desplegable--avatar .avatar::before { color: white; content: 'F'; }
   .aplicacion { padding-inline: 16px; }
   .tarjeta { align-items: flex-start; flex-wrap: wrap; }
   .tarjeta__contenido { min-width: calc(100% - 78px); }
