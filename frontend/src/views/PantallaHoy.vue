@@ -619,17 +619,16 @@ async function salir() {
         <button type="button" class="boton-secundario" @click="cargarSeccion(seccion, true)">Reintentar</button>
       </div>
       <template v-else>
-      <section v-if="seccion !== 'familia' && seccion !== 'actividad'" class="miembros" aria-label="Filtrar agenda por persona">
-        <button type="button" :class="{ activo: filtroPerfil === 'TODOS' }" :aria-pressed="filtroPerfil === 'TODOS'" @click="filtroPerfil = 'TODOS'">Todos</button>
-        <button v-for="perfil in datos?.perfiles" :key="perfil.id" type="button"
-          :class="{ activo: filtroPerfil === perfil.id }" :aria-pressed="filtroPerfil === perfil.id"
-          :style="{ borderColor: perfil.color }" @click="filtroPerfil = perfil.id">
-          {{ perfil.nombre }}
-        </button>
+      <section v-if="seccion !== 'familia' && seccion !== 'actividad'" class="selector-persona" aria-label="Filtrar agenda por persona">
+        <label for="filtro-persona">Ver agenda de</label>
+        <select id="filtro-persona" v-model="filtroPerfil">
+          <option value="TODOS">Todos</option>
+          <option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option>
+        </select>
       </section>
 
       <nav v-if="seccion === 'salud'" class="subnavegacion" aria-label="Secciones de Salud">
-        <RouterLink :to="destinoSalud('hoy')" :aria-current="seccionSalud === 'hoy' ? 'page' : undefined">Hoy</RouterLink>
+        <RouterLink :to="destinoSalud('hoy')" :aria-current="seccionSalud === 'hoy' ? 'page' : undefined">Tomas</RouterLink>
         <RouterLink :to="destinoSalud('tratamientos')" :aria-current="seccionSalud === 'tratamientos' ? 'page' : undefined">Tratamientos</RouterLink>
         <RouterLink :to="destinoSalud('botiquin')" :aria-current="seccionSalud === 'botiquin' ? 'page' : undefined">Botiquín</RouterLink>
         <RouterLink :to="destinoSalud('recetas')" :aria-current="seccionSalud === 'recetas' ? 'page' : undefined">Recetas</RouterLink>
@@ -670,7 +669,7 @@ async function salir() {
       </section>
 
       <section v-if="seccion === 'hoy' || (seccion === 'salud' && seccionSalud === 'hoy')" id="ocurrencias" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Tratamientos</span><h2>Ocurrencias</h2></div></div>
+        <div class="titulo-seccion"><div><h2>{{ seccion === 'salud' ? 'Tomas' : 'Tomas del día' }}</h2></div></div>
         <article v-for="ocurrencia in (seccion === 'salud' ? ocurrenciasVisibles : ocurrenciasPendientes)" :key="ocurrencia.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.programadaEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ ocurrencia.tratamiento }}</h3><p>Para {{ ocurrencia.persona }}</p></div>
@@ -683,12 +682,12 @@ async function salir() {
             />
           </div>
         </article>
-        <p v-if="!ocurrenciasPendientes.length" class="estado-vacio">No hay ocurrencias pendientes para este filtro.</p>
+        <p v-if="!ocurrenciasPendientes.length" class="estado-vacio">No hay tomas pendientes para este filtro.</p>
         <button v-if="seccion === 'salud' && ocurrenciasPendientes.length > 5" type="button" class="boton-ver-mas" @click="mostrarTodoSalud.hoy = !mostrarTodoSalud.hoy">
           {{ mostrarTodoSalud.hoy ? 'Mostrar menos' : `Ver ${ocurrenciasPendientes.length - 5} más` }}
         </button>
         <details v-if="historialOcurrencias.length" class="historial-ocurrencias">
-          <summary>Ver historial de ocurrencias ({{ historialOcurrencias.length }})</summary>
+          <summary>Ver historial de tomas ({{ historialOcurrencias.length }})</summary>
           <article v-for="ocurrencia in historialOcurrencias" :key="`historial-${ocurrencia.id}`" class="tarjeta">
             <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.resueltaEn || ocurrencia.programadaEn)) }}</time>
             <div class="tarjeta__contenido"><h3>{{ ocurrencia.tratamiento }}</h3><p>{{ ocurrencia.persona }} · {{ ocurrencia.resueltaPorNombre || 'Adulto autorizado' }}</p></div>
@@ -736,8 +735,21 @@ async function salir() {
       <section v-if="seccion === 'salud' && seccionSalud === 'tratamientos'" id="tratamientos" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'tratamiento'">Agregar</button></div>
         <article v-for="tratamiento in tratamientosVisibles" :key="tratamiento.id" class="tarjeta">
-          <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>Responsable: {{ tratamiento.responsable }}<span v-if="tratamiento.responsableAlternativo"> · alternativo: {{ tratamiento.responsableAlternativo }}</span></p><p>{{ tratamiento.intervaloHoras ? `Cada ${tratamiento.intervaloHoras} h desde ${tratamiento.horarios[0]}` : `Horarios: ${tratamiento.horarios.join(', ')}` }}</p><p v-if="tratamiento.dosisIndicada || tratamiento.frecuencia">{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') }}</p><small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small></div>
-          <div class="acciones-ocurrencia"><span class="estado">{{ tratamiento.estado }}</span><label v-if="!tratamiento.recetaId" class="boton-accion boton-archivo">Agregar receta<input type="file" accept="image/jpeg,image/png" capture="environment" :disabled="cargando" @change="agregarReceta($event, tratamiento.id)" /></label><button v-if="tratamiento.recetaId" type="button" class="boton-accion" :disabled="cargando" @click="verReceta(tratamiento.recetaId)">Ver receta</button><MenuMas v-if="tratamiento.recetaId || tratamiento.estado === 'ACTIVO'" :acciones="[{ id: 'eliminar-receta', etiqueta: 'Eliminar receta', peligrosa: true }, { id: 'cerrar', etiqueta: 'Finalizar tratamiento', peligrosa: true }].filter(accion => (accion.id !== 'eliminar-receta' || tratamiento.recetaId) && (accion.id !== 'cerrar' || tratamiento.estado === 'ACTIVO'))" :etiqueta="`Más acciones para ${tratamiento.medicamento}`" @seleccionar="accionTratamiento(tratamiento, $event)" /></div>
+          <div class="tarjeta__contenido">
+            <div class="tarjeta__encabezado"><h3>{{ tratamiento.medicamento }}</h3><span class="estado">{{ tratamiento.estado }}</span></div>
+            <p>{{ tratamiento.persona }} · {{ tratamiento.intervaloHoras ? `cada ${tratamiento.intervaloHoras} h` : tratamiento.horarios.map(horario => horario.slice(0, 5)).join(' · ') }}</p>
+            <details class="detalles-fila">
+              <summary>Ver detalles</summary>
+              <p>Responsable: {{ tratamiento.responsable }}<span v-if="tratamiento.responsableAlternativo"> · alternativo: {{ tratamiento.responsableAlternativo }}</span></p>
+              <p v-if="tratamiento.dosisIndicada || tratamiento.frecuencia">{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') }}</p>
+              <small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small>
+              <div class="detalles-fila__acciones">
+                <label v-if="!tratamiento.recetaId" class="boton-accion boton-archivo">Agregar receta<input type="file" accept="image/jpeg,image/png" capture="environment" :disabled="cargando" @change="agregarReceta($event, tratamiento.id)" /></label>
+                <button v-if="tratamiento.recetaId" type="button" class="boton-accion" :disabled="cargando" @click="verReceta(tratamiento.recetaId)">Ver receta</button>
+              </div>
+            </details>
+          </div>
+          <MenuMas v-if="tratamiento.recetaId || tratamiento.estado === 'ACTIVO'" :acciones="[{ id: 'eliminar-receta', etiqueta: 'Eliminar receta', peligrosa: true }, { id: 'cerrar', etiqueta: 'Finalizar tratamiento', peligrosa: true }].filter(accion => (accion.id !== 'eliminar-receta' || tratamiento.recetaId) && (accion.id !== 'cerrar' || tratamiento.estado === 'ACTIVO'))" :etiqueta="`Más acciones para ${tratamiento.medicamento}`" @seleccionar="accionTratamiento(tratamiento, $event)" />
         </article>
         <p v-if="!tratamientosFiltrados.length" class="estado-vacio">No hay tratamientos para este filtro.</p>
         <button v-if="tratamientosFiltrados.length > 5" type="button" class="boton-ver-mas" @click="mostrarTodoSalud.tratamientos = !mostrarTodoSalud.tratamientos">

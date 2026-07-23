@@ -37,11 +37,11 @@ test('navega por destinos reales y muestra solo el dominio activo', async ({ pag
   await expect(page).toHaveURL(/\/agenda$/)
   await expect(page.getByRole('link', { name: 'Agenda' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('heading', { name: 'Próximos eventos' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Salud' }).click()
   await expect(page).toHaveURL(/\/salud$/)
-  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Tratamientos' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Próximos eventos' })).toHaveCount(0)
 })
@@ -49,13 +49,13 @@ test('navega por destinos reales y muestra solo el dominio activo', async ({ pag
 test('Salud muestra una sola subsección y conserva la selección en la URL', async ({ page }) => {
   await page.goto('/salud')
   await expect(page.getByRole('navigation', { name: 'Secciones de Salud' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Medicamentos' })).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Tratamientos', exact: true }).click()
   await expect(page).toHaveURL(/\/salud\?seccion=tratamientos$/)
   await expect(page.getByRole('heading', { name: 'Tratamientos' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toHaveCount(0)
   await expect(page.locator('#tratamientos article.tarjeta')).toHaveCount(5)
   await page.getByRole('button', { name: 'Ver 1 más' }).click()
   await expect(page.locator('#tratamientos article.tarjeta')).toHaveCount(6)
@@ -72,7 +72,7 @@ test('Salud muestra una sola subsección y conserva la selección en la URL', as
 
 test('los menús de cabecera son mutuamente exclusivos', async ({ page }) => {
   await page.goto('/salud')
-  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toBeVisible()
   const botonAnadir = page.locator('button.boton-anadir')
   const botonAvatar = page.locator('button[aria-label="Abrir menú de familia"]')
 
@@ -89,7 +89,7 @@ test('los menús de cabecera son mutuamente exclusivos', async ({ page }) => {
 
 test('mantiene Familia y Actividad fuera de la navegación principal', async ({ page }) => {
   await page.goto('/salud')
-  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toBeVisible()
   await page.locator('button[aria-label="Abrir menú de familia"]').click()
   await page.getByRole('link', { name: 'Familia y permisos' }).click()
   await expect(page).toHaveURL(/\/ajustes\/familia$/)
@@ -122,7 +122,7 @@ test('carga solo los recursos requeridos por cada dominio', async ({ page }) => 
 
   solicitudes.length = 0
   await page.getByRole('link', { name: 'Salud' }).click()
-  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toBeVisible()
   expect(solicitudes.some(ruta => ruta.endsWith('/ocurrencias'))).toBe(true)
   expect(solicitudes.some(ruta => ruta.endsWith('/archivos/cuota'))).toBe(true)
   expect(solicitudes.some(ruta => ruta.endsWith('/auditoria'))).toBe(false)
