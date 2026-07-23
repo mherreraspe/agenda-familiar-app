@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 export interface AccionMenu {
   id: string
@@ -19,11 +19,43 @@ function seleccionar(accion: string) {
   menu.value?.removeAttribute('open')
   emit('seleccionar', accion)
 }
+
+function cerrar() {
+  menu.value?.removeAttribute('open')
+}
+
+function cerrarOtros() {
+  if (menu.value?.open) return
+  document.querySelectorAll<HTMLDetailsElement>('.menu-mas[open]').forEach(otro => {
+    if (otro !== menu.value) otro.removeAttribute('open')
+  })
+}
+
+function cerrarAlPulsarFuera(evento: PointerEvent) {
+  if (evento.target instanceof Node && !menu.value?.contains(evento.target)) cerrar()
+}
+
+function cerrarConEscape(evento: KeyboardEvent) {
+  if (evento.key === 'Escape' && menu.value?.open) {
+    cerrar()
+    menu.value.querySelector<HTMLElement>('summary')?.focus()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', cerrarAlPulsarFuera)
+  document.addEventListener('keydown', cerrarConEscape)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', cerrarAlPulsarFuera)
+  document.removeEventListener('keydown', cerrarConEscape)
+})
 </script>
 
 <template>
   <details ref="menu" class="menu-mas">
-    <summary :aria-label="etiqueta">⋮</summary>
+    <summary :aria-label="etiqueta" @click="cerrarOtros">⋮</summary>
     <div class="menu-mas__panel">
       <button
         v-for="accion in acciones"

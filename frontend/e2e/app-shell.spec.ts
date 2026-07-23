@@ -5,7 +5,7 @@ async function prepararApi(page: Page) {
   const perfil = { id: 'perfil-1', nombre: 'Mamá', tipo: 'ADULTO', color: '#315b4c', relacion: 'Mamá' }
   const tratamientos = Array.from({ length: 6 }, (_, indice) => ({
     id: `tratamiento-${indice}`, perfilId: perfil.id, persona: 'Mamá', medicamento: `Tratamiento ${indice + 1}`,
-    responsable: 'Mamá', horarios: ['08:00:00'], estado: 'ACTIVO'
+    responsable: 'Mamá', horarios: ['08:00:00'], estado: 'ACTIVO', recetaId: indice === 0 ? 'receta-1' : undefined
   }))
   const medicamentos = Array.from({ length: 6 }, (_, indice) => ({
     id: `medicamento-${indice}`, loteId: `lote-${indice}`, nombre: `Medicamento ${indice + 1}`,
@@ -30,6 +30,7 @@ async function prepararApi(page: Page) {
     if (ruta.endsWith('/auditoria')) return responder({ entradas: [] })
     if (ruta.endsWith('/configuracion')) return responder({ puedeAdministrar: true, perfiles: [{ ...perfil, activo: true, permiso: 'ADMINISTRADOR_FAMILIAR' }] })
     if (ruta.endsWith('/archivos/cuota')) return responder({ cuotaBytes: 1_000_000, usadosBytes: 0, disponiblesBytes: 1_000_000, porcentaje: 0, nivel: 'NORMAL' })
+    if (ruta.endsWith('/archivos/receta-1')) return route.fulfill({ status: 200, contentType: 'image/jpeg', body: '' })
     if (ruta.endsWith('/objetos') && route.request().method() === 'GET') return responder({ objetos, ubicaciones: [{ ruta: objetos[0].ruta, cantidad: 1 }] })
     if (ruta.endsWith('/objetos') && route.request().method() === 'POST') return responder({ id: 'objeto-2' })
     if (/\/objetos\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') return route.fulfill({ status: 204 })
@@ -110,6 +111,93 @@ test('los menús de cabecera son mutuamente exclusivos', async ({ page }) => {
 
   await page.keyboard.press('Escape')
   await expect(botonAvatar).toHaveAttribute('aria-expanded', 'false')
+})
+
+test('Tratamiento cabe en pantalla y bloquea cualquier segunda alta', async ({ page }, testInfo) => {
+  await page.goto('/salud?seccion=tratamientos')
+  await page.getByRole('button', { name: 'Tratamiento', exact: true }).click()
+
+  const dialogo = page.getByRole('dialog', { name: 'Nuevo tratamiento' })
+  await expect(dialogo).toBeVisible()
+  await expect(dialogo.locator('form')).toHaveCSS('overflow-y', 'auto')
+  await expect(dialogo.locator('.dialogo__acciones')).toBeVisible()
+  await expect(dialogo.getByRole('button', { name: 'Guardar tratamiento' })).toBeInViewport()
+  expect(await page.locator('dialog:modal').count()).toBe(1)
+  expect(await page.evaluate(() => document.activeElement?.closest('dialog')?.matches(':modal'))).toBe(true)
+
+  const caja = await dialogo.boundingBox()
+  expect(caja).not.toBeNull()
+  expect(caja!.y).toBeGreaterThanOrEqual(0)
+  expect(caja!.y + caja!.height).toBeLessThanOrEqual(testInfo.project.use.viewport!.height)
+
+  let fondoBloqueado = false
+  try {
+    await page.locator('button[aria-label="Abrir menú de familia"]').click({ timeout: 500 })
+  } catch {
+    fondoBloqueado = true
+  }
+  expect(fondoBloqueado).toBe(true)
+  expect(await page.locator('dialog:modal').count()).toBe(1)
+
+  await page.keyboard.press('Escape')
+  await expect(dialogo).toBeHidden()
+  await expect(page.locator('button[aria-label="Abrir menú de familia"]')).toBeEnabled()
+})
+
+test('todas las altas generales son modales, exclusivas y restauran el foco', async ({ page }) => {
+  const casos = [
+    { ruta: '/objetos', boton: 'Objeto', dialogo: 'Nuevo objeto' },
+    { ruta: '/salud?seccion=botiquin', boton: 'Medicamento', dialogo: 'Nuevo medicamento' },
+    { ruta: '/ajustes/familia', boton: 'Agregar', dialogo: 'Nuevo perfil' }
+  ]
+
+  for (const caso of casos) {
+    await page.goto(caso.ruta)
+    const activador = page.getByRole('button', { name: caso.boton, exact: true })
+    await activador.click()
+    await expect(page.getByRole('dialog', { name: caso.dialogo })).toBeVisible()
+    expect(await page.locator('dialog:modal').count()).toBe(1)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: caso.dialogo })).toBeHidden()
+    await expect(activador).toBeFocused()
+  }
+
+  await page.goto('/hoy')
+  const anadir = page.locator('button.boton-anadir')
+  await anadir.click()
+  await page.getByRole('button', { name: 'Tarea o recordatorio', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Nueva tarea' })).toBeVisible()
+  expect(await page.locator('dialog:modal').count()).toBe(1)
+  await page.keyboard.press('Escape')
+  await expect(anadir).toBeFocused()
+})
+
+test('solo permite un menú Más abierto y lo cierra al pulsar fuera', async ({ page }) => {
+  await page.goto('/salud?seccion=tratamientos')
+  const activadores = page.locator('.menu-mas > summary')
+  expect(await activadores.count()).toBeGreaterThan(1)
+  await activadores.nth(0).click()
+  await expect(page.locator('.menu-mas[open]')).toHaveCount(1)
+  await page.getByRole('heading', { name: 'Tratamientos' }).click()
+  await expect(page.locator('.menu-mas[open]')).toHaveCount(0)
+  await activadores.nth(1).click()
+  await expect(page.locator('.menu-mas[open]')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.menu-mas[open]')).toHaveCount(0)
+})
+
+test('la receta privada también usa una única capa modal', async ({ page }) => {
+  await page.goto('/salud?seccion=tratamientos')
+  const tratamientoConReceta = page
+    .locator('#tratamientos article.tarjeta')
+    .filter({ has: page.getByText('Tratamiento 1', { exact: true }) })
+  await tratamientoConReceta.getByText('Ver detalles', { exact: true }).click()
+  await tratamientoConReceta.getByRole('button', { name: 'Ver receta', exact: true }).click()
+  const dialogo = page.getByRole('dialog', { name: 'Receta privada' })
+  await expect(dialogo).toBeVisible()
+  expect(await page.locator('dialog:modal').count()).toBe(1)
+  await page.keyboard.press('Escape')
+  await expect(dialogo).toBeHidden()
 })
 
 test('mantiene Familia y Actividad fuera de la navegación principal', async ({ page }) => {
