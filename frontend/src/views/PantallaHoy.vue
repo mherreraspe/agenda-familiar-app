@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
+import FormularioEvento from '../features/eventos/FormularioEvento.vue'
+import { useFormularioRuta } from '../composables/useFormularioRuta'
 import {
   cerrarSesion as eliminarSesion,
   actuarAgenda,
@@ -15,8 +17,6 @@ import {
   consultarCatalogo,
   consultarHoy,
   consultarOcurrencias,
-  consultarSugerencias,
-  crearEvento,
   crearPerfil,
   crearMedicamento,
   crearTarea,
@@ -35,7 +35,6 @@ import {
   type RespuestaFamilia,
   type RespuestaCuota,
   type RespuestaOcurrencias,
-  type SugerenciaFamiliar,
   type TareaResumen
 } from '../api'
 import { reducirImagenReceta, validarImagenReceta } from '../imagen'
@@ -53,17 +52,24 @@ const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
 const auditoria = ref<RespuestaAuditoria | null>(null)
 const familia = ref<RespuestaFamilia | null>(null)
 const cuota = ref<RespuestaCuota | null>(null)
-const sugerenciasTitulo = ref<SugerenciaFamiliar[]>([])
 const filtroPerfil = ref('TODOS')
-const formulario = ref<'tarea' | 'evento' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
+const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
-const nuevoEvento = reactive({ perfilId: '', titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
 const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
 const recetaSeleccionada = ref<File | null>(null)
 const recetaVisible = ref<{ id: string; url: string } | null>(null)
 const perfilEditadoId = ref<string | null>(null)
 const nuevoPerfil = reactive({ nombre: '', tipo: 'DEPENDIENTE' as 'ADULTO' | 'DEPENDIENTE', color: '#315b4c', relacion: '', usuarioId: '', permiso: 'ADULTO' as 'ADMINISTRADOR_FAMILIAR' | 'ADULTO', activo: true })
+const formularioEvento = ref<InstanceType<typeof FormularioEvento> | null>(null)
+const {
+  abierto: eventoAbierto,
+  modificado: modificadoEvento,
+  abrir: abrirFormularioEvento,
+  cerrar: cerrarFormularioEvento,
+  registrarConfirmacion
+} = useFormularioRuta('evento')
+registrarConfirmacion(() => formularioEvento.value?.preguntarDescarte() ?? Promise.resolve(false))
 
 const fechaActual = new Intl.DateTimeFormat('es-PE', {
   weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima'
@@ -90,15 +96,9 @@ const elementosRevision = computed(() => agendaTratamientos.value?.revisar.filte
   if (filtroPerfil.value === 'TODOS' || elemento.origen !== 'OCURRENCIA') return true
   return agendaTratamientos.value?.ocurrencias.some(ocurrencia => ocurrencia.id === elemento.entidadId && coincideFiltro(ocurrencia.perfilId))
 }) ?? [])
-const lugaresSugeridos = computed(() => {
-  const consulta = nuevoEvento.lugar.trim().toLocaleLowerCase('es-PE')
-  if (!consulta) return catalogo.value?.lugares.slice(0, 5) ?? []
-  return catalogo.value?.lugares.filter(lugar => lugar.nombre.toLocaleLowerCase('es-PE').includes(consulta)).slice(0, 5) ?? []
-})
 const tituloFormulario = computed(() => ({
-  tarea: 'Nueva tarea', evento: 'Nuevo evento', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento', perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil'
+  tarea: 'Nueva tarea', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento', perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil'
 })[formulario.value ?? 'tarea'])
-let temporizadorSugerencias: number | undefined
 
 onMounted(async () => {
   try {
@@ -146,7 +146,6 @@ async function cargar() {
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
-  if (!nuevoEvento.perfilId && datos.value.perfiles.length) nuevoEvento.perfilId = datos.value.perfiles[0].id
   if (!nuevoTratamiento.perfilId && datos.value.perfiles.length) nuevoTratamiento.perfilId = datos.value.perfiles[0].id
 }
 
@@ -183,23 +182,6 @@ async function guardarTarea() {
   } finally {
     cargando.value = false
   }
-}
-
-async function guardarEvento() {
-  await ejecutarGuardado(async () => {
-    await crearEvento({
-      ...nuevoEvento,
-      perfilId: nuevoEvento.perfilId || undefined,
-      tipo: nuevoEvento.tipo || undefined,
-      lugar: nuevoEvento.lugar || undefined,
-      direccion: nuevoEvento.direccion || undefined,
-      notas: nuevoEvento.notas || undefined,
-      inicioEn: new Date(nuevoEvento.inicioEn).toISOString(),
-      finEn: nuevoEvento.finEn ? new Date(nuevoEvento.finEn).toISOString() : undefined,
-      recurrencia: nuevoEvento.repetir ? { frecuencia: nuevoEvento.frecuencia as 'DIARIA' | 'SEMANAL' | 'MENSUAL', intervalo: nuevoEvento.intervalo, hasta: new Date(nuevoEvento.hasta).toISOString() } : undefined
-    })
-    Object.assign(nuevoEvento, { perfilId: nuevoEvento.perfilId, titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '', repetir: false, hasta: '' })
-  }, 'El evento fue agregado.')
 }
 
 async function guardarMedicamento() {
@@ -315,32 +297,15 @@ async function borrarReceta(archivoId: string) {
   }
 }
 
-function seleccionarLugar(lugar: { nombre: string; direccion?: string }) {
-  nuevoEvento.lugar = lugar.nombre
-  nuevoEvento.direccion = lugar.direccion ?? ''
+function abrirEvento(evento: MouseEvent) {
+  void abrirFormularioEvento(evento.currentTarget as HTMLElement)
 }
 
-function actualizarSugerenciasTitulo() {
-  window.clearTimeout(temporizadorSugerencias)
-  if (nuevoEvento.titulo.trim().length < 2) {
-    sugerenciasTitulo.value = []
-    return
-  }
-  temporizadorSugerencias = window.setTimeout(async () => {
-    try {
-      sugerenciasTitulo.value = (await consultarSugerencias(nuevoEvento.titulo)).sugerencias
-        .filter(sugerencia => sugerencia.tipo === 'EVENTO')
-    } catch {
-      sugerenciasTitulo.value = []
-    }
-  }, 250)
-}
-
-function seleccionarSugerencia(sugerencia: SugerenciaFamiliar) {
-  nuevoEvento.titulo = sugerencia.titulo
-  nuevoEvento.lugar = sugerencia.lugar ?? ''
-  nuevoEvento.direccion = sugerencia.direccion ?? ''
-  sugerenciasTitulo.value = []
+async function eventoGuardado() {
+  modificadoEvento.value = false
+  await cerrarFormularioEvento(true)
+  mensaje.value = 'El evento fue agregado.'
+  await cargar()
 }
 
 async function resolverOcurrencia(ocurrencia: OcurrenciaResumen, estado: Exclude<EstadoOcurrencia, 'PENDIENTE'>) {
@@ -619,7 +584,7 @@ async function salir() {
       </section>
 
       <section id="calendario" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div><button type="button" class="boton-secundario" @click="formulario = 'evento'">Agregar</button></div>
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div><button type="button" class="boton-secundario" @click="abrirEvento">Agregar</button></div>
         <article v-for="evento in eventosFiltrados" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p><small v-if="evento.recurrente">Recurrente</small></div>
@@ -679,6 +644,17 @@ async function salir() {
       </section>
     </main>
 
+    <FormularioEvento
+      v-if="datos"
+      ref="formularioEvento"
+      :abierto="eventoAbierto"
+      :perfiles="datos.perfiles"
+      :zona-horaria="datos.zonaHoraria"
+      @cerrar="cerrarFormularioEvento()"
+      @guardado="eventoGuardado"
+      @modificado="modificadoEvento = $event"
+    />
+
     <dialog :open="formulario !== null" class="dialogo">
       <div class="titulo-seccion"><h2>{{ tituloFormulario }}</h2><button type="button" class="cerrar" aria-label="Cerrar" @click="formulario = null">×</button></div>
 
@@ -698,34 +674,6 @@ async function salir() {
           <label>Hasta<input v-model="nuevaTarea.hasta" type="datetime-local" required /></label>
         </div>
         <button class="boton-principal" :disabled="cargando">Guardar tarea</button>
-      </form>
-
-      <form v-else-if="formulario === 'evento'" @submit.prevent="guardarEvento">
-        <label>Persona opcional<select v-model="nuevoEvento.perfilId"><option value="">Toda la familia / sin asignar</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
-        <label>Título<input v-model.trim="nuevoEvento.titulo" maxlength="180" autocomplete="off" required @input="actualizarSugerenciasTitulo" /></label>
-        <div v-if="sugerenciasTitulo.length" class="sugerencias" aria-label="Registros familiares anteriores">
-          <button v-for="sugerencia in sugerenciasTitulo" :key="`${sugerencia.tipo}-${sugerencia.entidadId}`" type="button" @click="seleccionarSugerencia(sugerencia)">
-            <strong>{{ sugerencia.titulo }}</strong><small>{{ sugerencia.lugar || 'Sin lugar guardado' }}</small>
-          </button>
-        </div>
-        <label>Tipo opcional<select v-model="nuevoEvento.tipo"><option value="">Sin tipo</option><option value="CONSULTA">Consulta</option><option value="VACUNA">Vacuna</option><option value="CONTROL">Control</option><option value="OTRO">Otro</option></select></label>
-        <label>Lugar<input v-model.trim="nuevoEvento.lugar" maxlength="300" autocomplete="off" /></label>
-        <div v-if="lugaresSugeridos.length" class="sugerencias" aria-label="Lugares usados anteriormente">
-          <button v-for="lugar in lugaresSugeridos" :key="lugar.id" type="button" @click="seleccionarLugar(lugar)">
-            <strong>{{ lugar.nombre }}</strong><small>{{ lugar.direccion || 'Sin dirección guardada' }}</small>
-          </button>
-        </div>
-        <label>Dirección opcional<input v-model.trim="nuevoEvento.direccion" maxlength="500" /></label>
-        <label>Notas opcionales<textarea v-model.trim="nuevoEvento.notas" maxlength="1000" rows="2" /></label>
-        <label>Inicio<input v-model="nuevoEvento.inicioEn" type="datetime-local" required /></label>
-        <label>Fin opcional<input v-model="nuevoEvento.finEn" type="datetime-local" /></label>
-        <label class="opcion-linea"><input v-model="nuevoEvento.repetir" type="checkbox" /> Repetir evento</label>
-        <div v-if="nuevoEvento.repetir" class="campos-dobles">
-          <label>Frecuencia<select v-model="nuevoEvento.frecuencia"><option value="DIARIA">Diaria</option><option value="SEMANAL">Semanal</option><option value="MENSUAL">Mensual</option></select></label>
-          <label>Cada<input v-model.number="nuevoEvento.intervalo" type="number" min="1" max="30" required /></label>
-          <label>Hasta<input v-model="nuevoEvento.hasta" type="datetime-local" required /></label>
-        </div>
-        <button class="boton-principal" :disabled="cargando">Guardar evento</button>
       </form>
 
       <form v-else-if="formulario === 'medicamento'" @submit.prevent="guardarMedicamento">
