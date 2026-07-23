@@ -2,8 +2,8 @@
 
 **Corte:** 2026-07-23 (America/Lima)
 **Rama:** `main`
-**Commit desplegado:** `8acccbaeb56753898b2724a3ba6fd37f1cc194a1`
-**Versión del servidor:** `20260723T213222Z`
+**Commit desplegado:** `c155e00f974645a612e4561cdb50ed640319a249`
+**Versión del servidor:** `20260723T233543Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
@@ -191,6 +191,21 @@ Integrado mediante el PR #32, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-8acccba-20260723T213222Z`.
 - [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — administración global y alta de familias
+
+Integrado mediante el PR #34, desplegado y verificado en producción:
+
+- [x] Rol global `ADMINISTRADOR_PLATAFORMA` persistido en autenticación, incluido en el JWT firmado y comprobado nuevamente por Agenda.
+- [x] Ruta `/admin` exclusiva con listado y alta real de familias; no depende de estado simulado en frontend.
+- [x] Creación idempotente aislada por actor, zona horaria validada y auditoría de plataforma sin contenido médico.
+- [x] Los usuarios familiares reciben 403 y no ven el acceso de administración en AppShell.
+- [x] Migraciones V3 de autenticación y V10 de Agenda aplicadas sin modificar secretos ni volúmenes.
+- [x] Verificación local: 43 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
+- [x] CI de PR `30053417092` y CI de `main` `30053507456` verdes con PostgreSQL 18; 66 escenarios Playwright/axe en tres viewports.
+- [x] PR #34 integrado como `c155e00`; release `20260723T233543Z` saludable.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-c155e00-20260723T233543Z`.
+- [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -246,6 +261,7 @@ Integrado mediante el PR #32, desplegado y verificado en producción:
 - PR de sincronización familiar SSE y lectura offline: <https://github.com/mherreraspe/agenda-familiar-app/pull/28>; CI `30036392835` aprobado y release `20260723T190511Z` verificado.
 - PR de Objetos como dominio familiar real: <https://github.com/mherreraspe/agenda-familiar-app/pull/30>; CI `30042503806` aprobado y release `20260723T203410Z` verificado.
 - PR de formularios modales y capas exclusivas: <https://github.com/mherreraspe/agenda-familiar-app/pull/32>; CI `30046463114` aprobado y release `20260723T213222Z` verificado.
+- PR de administración global y alta de familias: <https://github.com/mherreraspe/agenda-familiar-app/pull/34>; CI `30053417092` y `30053507456` aprobados, release `20260723T233543Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
@@ -299,7 +315,8 @@ Integrado mediante el PR #32, desplegado y verificado en producción:
 - [ ] Segundo factor para dispositivo nuevo y dispositivos confiables revocables.
 - [ ] Pantalla de sesiones activas y revocación individual.
 - [ ] Roles familiares completos y autorización por operación.
-- [ ] Administración de plataforma: familias, suspensión, cuota y métricas sin contenido médico.
+- [x] Administración de plataforma: rol global, acceso exclusivo, listado y alta idempotente de familias.
+- [ ] Administración de plataforma: miembros por invitación, suspensión, cuota y métricas sin contenido médico.
 - [ ] Cambiar contraseña y retirar las credenciales provisionales antes de datos reales.
 - [ ] Migrar JWT HS256 compartido a firma asimétrica como indica el diseño técnico.
 
@@ -316,13 +333,13 @@ Integrado mediante el PR #32, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Implementar Web Push privado sin exponer contenido familiar en la pantalla bloqueada:
+Completar el ingreso de familias con miembros e invitaciones seguras:
 
-1. Registrar y revocar suscripciones por usuario/dispositivo con RLS y auditoría.
-2. Enviar mensajes bloqueados genéricos; cargar el detalle solo después de autenticar.
-3. Añadir preferencias, horario silencioso, deduplicación y reintentos acotados.
-4. Probar aislamiento familiar, permisos denegados, múltiples dispositivos y escalamiento opcional.
-5. Mantener SSE para vistas abiertas y las escrituras offline deshabilitadas.
+1. Crear invitaciones de un solo uso con token aleatorio, hash persistido, vencimiento corto y revocación.
+2. Permitir al invitado definir su contraseña desde el enlace sin que el administrador la conozca.
+3. Permitir al administrador iniciar un restablecimiento por enlace y revocar sesiones al completarlo.
+4. Auditar el ciclo de vida sin registrar tokens, contraseñas ni contenido familiar.
+5. Probar aislamiento, enumeración, reuso, concurrencia, expiración, CSRF e IDOR.
 
 ## Continuidad operativa
 
