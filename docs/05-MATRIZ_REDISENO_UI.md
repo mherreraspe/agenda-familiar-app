@@ -33,7 +33,8 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 ## Estado por PR
 
 - PR 1 — Formulario de evento: extraído a un componente de dominio, abierto con `?crear=evento`, validado en la zona horaria familiar y cubierto en 320×700, 390×844 y 1280×900.
-- PR 2 — AppShell: pendiente; debe actualizar la columna «Nueva ubicación» si la implementación difiere de esta matriz.
+- PR 2A — AppShell y rutas: Pinia incorporado para el filtro compartido, destinos reales `/hoy`, `/agenda` y `/salud`, Familia/Actividad en el menú secundario y redirecciones compatibles desde las rutas anteriores. Objetos permanece oculto hasta disponer de dominio real.
+- PR 2B — Listas compactas, menú Más, carga por dominio y accesibilidad automatizada: pendiente.
 - PR 3 en adelante: pendiente.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.

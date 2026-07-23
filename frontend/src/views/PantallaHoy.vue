@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { storeToRefs } from 'pinia'
+import AppShell from '../app/AppShell.vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
 import FormularioEvento from '../features/eventos/FormularioEvento.vue'
 import { useFormularioRuta } from '../composables/useFormularioRuta'
+import { useInterfazStore } from '../stores/interfaz'
 import {
   cerrarSesion as eliminarSesion,
   actuarAgenda,
@@ -39,6 +42,12 @@ import {
 } from '../api'
 import { reducirImagenReceta, validarImagenReceta } from '../imagen'
 
+type SeccionPrincipal = 'hoy' | 'agenda' | 'salud' | 'familia' | 'actividad'
+
+const props = withDefaults(defineProps<{ seccion?: SeccionPrincipal }>(), { seccion: 'hoy' })
+const interfaz = useInterfazStore()
+const { filtroPerfil } = storeToRefs(interfaz)
+
 const correo = ref('papa@familia.test')
 const clave = ref('')
 const cargando = ref(false)
@@ -52,7 +61,6 @@ const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
 const auditoria = ref<RespuestaAuditoria | null>(null)
 const familia = ref<RespuestaFamilia | null>(null)
 const cuota = ref<RespuestaCuota | null>(null)
-const filtroPerfil = ref('TODOS')
 const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
@@ -79,6 +87,7 @@ const coincideFiltro = (perfilId?: string) => filtroPerfil.value === 'TODOS' || 
 const pendientes = computed(() => datos.value?.tareas.filter(tarea => tarea.estado === 'PENDIENTE' && coincideFiltro(tarea.perfilId)) ?? [])
 const atrasadas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) < new Date()))
 const proximas = computed(() => pendientes.value.filter(tarea => new Date(tarea.fechaLimite) >= new Date()))
+const tareasHoy = computed(() => proximas.value.filter(tarea => claveFecha(tarea.fechaLimite) === claveFecha(new Date().toISOString())))
 const eventosFiltrados = computed(() => catalogo.value?.eventos.filter(evento => evento.estado === 'PROGRAMADO' && new Date(evento.inicioEn) >= new Date() && coincideFiltro(evento.perfilId)) ?? [])
 const eventosAtrasados = computed(() => catalogo.value?.eventos.filter(evento => evento.estado === 'PROGRAMADO' && new Date(evento.inicioEn) < new Date() && coincideFiltro(evento.perfilId)) ?? [])
 const cantidadRevision = computed(() => elementosRevision.value.length + atrasadas.value.length + eventosAtrasados.value.length)
@@ -99,6 +108,13 @@ const elementosRevision = computed(() => agendaTratamientos.value?.revisar.filte
 const tituloFormulario = computed(() => ({
   tarea: 'Nueva tarea', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento', perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil'
 })[formulario.value ?? 'tarea'])
+const tituloPantalla = computed(() => ({
+  hoy: 'Hoy', agenda: 'Agenda', salud: 'Salud', familia: 'Familia y permisos', actividad: 'Actividad'
+})[props.seccion])
+const subtituloPantalla = computed(() => ({
+  hoy: fechaActual, agenda: 'Tareas y eventos próximos', salud: 'Tomas, tratamientos, botiquín y recetas',
+  familia: 'Personas, cuentas y permisos', actividad: 'Historial de cambios familiares'
+})[props.seccion])
 
 onMounted(async () => {
   try {
@@ -116,6 +132,20 @@ function hora(tarea: TareaResumen) {
   return new Intl.DateTimeFormat('es-PE', {
     weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos.value?.zonaHoraria ?? 'America/Lima'
   }).format(new Date(tarea.fechaLimite))
+}
+
+function claveFecha(valor: string) {
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: datos.value?.zonaHoraria ?? 'America/Lima'
+  }).format(new Date(valor))
+}
+
+function abrirAlta(tipo: 'evento' | 'tarea' | 'tratamiento') {
+  if (tipo === 'evento') {
+    void abrirFormularioEvento()
+    return
+  }
+  formulario.value = tipo
 }
 
 async function entrar() {
@@ -479,18 +509,16 @@ async function salir() {
     </section>
   </main>
 
-  <div v-else class="aplicacion">
-    <header class="cabecera">
-      <div>
-        <p class="sobretitulo">{{ fechaActual }}</p>
-        <h1>Buenos días</h1>
-        <p>{{ datos?.familia }} · Esto es lo importante hoy.</p>
-      </div>
-      <button type="button" class="avatar" aria-label="Cerrar sesión" @click="salir">Salir</button>
-    </header>
-
-    <main>
-      <section class="miembros" aria-label="Filtrar agenda por persona">
+  <div v-else>
+    <AppShell
+      :titulo="tituloPantalla"
+      :subtitulo="subtituloPantalla"
+      :familia="datos?.familia"
+      :cantidad-atencion="cantidadRevision"
+      @anadir="abrirAlta"
+      @salir="salir"
+    >
+      <section v-if="seccion !== 'familia' && seccion !== 'actividad'" class="miembros" aria-label="Filtrar agenda por persona">
         <button type="button" :class="{ activo: filtroPerfil === 'TODOS' }" :aria-pressed="filtroPerfil === 'TODOS'" @click="filtroPerfil = 'TODOS'">Todos</button>
         <button v-for="perfil in datos?.perfiles" :key="perfil.id" type="button"
           :class="{ activo: filtroPerfil === perfil.id }" :aria-pressed="filtroPerfil === perfil.id"
@@ -499,7 +527,7 @@ async function salir() {
         </button>
       </section>
 
-      <section class="resumen" aria-label="Resumen del día">
+      <section v-if="seccion === 'hoy'" class="resumen" aria-label="Resumen del día">
         <div><strong>{{ pendientes.length }}</strong><span>pendientes</span></div>
         <div><strong>{{ ocurrenciasPendientes.length }}</strong><span>tomas pendientes</span></div>
         <div><strong>{{ cantidadRevision }}</strong><span>por revisar</span></div>
@@ -508,7 +536,7 @@ async function salir() {
       <p v-if="mensaje" class="confirmacion" role="status">{{ mensaje }}</p>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
 
-      <section v-if="atrasadas.length" class="seccion seccion--alerta">
+      <section v-if="seccion === 'hoy' && atrasadas.length" class="seccion seccion--alerta">
         <div class="titulo-seccion">
           <div><span class="etiqueta">Necesita atención</span><h2>Atrasado</h2></div>
         </div>
@@ -520,20 +548,20 @@ async function salir() {
         />
       </section>
 
-      <section class="seccion">
+      <section v-if="seccion === 'hoy' || seccion === 'agenda'" class="seccion">
         <div class="titulo-seccion">
-          <div><span class="etiqueta etiqueta--verde">En orden</span><h2>Próximos siete días</h2></div>
+          <div><span class="etiqueta etiqueta--verde">{{ seccion === 'hoy' ? 'Hoy' : 'En orden' }}</span><h2>{{ seccion === 'hoy' ? 'Tareas de hoy' : 'Próximos siete días' }}</h2></div>
         </div>
         <TarjetaPendiente
-          v-for="tarea in proximas" :key="tarea.id" :hora="hora(tarea)" :titulo="tarea.titulo"
+          v-for="tarea in (seccion === 'hoy' ? tareasHoy : proximas)" :key="tarea.id" :hora="hora(tarea)" :titulo="tarea.titulo"
           :detalle="`${tarea.responsable} · ${tarea.descripcion ?? 'Sin detalles'}`" tono="proximo"
           :recurrente="tarea.recurrente" @completar="marcarHecho(tarea)"
           @omitir="resolverAgenda('tareas', tarea, 'OMITIR')" @reprogramar="resolverAgenda('tareas', tarea, 'REPROGRAMAR')"
         />
-        <p v-if="!proximas.length" class="estado-vacio">No hay pendientes para los próximos días.</p>
+        <p v-if="!(seccion === 'hoy' ? tareasHoy : proximas).length" class="estado-vacio">{{ seccion === 'hoy' ? 'No hay más tareas para hoy.' : 'No hay pendientes para los próximos días.' }}</p>
       </section>
 
-      <section id="ocurrencias" class="seccion">
+      <section v-if="seccion === 'hoy' || seccion === 'salud'" id="ocurrencias" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Tratamientos</span><h2>Ocurrencias</h2></div></div>
         <article v-for="ocurrencia in ocurrenciasPendientes" :key="ocurrencia.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.programadaEn)) }}</time>
@@ -557,7 +585,7 @@ async function salir() {
         </details>
       </section>
 
-      <section id="revisar" class="seccion seccion--alerta">
+      <section v-if="seccion === 'hoy'" id="revisar" class="seccion seccion--alerta">
         <div class="titulo-seccion"><div><span class="etiqueta">Necesita atención</span><h2>Revisar</h2></div></div>
         <TarjetaPendiente v-for="tarea in atrasadas" :key="`revisar-${tarea.id}`" :hora="hora(tarea)"
           :titulo="tarea.titulo" :detalle="`${tarea.responsable} · Tarea vencida`" tono="atrasado"
@@ -583,8 +611,8 @@ async function salir() {
         <p v-if="!elementosRevision.length && !atrasadas.length && !eventosAtrasados.length" class="estado-vacio">No hay elementos por revisar.</p>
       </section>
 
-      <section id="calendario" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximas citas</h2></div><button type="button" class="boton-secundario" @click="abrirEvento">Agregar</button></div>
+      <section v-if="seccion === 'agenda'" id="calendario" class="seccion">
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximos eventos</h2></div><button type="button" class="boton-secundario" @click="abrirEvento">Agregar</button></div>
         <article v-for="evento in eventosFiltrados" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p><small v-if="evento.recurrente">Recurrente</small></div>
@@ -592,7 +620,7 @@ async function salir() {
         </article>
       </section>
 
-      <section id="tratamientos" class="seccion">
+      <section v-if="seccion === 'salud'" id="tratamientos" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'tratamiento'">Agregar</button></div>
         <article v-for="tratamiento in tratamientosFiltrados" :key="tratamiento.id" class="tarjeta">
           <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>Responsable: {{ tratamiento.responsable }}<span v-if="tratamiento.responsableAlternativo"> · alternativo: {{ tratamiento.responsableAlternativo }}</span></p><p>{{ tratamiento.intervaloHoras ? `Cada ${tratamiento.intervaloHoras} h desde ${tratamiento.horarios[0]}` : `Horarios: ${tratamiento.horarios.join(', ')}` }}</p><p v-if="tratamiento.dosisIndicada || tratamiento.frecuencia">{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') }}</p><small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small></div>
@@ -601,7 +629,7 @@ async function salir() {
         <p class="aviso-medico">La aplicación conserva el texto ingresado por la familia; no calcula ni recomienda dosis.</p>
       </section>
 
-      <section id="vencimientos" class="seccion seccion--alerta">
+      <section v-if="seccion === 'salud'" id="vencimientos" class="seccion seccion--alerta">
         <div class="titulo-seccion"><div><span class="etiqueta">Vencimientos</span><h2>Vencimientos cercanos</h2></div></div>
         <article v-for="medicamento in vencimientosCercanos" :key="`vence-${medicamento.loteId || medicamento.id}`" class="tarjeta tarjeta--atrasado">
           <time>{{ medicamento.fechaVencimiento || 'Sin fecha' }}</time>
@@ -611,7 +639,7 @@ async function salir() {
         <p v-if="!vencimientosCercanos.length" class="estado-vacio">No hay medicamentos vencidos ni próximos a vencer en 30 días.</p>
       </section>
 
-      <section id="botiquin" class="seccion">
+      <section v-if="seccion === 'salud'" id="botiquin" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'medicamento'">Agregar</button></div>
         <div v-if="cuota" class="cuota" :class="`cuota--${cuota.nivel.toLowerCase()}`" role="status">
           <div><strong>Fotos privadas: {{ cuota.porcentaje }} %</strong><span>{{ (cuota.usadosBytes / 1048576).toFixed(1) }} MiB de {{ (cuota.cuotaBytes / 1073741824).toFixed(1) }} GiB</span></div>
@@ -624,7 +652,7 @@ async function salir() {
         </article>
       </section>
 
-      <section id="historial" class="seccion">
+      <section v-if="seccion === 'actividad'" id="historial" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Trazabilidad</span><h2>Historial familiar</h2></div></div>
         <article v-for="entrada in auditoria?.entradas.slice(0, 20)" :key="`${entrada.entidad}-${entrada.entidadId}-${entrada.fecha}`" class="tarjeta">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(entrada.fecha)) }}</time>
@@ -633,7 +661,7 @@ async function salir() {
         <p v-if="!auditoria?.entradas.length" class="estado-vacio">Todavía no hay cambios registrados.</p>
       </section>
 
-      <section id="familia" class="seccion">
+      <section v-if="seccion === 'familia'" id="familia" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Familia</span><h2>Perfiles y permisos</h2></div><button v-if="familia?.puedeAdministrar" type="button" class="boton-secundario" @click="abrirPerfil()">Agregar</button></div>
         <article v-for="perfil in familia?.perfiles" :key="perfil.id" class="tarjeta" :class="{ 'perfil-inactivo': !perfil.activo }">
           <span class="muestra-color" :style="{ backgroundColor: perfil.color || '#c8d2ce' }" aria-hidden="true"></span>
@@ -642,7 +670,7 @@ async function salir() {
         </article>
         <p v-if="!familia?.puedeAdministrar" class="estado-vacio">Solo un administrador familiar puede cambiar perfiles y permisos.</p>
       </section>
-    </main>
+    </AppShell>
 
     <FormularioEvento
       v-if="datos"
@@ -724,10 +752,5 @@ async function salir() {
       <p>Visible solo durante esta sesión autenticada.</p>
     </dialog>
 
-    <button type="button" class="agregar" @click="formulario = 'tarea'"><span aria-hidden="true">+</span> Agregar tarea</button>
-    <nav class="navegacion" aria-label="Navegación principal">
-      <a class="activo" href="#top">Hoy</a><a href="#revisar">Revisar <span v-if="cantidadRevision" class="contador">{{ cantidadRevision }}</span></a><a href="#calendario">Calendario</a><a href="#botiquin">Botiquín</a>
-      <a href="#tratamientos">Tratamientos</a><a href="#familia">Familia</a>
-    </nav>
   </div>
 </template>

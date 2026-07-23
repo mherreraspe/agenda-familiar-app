@@ -107,7 +107,14 @@ Integrado mediante los PR #13–#15, desplegado y verificado en producción:
 - [x] Cookies `HttpOnly`, `Secure`, `SameSite=Lax` y defensa CSRF de doble envío.
 - [x] Renovación automática de sesión, usuario actual y cierre/revocación de sesión.
 - [x] RLS PostgreSQL y comprobación de membresía para aislar datos por familia.
-- [x] Pantalla móvil “Hoy” con perfiles, pendientes, calendario, tratamientos y botiquín.
+- [x] AppShell adaptable con barra inferior móvil, navegación lateral desde 840 px y ancho útil máximo de 1.200 px.
+- [x] Rutas reales `/hoy`, `/agenda`, `/salud`, `/ajustes/familia` y `/actividad`, con redirecciones desde rutas anteriores.
+- [x] Filtro de persona compartido mediante Pinia; Familia y Actividad disponibles desde el avatar.
+- [x] Pantalla “Hoy” limitada a atención, tareas del día y ocurrencias; Agenda y Salud muestran sus propios dominios.
+- [x] Acción global Añadir para evento, tarea y tratamiento; Objetos permanece oculto hasta disponer de backend.
+- [ ] Convertir tarjetas repetitivas en filas compactas con una acción principal y menú Más.
+- [ ] Sustituir la carga global por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Familia y Actividad.
+- [ ] Añadir auditoría axe de accesibilidad para rutas, menús y estados.
 - [x] Alta desde la interfaz de tareas, eventos, medicamentos y tratamientos.
 - [x] Completar tareas desde “Hoy”.
 - [x] Catálogo inicial de medicamento, tratamiento y evento para `familia_test`.
