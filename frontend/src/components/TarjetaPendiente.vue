@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import MenuMas from './listas/MenuMas.vue'
+
 defineProps<{
   hora: string
   titulo: string
@@ -12,6 +14,11 @@ const emit = defineEmits<{
   omitir: []
   reprogramar: []
 }>()
+
+function accionSecundaria(accion: string) {
+  if (accion === 'omitir') emit('omitir')
+  if (accion === 'reprogramar') emit('reprogramar')
+}
 </script>
 
 <template>
@@ -23,9 +30,12 @@ const emit = defineEmits<{
       <small v-if="recurrente">Recurrente</small>
     </div>
     <div class="acciones-ocurrencia">
-      <button type="button" class="boton-secundario" @click="emit('completar')">Hecho</button>
-      <button type="button" class="boton-secundario" @click="emit('omitir')">Omitir</button>
-      <button type="button" class="boton-secundario" @click="emit('reprogramar')">Reprogramar</button>
+      <button type="button" class="boton-accion" @click="emit('completar')">Hecho</button>
+      <MenuMas
+        :acciones="[{ id: 'omitir', etiqueta: 'Omitir' }, { id: 'reprogramar', etiqueta: 'Reprogramar' }]"
+        :etiqueta="`Más acciones para ${titulo}`"
+        @seleccionar="accionSecundaria"
+      />
     </div>
   </article>
 </template>

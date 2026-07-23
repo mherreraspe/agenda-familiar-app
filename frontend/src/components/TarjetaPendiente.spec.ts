@@ -17,9 +17,9 @@ describe('TarjetaPendiente', () => {
     const wrapper = mount(TarjetaPendiente, {
       props: { hora: '9:00', titulo: 'Control', detalle: 'Cita familiar', recurrente: true }
     })
-    const botones = wrapper.findAll('button')
+    const botones = wrapper.findAll('.menu-mas button')
+    await botones[0].trigger('click')
     await botones[1].trigger('click')
-    await botones[2].trigger('click')
     expect(wrapper.text()).toContain('Recurrente')
     expect(wrapper.emitted('omitir')).toHaveLength(1)
     expect(wrapper.emitted('reprogramar')).toHaveLength(1)

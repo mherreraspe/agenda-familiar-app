@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
 
 async function prepararApi(page: Page) {
   const perfil = { id: 'perfil-1', nombre: 'Mamá', tipo: 'ADULTO', color: '#315b4c', relacion: 'Mamá' }
@@ -50,4 +51,38 @@ test('redirige rutas antiguas y evita desbordamiento horizontal', async ({ page 
   await expect(page).toHaveURL(/\/salud\?seccion=botiquin$/)
   const medidas = await page.evaluate(() => ({ ancho: document.documentElement.scrollWidth, viewport: window.innerWidth }))
   expect(medidas.ancho).toBeLessThanOrEqual(medidas.viewport)
+})
+
+test('carga solo los recursos requeridos por cada dominio', async ({ page }) => {
+  const solicitudes: string[] = []
+  page.on('request', request => {
+    const ruta = new URL(request.url()).pathname
+    if (ruta.startsWith('/api/v1/')) solicitudes.push(ruta)
+  })
+
+  await page.goto('/agenda')
+  await expect(page.getByRole('heading', { name: 'Próximos eventos' })).toBeVisible()
+  expect(solicitudes.some(ruta => ruta.endsWith('/hoy'))).toBe(true)
+  expect(solicitudes.some(ruta => ruta.endsWith('/catalogo'))).toBe(true)
+  expect(solicitudes.some(ruta => ruta.endsWith('/ocurrencias'))).toBe(false)
+  expect(solicitudes.some(ruta => ruta.endsWith('/auditoria'))).toBe(false)
+  expect(solicitudes.some(ruta => ruta.endsWith('/configuracion'))).toBe(false)
+  expect(solicitudes.some(ruta => ruta.endsWith('/archivos/cuota'))).toBe(false)
+
+  solicitudes.length = 0
+  await page.getByRole('link', { name: 'Salud' }).click()
+  await expect(page.getByRole('heading', { name: 'Tratamientos' })).toBeVisible()
+  expect(solicitudes.some(ruta => ruta.endsWith('/ocurrencias'))).toBe(true)
+  expect(solicitudes.some(ruta => ruta.endsWith('/archivos/cuota'))).toBe(true)
+  expect(solicitudes.some(ruta => ruta.endsWith('/auditoria'))).toBe(false)
+})
+
+test('no presenta violaciones críticas o serias de accesibilidad', async ({ page }) => {
+  for (const ruta of ['/hoy', '/agenda', '/salud', '/ajustes/familia', '/actividad']) {
+    await page.goto(ruta)
+    await expect(page.locator('.estado-carga')).toHaveCount(0)
+    const resultado = await new AxeBuilder({ page }).analyze()
+    const graves = resultado.violations.filter(violacion => violacion.impact === 'critical' || violacion.impact === 'serious')
+    expect(graves, `${ruta}: ${graves.map(violacion => violacion.id).join(', ')}`).toEqual([])
+  }
 })
