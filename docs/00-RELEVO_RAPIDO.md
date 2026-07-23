@@ -5,23 +5,24 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `368a0de129a68334be3732f20f0ce3ec2ff400b4`.
-- Release activo: `20260723T124905Z`.
+- Commit desplegado: `2210abf6d08e81c1d69ff901b3733fe4c366eaee`.
+- Release activo: `20260723T134229Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
 - Migraciones: V1–V8 aplicadas correctamente.
-- Último bloque: formulario de evento adaptativo y rediseño estructural de la PWA.
-- E2E HTTPS aprobado; Playwright/axe verde en 320×700, 390×844 y 1280×900.
+- Último bloque: Salud compacta y menús superiores mutuamente exclusivos.
+- E2E HTTPS aprobado; 36 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #17: formulario de evento por URL, contenedor adaptativo, zona horaria familiar, validaciones, sugerencias y conservación del borrador.
-- PR #18: AppShell, Pinia, rutas reales, navegación adaptable, filtro compartido y Familia/Actividad en el avatar.
-- PR #19: filas compactas, una acción primaria, menú Más, carga e invalidación por dominio y estados independientes.
-- Rutas activas: `/hoy`, `/agenda`, `/salud`, `/ajustes/familia` y `/actividad`; rutas antiguas redirigen de forma compatible.
+- PR #21: corrección de superposición entre Añadir y avatar; cierre exterior y con Escape.
+- Salud muestra una sola subsección: Hoy, Tratamientos, Botiquín o Recetas; la selección queda en la URL.
+- Cada colección de Salud muestra inicialmente cinco filas y ofrece expansión progresiva.
+- La cuota de fotografías se presenta en Recetas y los vencimientos permanecen dentro de Botiquín.
+- Los destinos del avatar conservan semántica de enlace y los activadores exponen `aria-expanded`/`aria-controls`.
 - Objetos/Baúl no se muestra todavía: requiere migración, API, RLS/IDOR, auditoría y UI en un PR propio.
-- CI final verde: frontend y backend de la PR #19, ejecución `30007766644`.
-- Verificación local: 30 pruebas frontend, build Vite y 6 pruebas backend aprobadas.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-368a0de-20260723T124904Z`.
+- CI final verde: frontend y backend de la PR #21, ejecución `30011966232`.
+- Verificación local: 31 pruebas frontend, build Vite y 6 pruebas backend aprobadas.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-2210abf-20260723T134229Z`.
 - E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
 - No hubo revisión visual autenticada manual porque el navegador de la sesión no estaba disponible; la cobertura automatizada multi-viewport y axe sí fue aprobada.
 

@@ -35,6 +35,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - PR 1 — Formulario de evento: extraído a un componente de dominio, abierto con `?crear=evento`, validado en la zona horaria familiar y cubierto en 320×700, 390×844 y 1280×900.
 - PR 2A — AppShell y rutas: Pinia incorporado para el filtro compartido, destinos reales `/hoy`, `/agenda` y `/salud`, Familia/Actividad en el menú secundario y redirecciones compatibles desde las rutas anteriores. Objetos permanece oculto hasta disponer de dominio real.
 - PR 2B — Integrado mediante PR #19 y desplegado en `20260723T124905Z`: listas compactas, una acción principal por fila, menú Más, carga e invalidación por dominio, estados independientes y auditoría axe.
+- Ajuste posterior — PR #21 desplegado en `20260723T134229Z`: Salud usa cuatro subsecciones exclusivas, limita las listas inicialmente a cinco filas y evita la apertura simultánea de Añadir/Familia.
 - PR 3 en adelante: pendiente; el siguiente bloque es SSE entre cuidadores. Objetos/Baúl continúa reservado para su PR de dominio completo.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.
