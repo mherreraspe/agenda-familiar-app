@@ -11,13 +11,18 @@ async function prepararApi(page: Page) {
     id: `medicamento-${indice}`, loteId: `lote-${indice}`, nombre: `Medicamento ${indice + 1}`,
     presentacion: 'Tabletas', concentracion: '500 mg', cantidad: 10, unidad: 'tabletas', estado: 'DISPONIBLE'
   }))
+  const historialTomas = Array.from({ length: 20 }, (_, indice) => ({
+    id: `toma-${indice}`, perfilId: perfil.id, persona: 'Mamá', tratamiento: `Tratamiento ${indice + 1}`,
+    estado: 'TOMADA', programadaEn: `2026-07-22T${String(indice % 20).padStart(2, '0')}:00:00Z`,
+    resueltaEn: `2026-07-22T${String(indice % 20).padStart(2, '0')}:04:00Z`, resueltaPorNombre: 'Mamá'
+  }))
   await page.route('**/api/v1/**', async route => {
     const ruta = new URL(route.request().url()).pathname
     const responder = (datos: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(datos) })
     if (ruta.endsWith('/autenticacion/renovar')) return responder({ accessToken: 'token-e2e', expiraEn: '2099-01-01T00:00:00Z', usuarioId: 'usuario-1', correo: 'mama@familia.test' })
     if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil], tareas: [] })
     if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos: [], lugares: [] })
-    if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: [], revisar: [] })
+    if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: historialTomas, revisar: [] })
     if (ruta.endsWith('/auditoria')) return responder({ entradas: [] })
     if (ruta.endsWith('/configuracion')) return responder({ puedeAdministrar: true, perfiles: [{ ...perfil, activo: true, permiso: 'ADMINISTRADOR_FAMILIAR' }] })
     if (ruta.endsWith('/archivos/cuota')) return responder({ cuotaBytes: 1_000_000, usadosBytes: 0, disponiblesBytes: 1_000_000, porcentaje: 0, nivel: 'NORMAL' })
@@ -30,7 +35,9 @@ test.beforeEach(async ({ page }) => prepararApi(page))
 test('navega por destinos reales y muestra solo el dominio activo', async ({ page }) => {
   await page.goto('/hoy')
   await expect(page.getByRole('link', { name: /Hoy/ })).toHaveAttribute('aria-current', 'page')
-  await expect(page.getByRole('heading', { name: 'Tareas de hoy' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Todo está al día' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Por resolver' })).toHaveCount(0)
+  await expect(page.getByText('Ver historial', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Medicamentos' })).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Agenda' }).click()
@@ -68,6 +75,17 @@ test('Salud muestra una sola subsección y conserva la selección en la URL', as
   await page.getByRole('link', { name: 'Recetas', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Recetas' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Medicamentos' })).toHaveCount(0)
+  await expect(page.getByText(/Espacio usado/)).toHaveCount(0)
+})
+
+test('abre el historial de Tomas como vista paginada y no dentro de Hoy', async ({ page }) => {
+  await page.goto('/salud')
+  await page.getByRole('link', { name: 'Ver historial', exact: true }).click()
+  await expect(page).toHaveURL(/vista=historial/)
+  await expect(page.getByRole('heading', { name: 'Historial de tomas' })).toBeVisible()
+  await expect(page.locator('.historial-tomas article.tarjeta')).toHaveCount(10)
+  await page.getByRole('button', { name: 'Ver 10 más' }).click()
+  await expect(page.locator('.historial-tomas article.tarjeta')).toHaveCount(20)
 })
 
 test('los menús de cabecera son mutuamente exclusivos', async ({ page }) => {

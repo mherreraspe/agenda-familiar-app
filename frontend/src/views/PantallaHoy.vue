@@ -46,6 +46,7 @@ import { reducirImagenReceta, validarImagenReceta } from '../imagen'
 
 type SeccionPrincipal = 'hoy' | 'agenda' | 'salud' | 'familia' | 'actividad'
 type SeccionSalud = 'hoy' | 'tratamientos' | 'botiquin' | 'recetas'
+type TipoAlta = 'evento' | 'tarea' | 'tratamiento' | 'medicamento'
 
 const props = withDefaults(defineProps<{ seccion?: SeccionPrincipal }>(), { seccion: 'hoy' })
 const route = useRoute()
@@ -69,6 +70,7 @@ const estadoVista = ref<'cargando' | 'lista' | 'error'>('cargando')
 const errorVista = ref('')
 const recursosCargados = reactive({ base: false, catalogo: false, ocurrencias: false, auditoria: false, familia: false, cuota: false })
 const mostrarTodoSalud = reactive<Record<SeccionSalud, boolean>>({ hoy: false, tratamientos: false, botiquin: false, recetas: false })
+const limiteHistorialTomas = ref(10)
 const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
@@ -117,6 +119,9 @@ const seccionSalud = computed<SeccionSalud>(() => {
   const solicitada = route.query.seccion
   return solicitada === 'tratamientos' || solicitada === 'botiquin' || solicitada === 'recetas' ? solicitada : 'hoy'
 })
+const mostrandoHistorialTomas = computed(() => props.seccion === 'salud' && seccionSalud.value === 'hoy' && route.query.vista === 'historial')
+const historialTomasVisible = computed(() => historialOcurrencias.value.slice(0, limiteHistorialTomas.value))
+const hayContenidoHoy = computed(() => tareasHoy.value.length > 0 || ocurrenciasPendientes.value.length > 0 || cantidadRevision.value > 0)
 const ocurrenciasVisibles = computed(() => ocurrenciasPendientes.value.slice(0, mostrarTodoSalud.hoy ? undefined : 5))
 const tratamientosVisibles = computed(() => tratamientosFiltrados.value.slice(0, mostrarTodoSalud.tratamientos ? undefined : 5))
 const medicamentosVisibles = computed(() => (catalogo.value?.medicamentos ?? []).slice(0, mostrarTodoSalud.botiquin ? undefined : 5))
@@ -131,12 +136,27 @@ const subtituloPantalla = computed(() => ({
   hoy: fechaActual, agenda: 'Tareas y eventos próximos', salud: 'Tomas, tratamientos, botiquín y recetas',
   familia: 'Personas, cuentas y permisos', actividad: 'Historial de cambios familiares'
 })[props.seccion])
+const tipoAnadirCabecera = computed<TipoAlta | undefined>(() => {
+  if (props.seccion === 'agenda') return 'evento'
+  if (props.seccion === 'salud' && seccionSalud.value === 'tratamientos') return 'tratamiento'
+  if (props.seccion === 'salud' && seccionSalud.value === 'botiquin') return 'medicamento'
+  return undefined
+})
+const etiquetaAnadirCabecera = computed(() => tipoAnadirCabecera.value
+  ? ({ evento: 'Evento', tarea: 'Tarea', tratamiento: 'Tratamiento', medicamento: 'Medicamento' })[tipoAnadirCabecera.value]
+  : 'Añadir')
+const mostrarAnadirCabecera = computed(() => props.seccion !== 'familia' && props.seccion !== 'actividad' && !(props.seccion === 'salud' && (seccionSalud.value === 'recetas' || mostrandoHistorialTomas.value)))
 
 function destinoSalud(destino: SeccionSalud) {
   const query = { ...route.query }
+  delete query.vista
   if (destino === 'hoy') delete query.seccion
   else query.seccion = destino
   return { name: 'salud', query }
+}
+
+function destinoHistorialTomas() {
+  return { name: 'salud', query: { ...route.query, vista: 'historial' } }
 }
 
 onMounted(async () => {
@@ -169,12 +189,12 @@ function claveFecha(valor: string) {
   }).format(new Date(valor))
 }
 
-function abrirAlta(tipo: 'evento' | 'tarea' | 'tratamiento') {
+function abrirAlta(tipo: TipoAlta) {
   if (tipo === 'evento') {
     void abrirFormularioEvento()
     return
   }
-  formulario.value = tipo
+  formulario.value = tipo === 'medicamento' ? 'medicamento' : tipo
 }
 
 async function entrar() {
@@ -396,10 +416,6 @@ async function borrarReceta(archivoId: string) {
   }
 }
 
-function abrirEvento(evento: MouseEvent) {
-  void abrirFormularioEvento(evento.currentTarget as HTMLElement)
-}
-
 async function eventoGuardado() {
   modificadoEvento.value = false
   await cerrarFormularioEvento(true)
@@ -610,6 +626,9 @@ async function salir() {
       :subtitulo="subtituloPantalla"
       :familia="datos?.familia"
       :cantidad-atencion="cantidadRevision"
+      :etiqueta-anadir="etiquetaAnadirCabecera"
+      :tipo-anadir-directo="tipoAnadirCabecera"
+      :mostrar-anadir="mostrarAnadirCabecera"
       @anadir="abrirAlta"
       @salir="salir"
     >
@@ -634,28 +653,22 @@ async function salir() {
         <RouterLink :to="destinoSalud('recetas')" :aria-current="seccionSalud === 'recetas' ? 'page' : undefined">Recetas</RouterLink>
       </nav>
 
-      <section v-if="seccion === 'hoy'" class="resumen" aria-label="Resumen del día">
-        <div><strong>{{ pendientes.length }}</strong><span>pendientes</span></div>
-        <div><strong>{{ ocurrenciasPendientes.length }}</strong><span>tomas pendientes</span></div>
-        <div><strong>{{ cantidadRevision }}</strong><span>por revisar</span></div>
+      <section v-if="seccion === 'hoy' && hayContenidoHoy" class="resumen" aria-label="Resumen del día">
+        <div v-if="tareasHoy.length"><strong>{{ tareasHoy.length }}</strong><span>{{ tareasHoy.length === 1 ? 'tarea' : 'tareas' }}</span></div>
+        <div v-if="ocurrenciasPendientes.length"><strong>{{ ocurrenciasPendientes.length }}</strong><span>{{ ocurrenciasPendientes.length === 1 ? 'toma pendiente' : 'tomas pendientes' }}</span></div>
+        <div v-if="cantidadRevision"><strong>{{ cantidadRevision }}</strong><span>necesita atención</span></div>
+      </section>
+
+      <section v-if="seccion === 'hoy' && !hayContenidoHoy" class="estado-dia-libre" aria-labelledby="titulo-dia-libre">
+        <span class="estado-dia-libre__marca" aria-hidden="true">✓</span>
+        <div><h2 id="titulo-dia-libre">Todo está al día</h2><p>No hay tareas, tomas ni elementos que necesiten atención.</p></div>
+        <RouterLink :to="{ name: 'agenda' }">Ver lo que viene</RouterLink>
       </section>
 
       <p v-if="mensaje" class="confirmacion" role="status">{{ mensaje }}</p>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
 
-      <section v-if="seccion === 'hoy' && atrasadas.length" class="seccion seccion--alerta">
-        <div class="titulo-seccion">
-          <div><span class="etiqueta">Necesita atención</span><h2>Atrasado</h2></div>
-        </div>
-        <TarjetaPendiente
-          v-for="tarea in atrasadas" :key="tarea.id" :hora="hora(tarea)" :titulo="tarea.titulo"
-          :detalle="`${tarea.responsable} · ${tarea.descripcion ?? 'Sin detalles'}`" tono="atrasado"
-          :recurrente="tarea.recurrente" @completar="marcarHecho(tarea)"
-          @omitir="resolverAgenda('tareas', tarea, 'OMITIR')" @reprogramar="resolverAgenda('tareas', tarea, 'REPROGRAMAR')"
-        />
-      </section>
-
-      <section v-if="seccion === 'hoy' || seccion === 'agenda'" class="seccion">
+      <section v-if="(seccion === 'hoy' && tareasHoy.length) || (seccion === 'agenda' && proximas.length)" class="seccion">
         <div class="titulo-seccion">
           <div><span class="etiqueta etiqueta--verde">{{ seccion === 'hoy' ? 'Hoy' : 'En orden' }}</span><h2>{{ seccion === 'hoy' ? 'Tareas de hoy' : 'Próximos siete días' }}</h2></div>
         </div>
@@ -665,10 +678,9 @@ async function salir() {
           :recurrente="tarea.recurrente" @completar="marcarHecho(tarea)"
           @omitir="resolverAgenda('tareas', tarea, 'OMITIR')" @reprogramar="resolverAgenda('tareas', tarea, 'REPROGRAMAR')"
         />
-        <p v-if="!(seccion === 'hoy' ? tareasHoy : proximas).length" class="estado-vacio">{{ seccion === 'hoy' ? 'No hay más tareas para hoy.' : 'No hay pendientes para los próximos días.' }}</p>
       </section>
 
-      <section v-if="seccion === 'hoy' || (seccion === 'salud' && seccionSalud === 'hoy')" id="ocurrencias" class="seccion">
+      <section v-if="(seccion === 'hoy' && ocurrenciasPendientes.length) || (seccion === 'salud' && seccionSalud === 'hoy' && !mostrandoHistorialTomas)" id="ocurrencias" class="seccion">
         <div class="titulo-seccion"><div><h2>{{ seccion === 'salud' ? 'Tomas' : 'Tomas del día' }}</h2></div></div>
         <article v-for="ocurrencia in (seccion === 'salud' ? ocurrenciasVisibles : ocurrenciasPendientes)" :key="ocurrencia.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.programadaEn)) }}</time>
@@ -686,18 +698,23 @@ async function salir() {
         <button v-if="seccion === 'salud' && ocurrenciasPendientes.length > 5" type="button" class="boton-ver-mas" @click="mostrarTodoSalud.hoy = !mostrarTodoSalud.hoy">
           {{ mostrarTodoSalud.hoy ? 'Mostrar menos' : `Ver ${ocurrenciasPendientes.length - 5} más` }}
         </button>
-        <details v-if="historialOcurrencias.length" class="historial-ocurrencias">
-          <summary>Ver historial de tomas ({{ historialOcurrencias.length }})</summary>
-          <article v-for="ocurrencia in historialOcurrencias" :key="`historial-${ocurrencia.id}`" class="tarjeta">
-            <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.resueltaEn || ocurrencia.programadaEn)) }}</time>
-            <div class="tarjeta__contenido"><h3>{{ ocurrencia.tratamiento }}</h3><p>{{ ocurrencia.persona }} · {{ ocurrencia.resueltaPorNombre || 'Adulto autorizado' }}</p></div>
-            <span class="estado">{{ ocurrencia.estado.replace('_', ' ') }}</span>
-          </article>
-        </details>
+        <RouterLink v-if="seccion === 'salud' && historialOcurrencias.length" class="enlace-historial" :to="destinoHistorialTomas()">Ver historial</RouterLink>
       </section>
 
-      <section v-if="seccion === 'hoy'" id="revisar" class="seccion seccion--alerta">
-        <div class="titulo-seccion"><div><span class="etiqueta">Necesita atención</span><h2>Revisar</h2></div></div>
+      <section v-if="seccion === 'salud' && mostrandoHistorialTomas" class="seccion historial-tomas" aria-labelledby="titulo-historial-tomas">
+        <RouterLink class="enlace-volver" :to="destinoSalud('hoy')">← Volver a Tomas</RouterLink>
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Registro familiar</span><h2 id="titulo-historial-tomas">Historial de tomas</h2></div></div>
+        <article v-for="ocurrencia in historialTomasVisible" :key="`historial-${ocurrencia.id}`" class="tarjeta">
+          <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.resueltaEn || ocurrencia.programadaEn)) }}</time>
+          <div class="tarjeta__contenido"><h3>{{ ocurrencia.tratamiento }}</h3><p>{{ ocurrencia.persona }} · {{ ocurrencia.resueltaPorNombre || 'Adulto autorizado' }}</p></div>
+          <span class="estado">{{ ocurrencia.estado.replace('_', ' ') }}</span>
+        </article>
+        <p v-if="!historialOcurrencias.length" class="estado-vacio">Todavía no hay tomas registradas.</p>
+        <button v-if="historialOcurrencias.length > limiteHistorialTomas" type="button" class="boton-ver-mas" @click="limiteHistorialTomas += 10">Ver {{ Math.min(10, historialOcurrencias.length - limiteHistorialTomas) }} más</button>
+      </section>
+
+      <section v-if="seccion === 'hoy' && cantidadRevision" id="revisar" class="seccion seccion--alerta">
+        <div class="titulo-seccion"><div><span class="etiqueta">Necesita atención</span><h2>Por resolver</h2></div></div>
         <TarjetaPendiente v-for="tarea in atrasadas" :key="`revisar-${tarea.id}`" :hora="hora(tarea)"
           :titulo="tarea.titulo" :detalle="`${tarea.responsable} · Tarea vencida`" tono="atrasado"
           :recurrente="tarea.recurrente" @completar="marcarHecho(tarea)"
@@ -720,20 +737,20 @@ async function salir() {
           </div>
           <button v-else type="button" class="boton-accion" @click="resolverDesdeRevision(elemento)">Cerrar</button>
         </article>
-        <p v-if="!elementosRevision.length && !atrasadas.length && !eventosAtrasados.length" class="estado-vacio">No hay elementos por revisar.</p>
       </section>
 
       <section v-if="seccion === 'agenda'" id="calendario" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximos eventos</h2></div><button type="button" class="boton-secundario" @click="abrirEvento">Agregar</button></div>
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximos eventos</h2></div></div>
         <article v-for="evento in eventosFiltrados" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p><small v-if="evento.recurrente">Recurrente</small></div>
           <MenuMas :acciones="[{ id: 'omitir', etiqueta: 'Omitir' }, { id: 'reprogramar', etiqueta: 'Reprogramar' }]" :etiqueta="`Más acciones para ${evento.titulo}`" @seleccionar="accionAgenda('eventos', evento, $event)" />
         </article>
       </section>
+      <p v-if="seccion === 'agenda' && !proximas.length && !eventosFiltrados.length" class="estado-vacio estado-vacio--centrado">No hay tareas ni eventos próximos.</p>
 
       <section v-if="seccion === 'salud' && seccionSalud === 'tratamientos'" id="tratamientos" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'tratamiento'">Agregar</button></div>
+        <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div></div>
         <article v-for="tratamiento in tratamientosVisibles" :key="tratamiento.id" class="tarjeta">
           <div class="tarjeta__contenido">
             <div class="tarjeta__encabezado"><h3>{{ tratamiento.medicamento }}</h3><span class="estado">{{ tratamiento.estado }}</span></div>
@@ -768,7 +785,7 @@ async function salir() {
       </section>
 
       <section v-if="seccion === 'salud' && seccionSalud === 'botiquin'" id="botiquin" class="seccion">
-        <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'medicamento'">Agregar</button></div>
+        <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div></div>
         <article v-for="medicamento in medicamentosVisibles" :key="medicamento.loteId || medicamento.id" class="tarjeta">
           <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.presentacion }} · {{ medicamento.concentracion }}</p><small>{{ medicamento.cantidad }} {{ medicamento.unidad }} · vence {{ medicamento.fechaVencimiento || 'sin fecha' }}</small></div>
           <span class="estado">{{ medicamento.estado.replace('_', ' ') }}</span>
@@ -781,7 +798,7 @@ async function salir() {
 
       <section v-if="seccion === 'salud' && seccionSalud === 'recetas'" id="recetas" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Archivos privados</span><h2>Recetas</h2></div></div>
-        <div v-if="cuota" class="cuota" :class="`cuota--${cuota.nivel.toLowerCase()}`" role="status">
+        <div v-if="cuota && cuota.porcentaje >= 70" class="cuota" :class="`cuota--${cuota.nivel.toLowerCase()}`" role="status">
           <div><strong>Espacio usado: {{ cuota.porcentaje }} %</strong><span>{{ (cuota.usadosBytes / 1048576).toFixed(1) }} MiB de {{ (cuota.cuotaBytes / 1073741824).toFixed(1) }} GiB</span></div>
           <progress :value="cuota.porcentaje" max="100">{{ cuota.porcentaje }} %</progress>
           <small v-if="cuota.porcentaje >= 70">El espacio disponible se está agotando. Elimina fotografías que ya no necesites.</small>

@@ -70,8 +70,10 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .icono-app { width: 21px; height: 21px; flex: 0 0 auto; }
 .app-shell__marca { display: none; }
 .boton-anadir { display: inline-flex; min-height: 44px; align-items: center; gap: 5px; padding: 9px 13px; border: 0; border-radius: 10px; color: white; background: var(--verde); font-weight: 800; cursor: pointer; }
+.boton-anadir, .menu-desplegable--avatar .avatar { position: relative; z-index: 7; }
 .boton-anadir .icono-app { width: 18px; height: 18px; }
 .menu-desplegable { position: relative; }
+.menu-desplegable__velo { position: fixed; inset: 0; z-index: 5; border: 0; background: transparent; cursor: default; }
 .menu-desplegable__panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 6; display: grid; width: max-content; min-width: 210px; padding: 8px; border: 1px solid var(--linea); border-radius: 12px; background: var(--superficie); box-shadow: 0 16px 38px rgb(25 51 45 / 16%); }
 .menu-desplegable__panel a, .menu-desplegable__panel button { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 9px; color: #315b4c; background: transparent; text-align: left; text-decoration: none; font-weight: 800; }
 .menu-desplegable__panel a:hover, .menu-desplegable__panel a:focus-visible, .menu-desplegable__panel button:hover, .menu-desplegable__panel button:focus-visible { background: #eef2ef; outline: 2px solid #315b4c; outline-offset: -2px; }
@@ -110,7 +112,7 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .subnavegacion a[aria-current="page"]::after { background: var(--verde); }
 .subnavegacion a:focus-visible { outline: 3px solid #bf7b65; outline-offset: 2px; }
 
-.resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
+.resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px; margin-bottom: 28px; }
 
 .resumen div { display: grid; gap: 2px; padding: 13px 8px; border-left: 1px solid var(--linea); text-align: center; }
 .resumen div:first-child { border-left: 0; }
@@ -118,6 +120,12 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .resumen strong { font-family: var(--fuente-display); font-size: 1.55rem; color: var(--verde); }
 
 .resumen span { color: #63706b; font-size: .82rem; }
+.estado-dia-libre { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 14px; margin: 12px 0 26px; padding: 18px; border: 1px solid var(--linea); border-radius: 14px; background: var(--superficie); }
+.estado-dia-libre__marca { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: var(--superficie); background: var(--verde); font-weight: 900; }
+.estado-dia-libre h2, .estado-dia-libre p { margin: 0; }
+.estado-dia-libre h2 { font: 700 1.15rem var(--fuente-display); }
+.estado-dia-libre p { margin-top: 3px; color: var(--tinta-suave); font-size: .88rem; }
+.estado-dia-libre a { grid-column: 2; color: var(--verde); font-weight: 750; }
 
 .seccion { margin-top: 24px; }
 .subnavegacion + .seccion { margin-top: 0; }
@@ -128,6 +136,31 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 
 .titulo-seccion a { color: #315b4c; font-size: .88rem; font-weight: 800; }
 .boton-ver-mas { display: block; min-height: 44px; margin: 12px auto 0; padding: 8px 16px; border: 0; color: #315b4c; background: transparent; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.enlace-historial, .enlace-volver { display: inline-flex; min-height: 44px; align-items: center; color: var(--verde); font-weight: 750; text-underline-offset: 3px; }
+.enlace-historial { margin-top: 10px; }
+.historial-tomas { margin-top: 10px; }
+.estado-vacio--centrado { margin-top: 24px; text-align: center; }
+
+.objetos-prototipo { max-width: 760px; }
+.prototipo-aviso { display: inline-flex; margin: 0 0 18px; padding: 6px 9px; border-radius: 7px; color: #76562f; background: #f3ead9; font-size: .76rem; font-weight: 750; }
+.buscador-objetos { margin-bottom: 28px; }
+.buscador-objetos label { margin-bottom: 8px; color: var(--tinta); font: 700 1.35rem var(--fuente-display); }
+.buscador-objetos input { min-height: 52px; padding-left: 16px; font-size: 1rem; }
+.titulo-seccion--objetos { align-items: end; }
+.titulo-seccion--objetos button { flex: 0 0 auto; white-space: nowrap; }
+.titulo-seccion--objetos button:disabled { cursor: not-allowed; opacity: .55; }
+.lista-objetos { border-top: 1px solid var(--linea); }
+.fila-objeto { display: grid; min-height: 84px; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 13px 4px; border-bottom: 1px solid var(--linea); }
+.fila-objeto__marca { width: 8px; height: 34px; border-radius: 4px; background: var(--ambar); }
+.fila-objeto h3, .fila-objeto p { margin: 0; }
+.fila-objeto h3 { font-size: 1rem; }
+.fila-objeto p { margin-top: 4px; color: var(--tinta-suave); font-size: .86rem; }
+.fila-objeto small { display: block; margin-top: 4px; color: var(--verde); font-size: .74rem; font-weight: 700; }
+.fila-objeto > span:last-child { color: var(--verde); font-size: 1.4rem; }
+.lugares-objetos { margin-top: 30px; }
+.lugares-objetos__ruta { display: grid; gap: 2px; border-left: 2px solid var(--salvia); }
+.lugares-objetos__ruta strong, .lugares-objetos__ruta span { min-height: 42px; padding: 10px 14px; border-bottom: 1px solid var(--linea); }
+.lugares-objetos__ruta span { margin-left: 18px; color: var(--tinta-suave); }
 
 .etiqueta { color: var(--coral); letter-spacing: .02em; font-size: .7rem; font-weight: 750; }
 .etiqueta--verde { color: var(--verde); }
@@ -237,6 +270,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .app-shell__contexto span:nth-child(n + 2) { display: none; }
   .app-shell__principal { padding-inline: 16px; }
   .boton-anadir { padding-inline: 12px; }
+  .menu-desplegable__panel { position: fixed; top: auto; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); left: 12px; width: auto; padding: 10px; border-radius: 16px; box-shadow: 0 22px 60px rgb(25 51 45 / 24%); }
+  .menu-desplegable__velo { background: rgb(25 51 45 / 22%); }
+  .menu-desplegable__panel a, .menu-desplegable__panel button { min-height: 52px; }
   .aplicacion { padding-inline: 16px; }
   .tarjeta { align-items: flex-start; flex-wrap: wrap; }
   .tarjeta__contenido { min-width: calc(100% - 78px); }

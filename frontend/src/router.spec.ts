@@ -32,4 +32,9 @@ describe('rutas principales', () => {
     expect(router.currentRoute.value.name).toBe('hoy')
     expect(router.currentRoute.value.query.filtro).toBe('atencion')
   })
+
+  it('expone el prototipo de Objetos únicamente durante desarrollo', async () => {
+    await router.push('/prototipo/objetos')
+    expect(router.currentRoute.value.name).toBe('objetos-prototipo')
+  })
 })

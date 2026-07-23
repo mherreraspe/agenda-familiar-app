@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ nombre: 'hoy' | 'agenda' | 'salud' | 'anadir' | 'usuario' }>()
+defineProps<{ nombre: 'hoy' | 'agenda' | 'salud' | 'objetos' | 'anadir' | 'usuario' }>()
 </script>
 
 <template>
@@ -18,6 +18,10 @@ defineProps<{ nombre: 'hoy' | 'agenda' | 'salud' | 'anadir' | 'usuario' }>()
     </template>
     <template v-else-if="nombre === 'anadir'">
       <path d="M12 5v14M5 12h14" />
+    </template>
+    <template v-else-if="nombre === 'objetos'">
+      <path d="m4 8 8-4 8 4-8 4-8-4Z" />
+      <path d="M4 8v8l8 4 8-4V8M12 12v8" />
     </template>
     <template v-else>
       <circle cx="12" cy="8" r="3.25" />
