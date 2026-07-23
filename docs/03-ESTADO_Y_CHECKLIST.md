@@ -1,9 +1,9 @@
 # Estado y checklist de continuidad
 
-**Corte:** 2026-07-18 (America/Lima)  
-**Rama:** `agent/cerrar-bloque-v6`
-**Commit desplegado:** `5b9bdd4fc54423eb8e450ecf4a4bce49d3dd32ae`
-**Versión del servidor:** `20260718T200358Z`
+**Corte:** 2026-07-23 (America/Lima)
+**Rama:** `main`
+**Commit desplegado:** `368a0de129a68334be3732f20f0ce3ec2ff400b4`
+**Versión del servidor:** `20260723T124905Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
@@ -92,6 +92,22 @@ Integrado mediante los PR #13–#15, desplegado y verificado en producción:
 - [x] Release `20260719T033351Z` activa, V8 aplicada y backup `pre-5622571-20260719T033351Z`.
 - [x] E2E HTTPS de archivos/cuota aprobado y PWA a 390 × 844 sin desborde ni errores de consola.
 
+## Bloque completado — formulario adaptativo y rediseño estructural
+
+Integrado mediante los PR #17–#19, desplegado y verificado en producción:
+
+- [x] Formulario de evento extraído, abierto mediante `?crear=evento` y adaptado a móvil/escritorio con acciones persistentes, scroll y confirmación de descarte.
+- [x] Validación temporal y conversiones centralizadas con la zona horaria familiar; sugerencias desde dos caracteres, con debounce y máximo tres resultados.
+- [x] AppShell adaptable, Pinia, rutas reales y navegación activa derivada del router con `aria-current`.
+- [x] Hoy, Agenda, Salud, Familia y Actividad presentan únicamente su dominio; Familia y Actividad están en el menú del avatar.
+- [x] Filas compactas con una acción primaria y menú Más; carga, error, reintento e invalidación separados por dominio.
+- [x] Objetos/Baúl permanece fuera de navegación hasta disponer de migración, API, RLS/IDOR, auditoría y UI funcional.
+- [x] Vitest: 30 pruebas; Playwright/axe: 30 escenarios en 320×700, 390×844 y 1280×900; build y 6 pruebas backend aprobadas.
+- [x] CI final `30007766644` verde y PR #19 integrado como `368a0de`.
+- [x] Release `20260723T124905Z` activo; servicios saludables, V1–V8 validadas y E2E HTTPS aprobado.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-368a0de-20260723T124904Z`.
+- [x] La revisión visual autenticada manual quedó no ejecutada por falta de navegador en la sesión; no se sustituye ni se declara como realizada.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -135,6 +151,9 @@ Integrado mediante los PR #13–#15, desplegado y verificado en producción:
 - CI del PR #7: ejecución `29657913288`, frontend y backend aprobados con Testcontainers PostgreSQL 18.
 - PR de backup y despliegue reproducible: <https://github.com/mherreraspe/agenda-familiar-app/pull/8>
 - PR del hotfix de invocación Bash: <https://github.com/mherreraspe/agenda-familiar-app/pull/9>; CI `29658934355` aprobado.
+- PR del formulario de evento adaptativo: <https://github.com/mherreraspe/agenda-familiar-app/pull/17>.
+- PR de AppShell y rutas por dominio: <https://github.com/mherreraspe/agenda-familiar-app/pull/18>.
+- PR de listas, cargas selectivas y accesibilidad: <https://github.com/mherreraspe/agenda-familiar-app/pull/19>; CI `30007766644` aprobado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
@@ -205,13 +224,13 @@ Integrado mediante los PR #13–#15, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Completar sincronización y notificaciones privadas:
+Completar primero la sincronización entre cuidadores; notificaciones privadas queda para un bloque posterior:
 
 1. Añadir SSE con reconexión para reflejar cambios entre dispositivos abiertos.
 2. Incorporar caché de lectura PWA y aviso claro sin conexión, sin escrituras offline.
-3. Implementar Web Push genérico en pantalla bloqueada y contenido privado tras autenticar.
-4. Añadir preferencias, horario silencioso, deduplicación y reintentos.
-5. Probar reconexión, privacidad, concurrencia entre dispositivos y experiencia offline; publicar por PR y desplegar con CI verde.
+3. Invalidar selectivamente los datos afectados y evitar eventos duplicados.
+4. Probar reconexión, privacidad, concurrencia entre dispositivos y experiencia offline.
+5. Publicar por PR, exigir CI verde y desplegar únicamente desde `main`.
 
 ## Continuidad operativa
 
