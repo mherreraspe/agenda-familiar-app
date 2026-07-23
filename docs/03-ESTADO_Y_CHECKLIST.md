@@ -2,8 +2,8 @@
 
 **Corte:** 2026-07-23 (America/Lima)
 **Rama:** `main`
-**Commit desplegado:** `5032b1067bb8c5c588bde8ff1e26cf269b92b01b`
-**Versión del servidor:** `20260723T165603Z`
+**Commit desplegado:** `8acccbaeb56753898b2724a3ba6fd37f1cc194a1`
+**Versión del servidor:** `20260723T213222Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
@@ -176,6 +176,21 @@ Integrado mediante el PR #30, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-7723d3e-20260723T203410Z`.
 - [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — formularios modales y capas exclusivas
+
+Integrado mediante el PR #32, desplegado y verificado en producción:
+
+- [x] Altas de tarea, medicamento, tratamiento, perfil y objeto convertidas en diálogos modales nativos que bloquean el fondo.
+- [x] Alta de tratamiento adaptable: contenido desplazable y pie fijo con Guardar/Cancelar visible en móvil y escritorio.
+- [x] Receta privada presentada en una única capa modal y cerrable con Escape.
+- [x] Menús Más exclusivos, con cierre al pulsar fuera o Escape y devolución del foco al activador.
+- [x] Foco inicial dirigido al primer campo útil y restaurado al cerrar cada alta.
+- [x] Verificación local: 42 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
+- [x] CI `30046463114` verde con 63 escenarios Playwright/axe en 320×700, 390×844 y 1280×900.
+- [x] PR #32 integrado como `8acccba`; release `20260723T213222Z` saludable y V1–V9 validadas.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-8acccba-20260723T213222Z`.
+- [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -200,7 +215,8 @@ Integrado mediante el PR #30, desplegado y verificado en producción:
 - [x] Carga global sustituida por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Objetos, Familia y Actividad.
 - [x] Auditoría axe añadida para rutas, menús y estados, sin aceptar impactos críticos o serios.
 - [x] Salud dividida en Tomas, Tratamientos, Botiquín y Recetas; solo una subsección se renderiza por vez y cada lista inicia con un máximo de cinco filas.
-- [x] Menús Añadir/Familia mutuamente exclusivos, con cierre exterior y Escape, activadores accesibles y enlaces nativos preservados.
+- [x] Menús Añadir/Familia y menús Más mutuamente exclusivos, con cierre exterior y Escape, activadores accesibles y enlaces nativos preservados.
+- [x] Altas generales y receta como diálogos modales nativos: bloquean el fondo, encajan en el viewport y restauran el foco.
 - [x] Alta desde la interfaz de tareas, eventos, medicamentos y tratamientos.
 - [x] Completar tareas desde “Hoy”.
 - [x] Catálogo inicial de medicamento, tratamiento y evento para `familia_test`.
@@ -229,6 +245,7 @@ Integrado mediante el PR #30, desplegado y verificado en producción:
 - PR de estados operativos, historial y prototipo de Objetos: <https://github.com/mherreraspe/agenda-familiar-app/pull/26>; CI `30024979468` aprobado y release `20260723T165603Z` verificado.
 - PR de sincronización familiar SSE y lectura offline: <https://github.com/mherreraspe/agenda-familiar-app/pull/28>; CI `30036392835` aprobado y release `20260723T190511Z` verificado.
 - PR de Objetos como dominio familiar real: <https://github.com/mherreraspe/agenda-familiar-app/pull/30>; CI `30042503806` aprobado y release `20260723T203410Z` verificado.
+- PR de formularios modales y capas exclusivas: <https://github.com/mherreraspe/agenda-familiar-app/pull/32>; CI `30046463114` aprobado y release `20260723T213222Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
