@@ -146,6 +146,37 @@ test('carga solo los recursos requeridos por cada dominio', async ({ page }) => 
   expect(solicitudes.some(ruta => ruta.endsWith('/auditoria'))).toBe(false)
 })
 
+test('invalida Hoy al recibir un cambio familiar y descarta repeticiones', async ({ page }) => {
+  let consultasHoy = 0
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.endsWith('/hoy')) consultasHoy += 1
+  })
+  await page.route('**/familias/*/eventos', route => route.fulfill({
+    contentType: 'text/event-stream',
+    body: [
+      'id: inicial', 'event: sincronizar', 'data: {"id":"inicial","recursos":["HOY","AGENDA","SALUD"]}', '',
+      'id: cambio-1', 'event: cambio', 'data: {"id":"cambio-1","recursos":["HOY"]}', '',
+      'id: cambio-1', 'event: cambio', 'data: {"id":"cambio-1","recursos":["HOY"]}', '', ''
+    ].join('\n')
+  }))
+
+  await page.goto('/hoy')
+  await expect.poll(() => consultasHoy).toBeGreaterThanOrEqual(2)
+})
+
+test('avisa cuando no hay conexión y mantiene las altas solo en línea', async ({ page, context }) => {
+  await page.goto('/hoy')
+  await expect(page.getByRole('heading', { name: 'Todo está al día' })).toBeVisible()
+  await context.setOffline(true)
+
+  await expect(page.getByText(/Sin conexión: puedes consultar lo ya cargado/)).toBeVisible()
+  await page.locator('button.boton-anadir').click()
+  await page.getByRole('button', { name: 'Evento', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Vuelve a estar en línea')
+  await expect(page.locator('.formulario-adaptativo')).not.toBeVisible()
+  await context.setOffline(false)
+})
+
 test('no presenta violaciones críticas o serias de accesibilidad', async ({ page }) => {
   for (const ruta of ['/hoy', '/agenda', '/salud', '/ajustes/familia', '/actividad']) {
     await page.goto(ruta)

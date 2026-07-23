@@ -41,7 +41,7 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .panel-acceso small { color: #5f6965; }
 .panel-acceso--cargando { text-align: center; }
 .boton-principal { width: 100%; padding: 13px 18px; border: 0; border-radius: 10px; color: white; background: var(--verde); font-weight: 800; }
-.boton-principal:disabled { cursor: wait; opacity: .65; }
+.boton-principal:disabled { cursor: not-allowed; opacity: .65; }
 .error { padding: 11px 14px; border-radius: 11px; color: #7d321f; background: #f7dfd7; }
 
 .aplicacion {
@@ -61,6 +61,12 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .app-shell__contexto { display: flex; max-width: 560px; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; }
 .app-shell__acciones { display: flex; align-items: center; gap: 9px; }
 .app-shell__principal { width: 100%; padding: 6px 22px 104px; outline: none; }
+.aviso-conexion { display: flex; align-items: flex-start; gap: 9px; margin: 2px 0 14px; padding: 10px 12px; border: 1px solid #e1c486; border-radius: 11px; color: #62491f; background: #fff8e8; font-size: .82rem; font-weight: 650; }
+.aviso-conexion > span { width: 9px; height: 9px; flex: 0 0 auto; margin-top: 4px; border-radius: 50%; background: #bd7618; box-shadow: 0 0 0 3px rgb(189 118 24 / 14%); }
+.aviso-conexion--sincronizando { border-color: var(--linea); color: var(--tinta-suave); background: var(--superficie); }
+.aviso-conexion--sincronizando > span { background: var(--verde); box-shadow: 0 0 0 3px rgb(40 100 81 / 12%); animation: pulso-conexion 1.4s ease-in-out infinite; }
+@keyframes pulso-conexion { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .aviso-conexion--sincronizando > span { animation: none; } }
 .app-shell__navegacion { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; align-items: stretch; justify-content: space-around; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--linea); background: rgb(255 255 255 / 94%); backdrop-filter: blur(16px); }
 .app-shell__navegacion a { position: relative; display: grid; min-width: 74px; min-height: 54px; place-items: center; align-content: center; gap: 3px; color: #64746f; text-decoration: none; font-size: .75rem; font-weight: 700; }
 .app-shell__navegacion a::after { position: absolute; bottom: 1px; width: 18px; height: 3px; border-radius: 2px; background: transparent; content: ''; }

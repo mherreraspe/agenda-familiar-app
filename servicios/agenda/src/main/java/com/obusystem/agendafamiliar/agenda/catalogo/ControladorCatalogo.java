@@ -14,14 +14,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.obusystem.agendafamiliar.agenda.sincronizacion.RecursoSincronizacion;
+import com.obusystem.agendafamiliar.agenda.sincronizacion.ServicioSincronizacionFamilia;
+
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/familias/{familiaId}")
 public class ControladorCatalogo {
     private final ServicioCatalogo catalogo;
+    private final ServicioSincronizacionFamilia sincronizacion;
 
-    public ControladorCatalogo(ServicioCatalogo catalogo) { this.catalogo = catalogo; }
+    public ControladorCatalogo(ServicioCatalogo catalogo, ServicioSincronizacionFamilia sincronizacion) {
+        this.catalogo = catalogo;
+        this.sincronizacion = sincronizacion;
+    }
 
     @GetMapping("/catalogo")
     RespuestaCatalogo consultar(@PathVariable UUID familiaId, @AuthenticationPrincipal Jwt jwt) {
@@ -32,20 +39,26 @@ public class ControladorCatalogo {
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, UUID> crearMedicamento(@PathVariable UUID familiaId,
             @Valid @RequestBody SolicitudesCatalogo.Medicamento solicitud, @AuthenticationPrincipal Jwt jwt) {
-        return Map.of("id", catalogo.crearMedicamento(familiaId, solicitud, jwt));
+        UUID id = catalogo.crearMedicamento(familiaId, solicitud, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.SALUD);
+        return Map.of("id", id);
     }
 
     @PostMapping("/tratamientos")
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, UUID> crearTratamiento(@PathVariable UUID familiaId,
             @Valid @RequestBody SolicitudesCatalogo.Tratamiento solicitud, @AuthenticationPrincipal Jwt jwt) {
-        return Map.of("id", catalogo.crearTratamiento(familiaId, solicitud, jwt));
+        UUID id = catalogo.crearTratamiento(familiaId, solicitud, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
+        return Map.of("id", id);
     }
 
     @PostMapping("/eventos")
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, UUID> crearEvento(@PathVariable UUID familiaId,
             @Valid @RequestBody SolicitudesCatalogo.Evento solicitud, @AuthenticationPrincipal Jwt jwt) {
-        return Map.of("id", catalogo.crearEvento(familiaId, solicitud, jwt));
+        UUID id = catalogo.crearEvento(familiaId, solicitud, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.AGENDA);
+        return Map.of("id", id);
     }
 }
