@@ -2,6 +2,7 @@ export const FAMILIA_TEST_ID = '0197f100-0000-7000-8000-000000000001'
 
 let accessToken = ''
 let renovacionEnCurso: Promise<RespuestaSesion> | null = null
+const cacheLectura = new Map<string, unknown>()
 
 export interface PerfilResumen {
   id: string
@@ -131,19 +132,46 @@ export async function renovarSesion() {
 }
 
 async function solicitud<T>(ruta: string, opciones: RequestInit = {}, reintentar = true): Promise<T> {
+  const metodo = (opciones.method ?? 'GET').toUpperCase()
+  const esLectura = metodo === 'GET' || metodo === 'HEAD'
+  if (!esLectura && typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Sin conexión. Los cambios solo se pueden guardar cuando vuelvas a estar en línea.')
+  }
   const encabezados = new Headers(opciones.headers)
   encabezados.set('Accept', 'application/json')
   if (opciones.body && !(opciones.body instanceof FormData)) encabezados.set('Content-Type', 'application/json')
   if (accessToken) encabezados.set('Authorization', `Bearer ${accessToken}`)
 
-  const respuesta = await fetch(ruta, { ...opciones, headers: encabezados, credentials: 'same-origin' })
+  const sujeto = sujetoSesion()
+  const claveCache = sujeto ? `${sujeto}:${ruta}` : ''
+  let respuesta: Response
+  try {
+    respuesta = await fetch(ruta, { ...opciones, headers: encabezados, credentials: 'same-origin' })
+  } catch (error) {
+    if (esLectura && claveCache && cacheLectura.has(claveCache)) return cacheLectura.get(claveCache) as T
+    throw error
+  }
   if (respuesta.status === 401 && reintentar && accessToken) {
     await renovarSesion()
     return solicitud<T>(ruta, opciones, false)
   }
   if (!respuesta.ok) throw await problema(respuesta)
   if (respuesta.status === 204) return undefined as T
-  return respuesta.json() as Promise<T>
+  const datos = await respuesta.json() as T
+  if (esLectura && claveCache) cacheLectura.set(claveCache, datos)
+  return datos
+}
+
+function sujetoSesion() {
+  try {
+    const carga = accessToken.split('.')[1]
+    if (!carga) return null
+    const sinRelleno = carga.replaceAll('-', '+').replaceAll('_', '/')
+    const normalizada = sinRelleno.padEnd(Math.ceil(sinRelleno.length / 4) * 4, '=')
+    return (JSON.parse(atob(normalizada)) as { sub?: string }).sub ?? null
+  } catch {
+    return null
+  }
 }
 
 export async function iniciarSesion(correo: string, clave: string) {
@@ -161,6 +189,26 @@ export async function cerrarSesion() {
   })
   if (!respuesta.ok) throw await problema(respuesta)
   accessToken = ''
+  cacheLectura.clear()
+}
+
+export async function abrirFlujoEventos(ultimoEventoId: string, signal: AbortSignal, reintentar = true) {
+  const encabezados = new Headers({ Accept: 'text/event-stream' })
+  if (accessToken) encabezados.set('Authorization', `Bearer ${accessToken}`)
+  if (ultimoEventoId) encabezados.set('Last-Event-ID', ultimoEventoId)
+  const respuesta = await fetch(`/api/v1/familias/${FAMILIA_TEST_ID}/eventos`, {
+    headers: encabezados,
+    credentials: 'same-origin',
+    cache: 'no-store',
+    signal
+  })
+  if (respuesta.status === 401 && reintentar && accessToken) {
+    await renovarSesion()
+    return abrirFlujoEventos(ultimoEventoId, signal, false)
+  }
+  if (!respuesta.ok) throw await problema(respuesta)
+  if (!respuesta.body) throw new Error('El navegador no pudo abrir la sincronización en vivo.')
+  return respuesta
 }
 
 export function consultarHoy() {

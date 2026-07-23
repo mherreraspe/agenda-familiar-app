@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.obusystem.agendafamiliar.agenda.tarea.EstadoTarea;
+import com.obusystem.agendafamiliar.agenda.sincronizacion.RecursoSincronizacion;
+import com.obusystem.agendafamiliar.agenda.sincronizacion.ServicioSincronizacionFamilia;
 
 import jakarta.validation.Valid;
 
@@ -22,9 +24,11 @@ import jakarta.validation.Valid;
 @RequestMapping("/familias/{familiaId}")
 public class ControladorHoy {
     private final ServicioHoy hoy;
+    private final ServicioSincronizacionFamilia sincronizacion;
 
-    public ControladorHoy(ServicioHoy hoy) {
+    public ControladorHoy(ServicioHoy hoy, ServicioSincronizacionFamilia sincronizacion) {
         this.hoy = hoy;
+        this.sincronizacion = sincronizacion;
     }
 
     @GetMapping("/hoy")
@@ -36,12 +40,16 @@ public class ControladorHoy {
     @ResponseStatus(HttpStatus.CREATED)
     RespuestaHoy.TareaResumen crear(@PathVariable UUID familiaId, @Valid @RequestBody SolicitudTarea solicitud,
             @AuthenticationPrincipal Jwt jwt) {
-        return hoy.crearTarea(familiaId, solicitud, jwt);
+        RespuestaHoy.TareaResumen tarea = hoy.crearTarea(familiaId, solicitud, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.AGENDA);
+        return tarea;
     }
 
     @PatchMapping("/tareas/{tareaId}/estado/{estado}")
     RespuestaHoy.TareaResumen cambiarEstado(@PathVariable UUID familiaId, @PathVariable UUID tareaId,
             @PathVariable EstadoTarea estado, @AuthenticationPrincipal Jwt jwt) {
-        return hoy.cambiarEstado(familiaId, tareaId, estado, jwt);
+        RespuestaHoy.TareaResumen tarea = hoy.cambiarEstado(familiaId, tareaId, estado, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.AGENDA);
+        return tarea;
     }
 }

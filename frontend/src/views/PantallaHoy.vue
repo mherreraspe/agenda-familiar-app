@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import AppShell from '../app/AppShell.vue'
@@ -43,6 +43,7 @@ import {
   type TareaResumen
 } from '../api'
 import { reducirImagenReceta, validarImagenReceta } from '../imagen'
+import { suscribirEventosFamilia, type EstadoSincronizacion, type RecursoSincronizacion } from '../sincronizacion'
 
 type SeccionPrincipal = 'hoy' | 'agenda' | 'salud' | 'familia' | 'actividad'
 type SeccionSalud = 'hoy' | 'tratamientos' | 'botiquin' | 'recetas'
@@ -60,6 +61,8 @@ const error = ref('')
 const mensaje = ref('')
 const sesionActiva = ref(false)
 const restaurando = ref(true)
+const enLinea = ref(typeof navigator === 'undefined' || navigator.onLine)
+const estadoSincronizacion = ref<EstadoSincronizacion>('reconectando')
 const datos = ref<RespuestaHoy | null>(null)
 const catalogo = ref<RespuestaCatalogo | null>(null)
 const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
@@ -69,6 +72,8 @@ const cuota = ref<RespuestaCuota | null>(null)
 const estadoVista = ref<'cargando' | 'lista' | 'error'>('cargando')
 const errorVista = ref('')
 const recursosCargados = reactive({ base: false, catalogo: false, ocurrencias: false, auditoria: false, familia: false, cuota: false })
+let cerrarSincronizacion: (() => void) | null = null
+let primeraNotificacionSincronizacion = true
 const mostrarTodoSalud = reactive<Record<SeccionSalud, boolean>>({ hoy: false, tratamientos: false, botiquin: false, recetas: false })
 const limiteHistorialTomas = ref(10)
 const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
@@ -160,16 +165,65 @@ function destinoHistorialTomas() {
 }
 
 onMounted(async () => {
+  window.addEventListener('online', actualizarEstadoRed)
+  window.addEventListener('offline', actualizarEstadoRed)
   try {
     await renovarSesion()
     sesionActiva.value = true
     await cargarSeccion(props.seccion)
+    iniciarSincronizacion()
   } catch {
     sesionActiva.value = false
   } finally {
     restaurando.value = false
   }
 })
+
+onBeforeUnmount(() => {
+  cerrarSincronizacion?.()
+  window.removeEventListener('online', actualizarEstadoRed)
+  window.removeEventListener('offline', actualizarEstadoRed)
+})
+
+function actualizarEstadoRed() {
+  enLinea.value = navigator.onLine
+  if (!enLinea.value) estadoSincronizacion.value = 'sin-conexion'
+}
+
+function iniciarSincronizacion() {
+  cerrarSincronizacion?.()
+  primeraNotificacionSincronizacion = true
+  cerrarSincronizacion = suscribirEventosFamilia(async evento => {
+    if (primeraNotificacionSincronizacion) {
+      primeraNotificacionSincronizacion = false
+      return
+    }
+    invalidarRecursos(evento.recursos)
+    const recurso = props.seccion.toUpperCase() as RecursoSincronizacion
+    if (evento.recursos.includes(recurso)) await cargarSeccion(props.seccion, false, true)
+  }, estado => {
+    estadoSincronizacion.value = estado
+    enLinea.value = navigator.onLine
+  })
+}
+
+function invalidarRecursos(recursos: RecursoSincronizacion[]) {
+  if (recursos.includes('HOY')) {
+    recursosCargados.base = false
+    recursosCargados.catalogo = false
+    recursosCargados.ocurrencias = false
+  }
+  if (recursos.includes('AGENDA')) {
+    recursosCargados.base = false
+    recursosCargados.catalogo = false
+  }
+  if (recursos.includes('SALUD')) {
+    recursosCargados.base = false
+    recursosCargados.catalogo = false
+    recursosCargados.ocurrencias = false
+    recursosCargados.cuota = false
+  }
+}
 
 watch(() => props.seccion, seccion => {
   mensaje.value = ''
@@ -190,6 +244,10 @@ function claveFecha(valor: string) {
 }
 
 function abrirAlta(tipo: TipoAlta) {
+  if (!enLinea.value) {
+    error.value = 'Sin conexión. Vuelve a estar en línea para añadir o cambiar información.'
+    return
+  }
   if (tipo === 'evento') {
     void abrirFormularioEvento()
     return
@@ -204,6 +262,7 @@ async function entrar() {
     await iniciarSesion(correo.value, clave.value)
     sesionActiva.value = true
     await cargarSeccion(props.seccion, true)
+    iniciarSincronizacion()
     clave.value = ''
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo iniciar sesión'
@@ -252,19 +311,25 @@ async function cargarCuota(forzar = false) {
   recursosCargados.cuota = true
 }
 
-async function cargarSeccion(seccion: SeccionPrincipal, forzar = false) {
-  estadoVista.value = 'cargando'
-  errorVista.value = ''
+async function cargarSeccion(seccion: SeccionPrincipal, forzar = false, enSegundoPlano = false) {
+  if (!enSegundoPlano) {
+    estadoVista.value = 'cargando'
+    errorVista.value = ''
+  }
   try {
     if (seccion === 'hoy') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar), cargarOcurrencias(forzar)])
     if (seccion === 'agenda') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar)])
     if (seccion === 'salud') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar), cargarOcurrencias(forzar), cargarCuota(forzar)])
     if (seccion === 'familia') await Promise.all([cargarBase(forzar), cargarFamilia(forzar)])
     if (seccion === 'actividad') await Promise.all([cargarBase(forzar), cargarAuditoria(forzar)])
-    estadoVista.value = 'lista'
+    if (!enSegundoPlano) estadoVista.value = 'lista'
   } catch (causa) {
-    errorVista.value = causa instanceof Error ? causa.message : 'No se pudo cargar esta sección.'
-    estadoVista.value = 'error'
+    if (enSegundoPlano) {
+      error.value = 'No se pudieron recuperar los últimos cambios. La aplicación volverá a intentarlo.'
+    } else {
+      errorVista.value = causa instanceof Error ? causa.message : 'No se pudo cargar esta sección.'
+      estadoVista.value = 'error'
+    }
   }
 }
 
@@ -580,6 +645,8 @@ async function salir() {
   error.value = ''
   try {
     await eliminarSesion()
+    cerrarSincronizacion?.()
+    cerrarSincronizacion = null
     datos.value = null
     catalogo.value = null
     agendaTratamientos.value = null
@@ -632,6 +699,14 @@ async function salir() {
       @anadir="abrirAlta"
       @salir="salir"
     >
+      <p v-if="!enLinea" class="aviso-conexion" role="status">
+        <span aria-hidden="true"></span>
+        Sin conexión: puedes consultar lo ya cargado. Para proteger los cambios, guardar estará disponible al volver a estar en línea.
+      </p>
+      <p v-else-if="estadoSincronizacion === 'reconectando'" class="aviso-conexion aviso-conexion--sincronizando" role="status">
+        <span aria-hidden="true"></span>
+        Recuperando los cambios de tu familia…
+      </p>
       <p v-if="estadoVista === 'cargando'" class="estado-carga" role="status">Cargando {{ tituloPantalla.toLowerCase() }}…</p>
       <div v-else-if="estadoVista === 'error'" class="estado-error" role="alert">
         <p>{{ errorVista }}</p>
@@ -863,7 +938,7 @@ async function salir() {
           <label>Cada<input v-model.number="nuevaTarea.intervalo" type="number" min="1" max="30" required /></label>
           <label>Hasta<input v-model="nuevaTarea.hasta" type="datetime-local" required /></label>
         </div>
-        <button class="boton-principal" :disabled="cargando">Guardar tarea</button>
+        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar tarea</button>
       </form>
 
       <form v-else-if="formulario === 'medicamento'" @submit.prevent="guardarMedicamento">
@@ -872,7 +947,7 @@ async function salir() {
         <label>Concentración<input v-model.trim="nuevoMedicamento.concentracion" maxlength="120" placeholder="Texto del envase" /></label>
         <div class="campos-dobles"><label>Cantidad<input v-model.number="nuevoMedicamento.cantidad" type="number" min="0" step="0.01" required /></label><label>Unidad<input v-model.trim="nuevoMedicamento.unidad" maxlength="40" required /></label></div>
         <label>Vencimiento opcional<input v-model="nuevoMedicamento.fechaVencimiento" type="date" /></label>
-        <button class="boton-principal" :disabled="cargando">Guardar medicamento</button>
+        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar medicamento</button>
       </form>
 
       <form v-else-if="formulario === 'tratamiento'" @submit.prevent="guardarTratamiento">
@@ -892,7 +967,7 @@ async function salir() {
           <p v-if="recetaSeleccionada" class="confirmacion">{{ recetaSeleccionada.name }} · {{ (recetaSeleccionada.size / 1048576).toFixed(1) }} MiB</p>
           <div class="campos-dobles"><label>Inicio opcional<input v-model="nuevoTratamiento.fechaInicio" type="date" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
         </div></details>
-        <button class="boton-principal" :disabled="cargando">Guardar tratamiento</button>
+        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar tratamiento</button>
       </form>
 
       <form v-else-if="formulario === 'perfil'" @submit.prevent="guardarPerfil">
@@ -904,7 +979,7 @@ async function salir() {
           <label v-if="nuevoPerfil.usuarioId">Permiso<select v-model="nuevoPerfil.permiso"><option value="ADULTO">Adulto</option><option value="ADMINISTRADOR_FAMILIAR">Administrador familiar</option></select></label>
         </template>
         <label class="opcion-linea"><input v-model="nuevoPerfil.activo" type="checkbox" /> Perfil activo</label>
-        <button class="boton-principal" :disabled="cargando">Guardar perfil</button>
+        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar perfil</button>
       </form>
     </dialog>
 

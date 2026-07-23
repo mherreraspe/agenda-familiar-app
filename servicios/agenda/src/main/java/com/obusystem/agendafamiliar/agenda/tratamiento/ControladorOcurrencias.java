@@ -14,14 +14,21 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.HttpStatus;
 
+import com.obusystem.agendafamiliar.agenda.sincronizacion.RecursoSincronizacion;
+import com.obusystem.agendafamiliar.agenda.sincronizacion.ServicioSincronizacionFamilia;
+
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/familias/{familiaId}")
 public class ControladorOcurrencias {
     private final ServicioOcurrencias servicio;
+    private final ServicioSincronizacionFamilia sincronizacion;
 
-    public ControladorOcurrencias(ServicioOcurrencias servicio) { this.servicio = servicio; }
+    public ControladorOcurrencias(ServicioOcurrencias servicio, ServicioSincronizacionFamilia sincronizacion) {
+        this.servicio = servicio;
+        this.sincronizacion = sincronizacion;
+    }
 
     @GetMapping("/ocurrencias")
     RespuestaOcurrencias consultar(@PathVariable UUID familiaId, @AuthenticationPrincipal Jwt jwt) {
@@ -39,7 +46,11 @@ public class ControladorOcurrencias {
             @RequestHeader("Idempotency-Key") String claveIdempotencia,
             @RequestBody(required = false) SolicitudAccionOcurrencia solicitud,
             @AuthenticationPrincipal Jwt jwt) {
-        return servicio.cambiarEstado(familiaId, ocurrenciaId, estado, claveIdempotencia, solicitud, jwt);
+        RespuestaOcurrencias.OcurrenciaResumen respuesta = servicio.cambiarEstado(
+                familiaId, ocurrenciaId, estado, claveIdempotencia, solicitud, jwt);
+        sincronizacion.publicarIdempotente(familiaId, claveIdempotencia,
+                RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
+        return respuesta;
     }
 
     @PatchMapping("/revisar/{elementoId}/cerrar")
@@ -48,6 +59,8 @@ public class ControladorOcurrencias {
             @RequestHeader("Idempotency-Key") String claveIdempotencia,
             @AuthenticationPrincipal Jwt jwt) {
         servicio.cerrarRevision(familiaId, elementoId, claveIdempotencia, jwt);
+        sincronizacion.publicarIdempotente(familiaId, claveIdempotencia,
+                RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
     }
 
     @PatchMapping("/tratamientos/{tratamientoId}/cerrar")
@@ -57,5 +70,7 @@ public class ControladorOcurrencias {
             @Valid @RequestBody(required = false) SolicitudCierreTratamiento solicitud,
             @AuthenticationPrincipal Jwt jwt) {
         servicio.cerrarTratamiento(familiaId, tratamientoId, claveIdempotencia, solicitud, jwt);
+        sincronizacion.publicarIdempotente(familiaId, claveIdempotencia,
+                RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
     }
 }
