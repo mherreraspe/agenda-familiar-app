@@ -29,6 +29,8 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Ver auditoría | Ajustes / Actividad | Abrir | — | `consultarAuditoria` | E2E |
 | Filtrar por persona | Hoy / Agenda / Salud | Elegir persona | — | Estado compartido | Vitest / E2E |
 | Cerrar sesión | Menú de avatar | Cerrar sesión | — | `cerrarSesion` | E2E |
+| Reflejar cambios familiares | Hoy / Agenda / Salud | Automática | Aviso de reconexión | SSE `/familias/{id}/eventos` | Vitest / IT / E2E |
+| Consultar durante un corte | Hoy / Agenda / Salud | Lectura ya cargada | Aviso sin conexión | Caché en memoria por sujeto | Vitest / E2E |
 
 ## Estado por PR
 
@@ -38,7 +40,8 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Ajuste posterior — PR #21 desplegado en `20260723T134229Z`: Salud usa cuatro subsecciones exclusivas, limita las listas inicialmente a cinco filas y evita la apertura simultánea de Añadir/Familia.
 - Fundamento visual — PR #23 desplegado en `20260723T151623Z`: tipografías legibles, tokens cromáticos, iconos SVG, encabezado y filtro compactos, terminología `Tomas` y detalle progresivo de tratamientos; axe verde en los tres viewports.
 - Interacción operativa — PR #26 desplegado en `20260723T165603Z`: Hoy oculta secciones vacías, el historial de tomas usa una vista paginada, las altas son contextuales y la cuota normal no compite con el contenido.
+- Sincronización familiar — PR #28 desplegado en `20260723T190511Z`: SSE autenticado por familia, backoff, deduplicación, invalidación de Hoy/Agenda/Salud y lectura ya cargada sin escrituras offline; 45 escenarios Playwright/axe verdes.
 - Objetos — existe un prototipo visual solo en desarrollo para validar búsqueda, recientes y rutas físicas; continúa excluido de producción hasta disponer de dominio, API, RLS/IDOR y auditoría.
-- PR 3 en adelante: pendiente; el siguiente bloque es SSE entre cuidadores. Objetos/Baúl continúa reservado para su PR de dominio completo.
+- PR 3 completado mediante #28. El siguiente bloque es Objetos como dominio completo; Web Push privado permanece posterior.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.
