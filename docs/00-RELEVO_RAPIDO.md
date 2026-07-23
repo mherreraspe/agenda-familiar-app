@@ -5,31 +5,33 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `e5beb0bc904cc8d7bd99d96af137f90e8c568e3d`.
-- Release activo: `20260718T205050Z`.
+- Commit desplegado: `56225719f04eff1b17e0b8d95ef2d7c84879c3e6`.
+- Release activo: `20260719T033351Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
-- Migraciones: V1–V7 aplicadas correctamente.
-- Último bloque: recurrencia, acciones de agenda y administración familiar.
-- E2E HTTPS y revisión móvil V7 autenticada: aprobados.
+- Migraciones: V1–V8 aplicadas correctamente.
+- Último bloque: fotografías privadas de recetas y cuota familiar.
+- E2E HTTPS y revisión móvil V8 autenticada: aprobados.
 
 ## Último bloque completado
 
-- PR #11 integrado en `main`; CI `29660227013` verde (frontend 13 s, backend 1 min 11 s).
-- Migración V7: series de tareas/eventos y acciones idempotentes con RLS forzado.
-- Recurrencia diaria, semanal y mensual materializada sin borrar instancias anteriores.
-- Omitir y reprogramar tareas/eventos desde “Hoy”, “Revisar” y calendario; reprogramación enlazada.
-- Interfaz para perfiles adultos/dependientes, cuentas vinculadas y permisos, restringida a administradores.
-- Pruebas PostgreSQL 18: recurrencia, historial, idempotencia, concurrencia, IDOR, RLS y permisos.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-e5beb0b-20260718T205050Z`.
-- Producción saludable; V7 aplicada una vez y E2E con aislamiento 404, auditoría e indexación aprobado.
-- PWA autenticada a 390×844: bundle V7, recurrencia y gestión familiar visibles; sin desborde ni errores de consola.
+- PR #13 funcional y PR #14–#15 operativos integrados; CI final verde en frontend y backend.
+- Migración V8 con metadatos, UUID impredecibles, SHA-256 y RLS forzado para archivos familiares.
+- Originales y miniaturas re-encodeados sin EXIF/ubicación y cifrados con AES-256-GCM en volumen privado.
+- Captura/selección JPEG/PNG, reducción móvil, visualización autenticada y eliminación completa desde la PWA.
+- Cuota de 1 GiB serializada por familia, niveles 70/85/95/100 %, deduplicación familiar y bloqueo al límite.
+- Pruebas PostgreSQL 18 para formato/tamaño, cifrado, IDOR/RLS, cuota y subidas competidoras.
+- Bootstrap de clave persistente y permisos del volumen corregidos manteniendo Agenda sin privilegios.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-5622571-20260719T033351Z`.
+- E2E: alta 201, descarga cifrada, borrado, aislamiento 404, cuota, auditoría e indexación aprobados.
+- PWA a 390×844: bundle `index-I8YWU03E.js`, receta y cuota visibles; sin desborde ni errores de consola.
 
 ## Siguiente bloque funcional
 
-1. Fotografía opcional de receta desde la PWA con reducción y eliminación de EXIF/ubicación.
-2. Almacenamiento privado, descarga autorizada, miniaturas y eliminación completa.
-3. Cuota familiar con avisos y bloqueo de nuevas fotos al alcanzar el límite.
-4. Pruebas de archivos inválidos/maliciosos, aislamiento, cuota y concurrencia.
+1. SSE con reconexión para reflejar cambios entre dispositivos abiertos.
+2. Caché de lectura PWA y aviso claro sin conexión, manteniendo las escrituras solo en línea.
+3. Web Push genérico en pantalla bloqueada y contenido privado únicamente tras autenticar.
+4. Preferencias, horario silencioso, deduplicación y reintentos de notificaciones.
+5. Pruebas de reconexión, privacidad, concurrencia entre dispositivos y experiencia offline.
 
 ## Entrada operativa
 
