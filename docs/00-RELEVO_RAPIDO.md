@@ -20,7 +20,6 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 - Los tratamientos muestran una fila compacta; indicación, responsables y receta quedan bajo `Ver detalles`.
 - En 390×844 la fila de tratamiento bajó de 160 px a 109 px, entran cinco elementos accionables y no existe overflow horizontal.
 - Objetos/Baúl no se muestra todavía: requiere migración, API, RLS/IDOR, auditoría y UI en un PR propio.
-- CI final verde: frontend y backend de la PR #21, ejecución `30011966232`.
 - Verificación local: 32 pruebas frontend, build Vite, 6 pruebas backend y auditoría de dependencias de producción sin vulnerabilidades.
 - CI `30018761203`: frontend y backend verdes; 36 escenarios Playwright/axe aprobados.
 - Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-3e326f9-20260723T151623Z`.
