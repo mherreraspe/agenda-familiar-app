@@ -2,8 +2,8 @@
 
 **Corte:** 2026-07-23 (America/Lima)
 **Rama:** `main`
-**Commit desplegado:** `368a0de129a68334be3732f20f0ce3ec2ff400b4`
-**Versión del servidor:** `20260723T124905Z`
+**Commit desplegado:** `2210abf6d08e81c1d69ff901b3733fe4c366eaee`
+**Versión del servidor:** `20260723T134229Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
@@ -131,6 +131,8 @@ Integrado mediante los PR #17–#19, desplegado y verificado en producción:
 - [x] Tarjetas repetitivas convertidas en filas compactas con una acción principal y menú Más.
 - [x] Carga global sustituida por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Familia y Actividad.
 - [x] Auditoría axe añadida para rutas, menús y estados, sin aceptar impactos críticos o serios.
+- [x] Salud dividida en Hoy, Tratamientos, Botiquín y Recetas; solo una subsección se renderiza por vez y cada lista inicia con un máximo de cinco filas.
+- [x] Menús Añadir/Familia mutuamente exclusivos, con cierre exterior y Escape, activadores accesibles y enlaces nativos preservados.
 - [x] Alta desde la interfaz de tareas, eventos, medicamentos y tratamientos.
 - [x] Completar tareas desde “Hoy”.
 - [x] Catálogo inicial de medicamento, tratamiento y evento para `familia_test`.
@@ -154,6 +156,7 @@ Integrado mediante los PR #17–#19, desplegado y verificado en producción:
 - PR del formulario de evento adaptativo: <https://github.com/mherreraspe/agenda-familiar-app/pull/17>.
 - PR de AppShell y rutas por dominio: <https://github.com/mherreraspe/agenda-familiar-app/pull/18>.
 - PR de listas, cargas selectivas y accesibilidad: <https://github.com/mherreraspe/agenda-familiar-app/pull/19>; CI `30007766644` aprobado.
+- PR de Salud compacta y menús exclusivos: <https://github.com/mherreraspe/agenda-familiar-app/pull/21>; CI `30011966232` aprobado y release `20260723T134229Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
