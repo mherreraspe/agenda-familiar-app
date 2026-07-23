@@ -5,26 +5,27 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `3e326f97b9ef21dc23c817a1eec72bb1c27c8370`.
-- Release activo: `20260723T151623Z`.
+- Commit desplegado: `5032b1067bb8c5c588bde8ff1e26cf269b92b01b`.
+- Release activo: `20260723T165603Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
 - Migraciones: V1–V8 aplicadas correctamente.
-- Último bloque: fundamento visual y compactación de tratamientos.
-- E2E HTTPS aprobado; 36 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
+- Último bloque: estados operativos, historial de tomas y prototipo de Objetos.
+- E2E HTTPS aprobado; 39 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #23: fundamento visual de «tablero doméstico claro», con tipografías locales, paleta calmada e iconos SVG propios.
-- Encabezado móvil reducido, identificador técnico de la familia oculto y filtro de persona convertido en un selector único.
-- Salud usa pestañas ligeras y lenguaje familiar: `Tomas` sustituye a `Ocurrencias` en la interfaz.
-- Los tratamientos muestran una fila compacta; indicación, responsables y receta quedan bajo `Ver detalles`.
-- En 390×844 la fila de tratamiento bajó de 160 px a 109 px, entran cinco elementos accionables y no existe overflow horizontal.
-- Objetos/Baúl no se muestra todavía: requiere migración, API, RLS/IDOR, auditoría y UI en un PR propio.
-- Verificación local: 32 pruebas frontend, build Vite, 6 pruebas backend y auditoría de dependencias de producción sin vulnerabilidades.
-- CI `30018761203`: frontend y backend verdes; 36 escenarios Playwright/axe aprobados.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-3e326f9-20260723T151623Z`.
+- PR #26: Hoy vacío se reduce a `Todo está al día`; `Por resolver` solo aparece con contenido y no duplica tareas vencidas.
+- El historial de tomas sale de Hoy y usa una vista propia en Salud con carga de 10 registros por bloque.
+- Agenda, Tratamientos y Botiquín usan una única alta contextual; los menús móviles se presentan como hojas inferiores.
+- La cuota de recetas permanece oculta por debajo del 70 %.
+- Prototipo visual de Objetos disponible solo en desarrollo bajo `/prototipo/objetos`; está ausente del build productivo.
+- El nombre previsto es `Objetos`; la pantalla responde a `¿Qué estás buscando?` y muestra rutas como `Habitación › Ropero › Caja`.
+- Objetos todavía requiere migración, API, RLS/IDOR, auditoría y UI productiva en un PR propio.
+- Verificación local: 34 pruebas frontend, build Vite y 6 pruebas backend aprobadas.
+- CI `30024979468`: frontend y backend verdes; 39 escenarios Playwright/axe aprobados.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-5032b10-20260723T165603Z`.
 - E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
-- Revisión visual aislada realizada en 390×844 y 1280×900; la validación autenticada de producción se cubrió mediante E2E HTTPS.
+- Revisión visual aislada realizada en 390×844 para Hoy, Agenda, Salud, Historial y Objetos; cero overflow y axe sin impactos graves.
 
 ## Siguiente bloque funcional
 
