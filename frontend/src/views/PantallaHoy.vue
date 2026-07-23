@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute } from 'vue-router'
 import AppShell from '../app/AppShell.vue'
@@ -83,6 +83,10 @@ let primeraNotificacionSincronizacion = true
 const mostrarTodoSalud = reactive<Record<SeccionSalud, boolean>>({ hoy: false, tratamientos: false, botiquin: false, recetas: false })
 const limiteHistorialTomas = ref(10)
 const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | 'objeto' | null>(null)
+const dialogoFormulario = ref<HTMLDialogElement | null>(null)
+const dialogoReceta = ref<HTMLDialogElement | null>(null)
+let activadorFormulario: HTMLElement | null = null
+let activadorReceta: HTMLElement | null = null
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
 const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
@@ -103,6 +107,37 @@ const {
   registrarConfirmacion
 } = useFormularioRuta('evento')
 registrarConfirmacion(() => formularioEvento.value?.preguntarDescarte() ?? Promise.resolve(false))
+
+async function sincronizarDialogo(dialogo: HTMLDialogElement | null, abierto: boolean, devolverFoco: 'formulario' | 'receta') {
+  await nextTick()
+  if (!dialogo) return
+  if (abierto && !dialogo.open) {
+    const activo = document.activeElement
+    if (devolverFoco === 'formulario' && !activadorFormulario) activadorFormulario = activo instanceof HTMLElement ? activo : null
+    if (devolverFoco === 'receta' && !activadorReceta) activadorReceta = activo instanceof HTMLElement ? activo : null
+    dialogo.showModal()
+    await nextTick()
+    const destino = dialogo.querySelector<HTMLElement>('[autofocus]')
+      ?? dialogo.querySelector<HTMLElement>('form input, form select, form textarea')
+      ?? dialogo.querySelector<HTMLElement>('button')
+    destino?.focus()
+  } else if (!abierto && dialogo.open) {
+    dialogo.close()
+    await nextTick()
+    const activador = devolverFoco === 'formulario' ? activadorFormulario : activadorReceta
+    activador?.focus()
+    if (devolverFoco === 'formulario') activadorFormulario = null
+    else activadorReceta = null
+  }
+}
+
+watch(formulario, abierto => void sincronizarDialogo(dialogoFormulario.value, abierto !== null, 'formulario'))
+watch(recetaVisible, abierta => void sincronizarDialogo(dialogoReceta.value, abierta !== null, 'receta'))
+watch(eventoAbierto, abierto => {
+  if (!abierto) return
+  formulario.value = null
+  cerrarRecetaVisible()
+})
 
 const fechaActual = new Intl.DateTimeFormat('es-PE', {
   weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Lima'
@@ -144,6 +179,11 @@ const recetasVisibles = computed(() => tratamientosFiltrados.value.filter(tratam
 const tituloFormulario = computed(() => ({
   tarea: 'Nueva tarea', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento',
   perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil', objeto: objetoEditadoId.value ? 'Editar objeto' : 'Nuevo objeto'
+})[formulario.value ?? 'tarea'])
+const etiquetaGuardarFormulario = computed(() => ({
+  tarea: 'Guardar tarea', medicamento: 'Guardar medicamento', tratamiento: 'Guardar tratamiento',
+  perfil: perfilEditadoId.value ? 'Guardar cambios' : 'Guardar perfil',
+  objeto: objetoEditadoId.value ? 'Guardar cambios' : 'Guardar objeto'
 })[formulario.value ?? 'tarea'])
 const tituloPantalla = computed(() => ({
   hoy: 'Hoy', agenda: 'Agenda', salud: 'Salud', objetos: 'Objetos', familia: 'Familia y permisos', actividad: 'Actividad'
@@ -270,15 +310,26 @@ function abrirAlta(tipo: TipoAlta) {
     error.value = 'Sin conexión. Vuelve a estar en línea para añadir o cambiar información.'
     return
   }
+  const activo = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  const activador = activo?.closest('.menu-desplegable__panel')
+    ? document.querySelector<HTMLElement>('.boton-anadir')
+    : activo
+  cerrarRecetaVisible()
   if (tipo === 'evento') {
-    void abrirFormularioEvento()
+    formulario.value = null
+    void abrirFormularioEvento(activador)
     return
   }
+  activadorFormulario = activador
   if (tipo === 'objeto') {
     objetoEditadoId.value = null
     Object.assign(nuevoObjeto, { nombre: '', categoria: '', notas: '', ruta: '', version: undefined })
   }
   formulario.value = tipo === 'medicamento' ? 'medicamento' : tipo
+}
+
+function cerrarFormulario() {
+  formulario.value = null
 }
 
 async function entrar() {
@@ -464,6 +515,7 @@ async function verReceta(archivoId: string) {
   cargando.value = true
   error.value = ''
   try {
+    formulario.value = null
     cerrarRecetaVisible()
     const blob = await descargarReceta(archivoId)
     recetaVisible.value = { id: archivoId, url: URL.createObjectURL(blob) }
@@ -1008,10 +1060,10 @@ async function salir() {
       @modificado="modificadoEvento = $event"
     />
 
-    <dialog :open="formulario !== null" class="dialogo">
-      <div class="titulo-seccion"><h2>{{ tituloFormulario }}</h2><button type="button" class="cerrar" aria-label="Cerrar" @click="formulario = null">×</button></div>
+    <dialog ref="dialogoFormulario" class="dialogo dialogo--formulario" aria-labelledby="titulo-dialogo-formulario" @cancel.prevent="cerrarFormulario">
+      <div class="titulo-seccion dialogo__cabecera"><h2 id="titulo-dialogo-formulario">{{ tituloFormulario }}</h2><button type="button" class="cerrar" aria-label="Cerrar formulario" @click="cerrarFormulario">×</button></div>
 
-      <form v-if="formulario === 'tarea'" @submit.prevent="guardarTarea">
+      <form v-if="formulario === 'tarea'" id="formulario-general" @submit.prevent="guardarTarea">
         <label>Título<input v-model.trim="nuevaTarea.titulo" maxlength="180" required /></label>
         <label>Responsable
           <select v-model="nuevaTarea.perfilId" required>
@@ -1026,19 +1078,17 @@ async function salir() {
           <label>Cada<input v-model.number="nuevaTarea.intervalo" type="number" min="1" max="30" required /></label>
           <label>Hasta<input v-model="nuevaTarea.hasta" type="datetime-local" required /></label>
         </div>
-        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar tarea</button>
       </form>
 
-      <form v-else-if="formulario === 'medicamento'" @submit.prevent="guardarMedicamento">
+      <form v-else-if="formulario === 'medicamento'" id="formulario-general" @submit.prevent="guardarMedicamento">
         <label>Nombre<input v-model.trim="nuevoMedicamento.nombre" maxlength="180" required /></label>
         <label>Presentación<input v-model.trim="nuevoMedicamento.presentacion" maxlength="120" placeholder="Caja, frasco…" /></label>
         <label>Concentración<input v-model.trim="nuevoMedicamento.concentracion" maxlength="120" placeholder="Texto del envase" /></label>
         <div class="campos-dobles"><label>Cantidad<input v-model.number="nuevoMedicamento.cantidad" type="number" min="0" step="0.01" required /></label><label>Unidad<input v-model.trim="nuevoMedicamento.unidad" maxlength="40" required /></label></div>
         <label>Vencimiento opcional<input v-model="nuevoMedicamento.fechaVencimiento" type="date" /></label>
-        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar medicamento</button>
       </form>
 
-      <form v-else-if="formulario === 'tratamiento'" @submit.prevent="guardarTratamiento">
+      <form v-else-if="formulario === 'tratamiento'" id="formulario-general" @submit.prevent="guardarTratamiento">
         <label>Persona<select v-model="nuevoTratamiento.perfilId" required><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
         <label>Nombre del tratamiento o medicamento<input v-model.trim="nuevoTratamiento.nombre" maxlength="180" required /></label>
         <label>Horario<input v-model="nuevoTratamiento.horario" type="time" required /></label>
@@ -1055,10 +1105,9 @@ async function salir() {
           <p v-if="recetaSeleccionada" class="confirmacion">{{ recetaSeleccionada.name }} · {{ (recetaSeleccionada.size / 1048576).toFixed(1) }} MiB</p>
           <div class="campos-dobles"><label>Inicio opcional<input v-model="nuevoTratamiento.fechaInicio" type="date" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
         </div></details>
-        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar tratamiento</button>
       </form>
 
-      <form v-else-if="formulario === 'perfil'" @submit.prevent="guardarPerfil">
+      <form v-else-if="formulario === 'perfil'" id="formulario-general" @submit.prevent="guardarPerfil">
         <label>Nombre visible<input v-model.trim="nuevoPerfil.nombre" maxlength="120" required /></label>
         <label>Tipo<select v-model="nuevoPerfil.tipo"><option value="ADULTO">Adulto</option><option value="DEPENDIENTE">Dependiente</option></select></label>
         <div class="campos-dobles"><label>Relación<input v-model.trim="nuevoPerfil.relacion" maxlength="80" placeholder="Mamá, abuelo, hija…" /></label><label>Color<input v-model="nuevoPerfil.color" type="color" /></label></div>
@@ -1067,20 +1116,22 @@ async function salir() {
           <label v-if="nuevoPerfil.usuarioId">Permiso<select v-model="nuevoPerfil.permiso"><option value="ADULTO">Adulto</option><option value="ADMINISTRADOR_FAMILIAR">Administrador familiar</option></select></label>
         </template>
         <label class="opcion-linea"><input v-model="nuevoPerfil.activo" type="checkbox" /> Perfil activo</label>
-        <button class="boton-principal" :disabled="cargando || !enLinea">Guardar perfil</button>
       </form>
 
-      <form v-else-if="formulario === 'objeto'" @submit.prevent="guardarObjeto">
+      <form v-else-if="formulario === 'objeto'" id="formulario-general" @submit.prevent="guardarObjeto">
         <label>Nombre<input v-model.trim="nuevoObjeto.nombre" maxlength="180" required /></label>
         <label>Categoría<input v-model.trim="nuevoObjeto.categoria" maxlength="80" placeholder="Documentos, herramientas…" required /></label>
         <label>Ruta de ubicación<input v-model.trim="nuevoObjeto.ruta" maxlength="604" placeholder="Habitación principal › Ropero › Caja de documentos" required /><small>Separa cada nivel con ›.</small></label>
         <label>Nota opcional<textarea v-model.trim="nuevoObjeto.notas" maxlength="500" rows="3" placeholder="Un detalle que ayude a reconocerlo" /></label>
-        <button class="boton-principal" :disabled="cargando || !enLinea">{{ objetoEditadoId ? 'Guardar cambios' : 'Guardar objeto' }}</button>
       </form>
+      <footer class="dialogo__acciones">
+        <button type="button" class="boton-secundario" :disabled="cargando" @click="cerrarFormulario">Cancelar</button>
+        <button type="submit" form="formulario-general" class="boton-principal" :disabled="cargando || !enLinea">{{ etiquetaGuardarFormulario }}</button>
+      </footer>
     </dialog>
 
-    <dialog :open="recetaVisible !== null" class="dialogo dialogo--receta">
-      <div class="titulo-seccion"><h2>Receta privada</h2><button type="button" class="cerrar" aria-label="Cerrar receta" @click="cerrarRecetaVisible">×</button></div>
+    <dialog ref="dialogoReceta" class="dialogo dialogo--receta" aria-labelledby="titulo-dialogo-receta" @cancel.prevent="cerrarRecetaVisible">
+      <div class="titulo-seccion dialogo__cabecera"><h2 id="titulo-dialogo-receta">Receta privada</h2><button type="button" class="cerrar" aria-label="Cerrar receta" @click="cerrarRecetaVisible">×</button></div>
       <img v-if="recetaVisible" :src="recetaVisible.url" alt="Fotografía privada de receta" />
       <p>Visible solo durante esta sesión autenticada.</p>
     </dialog>

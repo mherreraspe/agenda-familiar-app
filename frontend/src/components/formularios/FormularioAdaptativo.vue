@@ -18,7 +18,10 @@ watch(() => props.abierto, async abierto => {
   if (abierto && dialogo.value && !dialogo.value.open) {
     dialogo.value.showModal()
     await nextTick()
-    dialogo.value.querySelector<HTMLElement>('[autofocus], input, select, textarea, button')?.focus()
+    const destino = dialogo.value.querySelector<HTMLElement>('[autofocus]')
+      ?? dialogo.value.querySelector<HTMLElement>('input, select, textarea')
+      ?? dialogo.value.querySelector<HTMLElement>('button')
+    destino?.focus()
   } else if (!abierto && dialogo.value?.open) {
     dialogo.value.close()
   }

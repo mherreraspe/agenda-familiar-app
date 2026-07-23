@@ -226,9 +226,17 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #2c6e57; outline-offset: 3px; }
 
-.dialogo { position: fixed; inset: 50% auto auto 50%; z-index: 5; width: min(calc(100% - 32px), 460px); margin: 0; padding: 24px; transform: translate(-50%, -50%); border: 0; border-radius: 18px; background: var(--superficie); box-shadow: 0 22px 80px rgb(0 0 0 / 32%); }
+.dialogo { position: fixed; inset: 50% auto auto 50%; width: min(calc(100% - 32px), 520px); max-width: none; max-height: calc(100dvh - 32px); margin: 0; padding: 0 24px 24px; transform: translate(-50%, -50%); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border: 0; border-radius: 18px; color: var(--tinta); background: var(--superficie); box-shadow: 0 22px 80px rgb(0 0 0 / 32%); }
 .dialogo::backdrop { background: rgb(24 36 31 / 55%); }
+.dialogo__cabecera { position: sticky; top: 0; z-index: 1; margin: 0 -24px 18px; padding: 20px 24px 14px; border-bottom: 1px solid var(--linea); background: var(--superficie); }
+.dialogo__cabecera .cerrar { margin-left: auto; }
 .dialogo form { display: grid; gap: 15px; }
+.dialogo--formulario { padding: 0; overflow: hidden; }
+.dialogo--formulario[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+.dialogo--formulario .dialogo__cabecera { position: static; margin: 0; }
+.dialogo--formulario form { min-height: 0; align-content: start; padding: 20px 24px 28px; overflow-y: auto; overscroll-behavior: contain; }
+.dialogo__acciones { display: flex; justify-content: flex-end; gap: 12px; padding: 14px 24px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--linea); background: var(--superficie); }
+.dialogo__acciones button { min-height: 44px; }
 .dialogo details { padding: 12px; border: 1px solid #ded9ce; border-radius: 12px; }
 .dialogo summary { cursor: pointer; color: #315b4c; font-weight: 800; }
 .detalles-progresivos { display: grid; gap: 15px; margin-top: 15px; }
@@ -287,6 +295,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .acciones-ocurrencia .boton-secundario { margin-left: 0; }
   .agregar { right: 16px; }
   .campos-dobles { grid-template-columns: 1fr; }
+  .dialogo--formulario { inset: 0; width: 100%; height: 100dvh; max-height: none; transform: none; border-radius: 0; }
+  .dialogo--formulario .dialogo__cabecera, .dialogo--formulario form, .dialogo__acciones { padding-inline: 16px; }
+  .dialogo__acciones { justify-content: stretch; }
+  .dialogo__acciones button { flex: 1; }
   .formulario-adaptativo { inset: 0; width: 100%; height: 100dvh; max-height: none; transform: none; border-radius: 0; }
   .formulario-adaptativo__estructura { height: 100dvh; }
   .formulario-adaptativo__cabecera, .formulario-adaptativo__contenido { padding-inline: 16px; }
