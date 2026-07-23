@@ -2,8 +2,8 @@
 
 **Corte:** 2026-07-23 (America/Lima)
 **Rama:** `main`
-**Commit desplegado:** `3e326f97b9ef21dc23c817a1eec72bb1c27c8370`
-**Versión del servidor:** `20260723T151623Z`
+**Commit desplegado:** `5032b1067bb8c5c588bde8ff1e26cf269b92b01b`
+**Versión del servidor:** `20260723T165603Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
@@ -124,6 +124,23 @@ Integrado mediante el PR #23, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-3e326f9-20260723T151623Z`.
 - [x] E2E HTTPS aprobado: aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — estados operativos e historial de tomas
+
+Integrado mediante el PR #26, desplegado y verificado en producción:
+
+- [x] Hoy vacío muestra un único estado `Todo está al día`; no presenta contadores en cero, historial ni secciones vacías.
+- [x] `Por resolver` solo se renderiza cuando existe contenido y las tareas vencidas no se duplican en otra sección.
+- [x] Historial de tomas trasladado a una vista propia de Salud con 10 registros por bloque y retorno explícito a Tomas.
+- [x] Cuota de recetas oculta mientras el uso sea inferior al 70 %.
+- [x] Altas contextuales únicas: Evento en Agenda, Tratamiento en Tratamientos y Medicamento en Botiquín.
+- [x] Menús móviles convertidos en hojas inferiores con fondo atenuado, cierre exterior y exclusión mutua.
+- [x] Prototipo visual de Objetos con búsqueda, recientes y rutas físicas; disponible solo en desarrollo y ausente del build productivo.
+- [x] Verificación local: 34 pruebas frontend, build Vite y 6 pruebas backend aprobadas.
+- [x] CI `30024979468` verde con 39 escenarios Playwright/axe; cero impactos graves y cero overflow en las vistas revisadas.
+- [x] PR #26 integrado como `5032b10`; release `20260723T165603Z` saludable y V1–V8 validadas.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-5032b10-20260723T165603Z`.
+- [x] E2E HTTPS aprobado: aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -174,6 +191,7 @@ Integrado mediante el PR #23, desplegado y verificado en producción:
 - PR de listas, cargas selectivas y accesibilidad: <https://github.com/mherreraspe/agenda-familiar-app/pull/19>; CI `30007766644` aprobado.
 - PR de Salud compacta y menús exclusivos: <https://github.com/mherreraspe/agenda-familiar-app/pull/21>; CI `30011966232` aprobado y release `20260723T134229Z` verificado.
 - PR del fundamento visual y compactación de tratamientos: <https://github.com/mherreraspe/agenda-familiar-app/pull/23>; CI `30018761203` aprobado y release `20260723T151623Z` verificado.
+- PR de estados operativos, historial y prototipo de Objetos: <https://github.com/mherreraspe/agenda-familiar-app/pull/26>; CI `30024979468` aprobado y release `20260723T165603Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
