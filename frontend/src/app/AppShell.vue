@@ -73,20 +73,20 @@ function anadir(tipo: 'evento' | 'tarea' | 'tratamiento') {
         </div>
         <div class="app-shell__acciones">
           <div ref="menuAnadir" class="menu-desplegable">
-            <button type="button" class="boton-anadir" aria-haspopup="menu" :aria-expanded="menuAbierto === 'anadir'" @click="alternarMenu('anadir')"><span aria-hidden="true">+</span> Añadir</button>
-            <div v-if="menuAbierto === 'anadir'" class="menu-desplegable__panel" role="menu" aria-label="¿Qué deseas añadir?">
-              <button type="button" role="menuitem" @click="anadir('evento')">Evento</button>
-              <button type="button" role="menuitem" @click="anadir('tarea')">Tarea o recordatorio</button>
-              <button type="button" role="menuitem" @click="anadir('tratamiento')">Tratamiento</button>
+            <button type="button" class="boton-anadir" aria-controls="menu-anadir" :aria-expanded="menuAbierto === 'anadir'" @click="alternarMenu('anadir')"><span aria-hidden="true">+</span> Añadir</button>
+            <div v-if="menuAbierto === 'anadir'" id="menu-anadir" class="menu-desplegable__panel" aria-label="¿Qué deseas añadir?">
+              <button type="button" @click="anadir('evento')">Evento</button>
+              <button type="button" @click="anadir('tarea')">Tarea o recordatorio</button>
+              <button type="button" @click="anadir('tratamiento')">Tratamiento</button>
             </div>
           </div>
 
           <div ref="menuAvatar" class="menu-desplegable menu-desplegable--avatar">
-            <button type="button" class="avatar" aria-label="Abrir menú de familia" aria-haspopup="menu" :aria-expanded="menuAbierto === 'avatar'" @click="alternarMenu('avatar')">Familia</button>
-            <div v-if="menuAbierto === 'avatar'" class="menu-desplegable__panel" role="menu" aria-label="Menú de familia">
-              <RouterLink role="menuitem" :to="{ name: 'familia' }" @click="cerrarMenus">Familia y permisos</RouterLink>
-              <RouterLink role="menuitem" :to="{ name: 'actividad' }" @click="cerrarMenus">Actividad</RouterLink>
-              <button type="button" role="menuitem" @click="cerrarMenus(); emit('salir')">Cerrar sesión</button>
+            <button type="button" class="avatar" aria-label="Abrir menú de familia" aria-controls="menu-familia" :aria-expanded="menuAbierto === 'avatar'" @click="alternarMenu('avatar')">Familia</button>
+            <div v-if="menuAbierto === 'avatar'" id="menu-familia" class="menu-desplegable__panel" aria-label="Menú de familia">
+              <RouterLink :to="{ name: 'familia' }" @click="cerrarMenus">Familia y permisos</RouterLink>
+              <RouterLink :to="{ name: 'actividad' }" @click="cerrarMenus">Actividad</RouterLink>
+              <button type="button" @click="cerrarMenus(); emit('salir')">Cerrar sesión</button>
             </div>
           </div>
         </div>
