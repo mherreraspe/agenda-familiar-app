@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.LongFunction;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class ServicioSincronizacionFamilia {
     private final LongFunction<SseEmitter> crearEmisor;
     private final ConcurrentHashMap<UUID, CopyOnWriteArraySet<SseEmitter>> conexiones = new ConcurrentHashMap<>();
 
+    @Autowired
     public ServicioSincronizacionFamilia(AccesoFamilia acceso) {
         this(acceso, SseEmitter::new);
     }
