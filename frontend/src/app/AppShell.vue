@@ -3,12 +3,16 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import IconoApp from '../components/IconoApp.vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   titulo: string
   subtitulo: string
   familia?: string
   cantidadAtencion?: number
-}>()
+  etiquetaAnadir?: string
+  tipoAnadirDirecto?: 'evento' | 'tarea' | 'tratamiento' | 'medicamento'
+  mostrarAnadir?: boolean
+  mostrarObjetos?: boolean
+}>(), { mostrarAnadir: true })
 
 const familiaVisible = computed(() => {
   const nombre = props.familia?.trim()
@@ -17,7 +21,7 @@ const familiaVisible = computed(() => {
 })
 
 const emit = defineEmits<{
-  anadir: [tipo: 'evento' | 'tarea' | 'tratamiento']
+  anadir: [tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento']
   salir: []
 }>()
 
@@ -53,9 +57,17 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', cerrarConEscape)
 })
 
-function anadir(tipo: 'evento' | 'tarea' | 'tratamiento') {
+function anadir(tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento') {
   cerrarMenus()
   emit('anadir', tipo)
+}
+
+function activarAnadir() {
+  if (props.tipoAnadirDirecto) {
+    anadir(props.tipoAnadirDirecto)
+    return
+  }
+  alternarMenu('anadir')
 }
 </script>
 
@@ -69,6 +81,7 @@ function anadir(tipo: 'evento' | 'tarea' | 'tratamiento') {
       </RouterLink>
       <RouterLink :to="{ name: 'agenda' }"><IconoApp nombre="agenda" /><span>Agenda</span></RouterLink>
       <RouterLink :to="{ name: 'salud' }"><IconoApp nombre="salud" /><span>Salud</span></RouterLink>
+      <RouterLink v-if="mostrarObjetos" :to="{ name: 'objetos-prototipo' }"><IconoApp nombre="objetos" /><span>Objetos</span></RouterLink>
     </nav>
 
     <div class="app-shell__contenido">
@@ -78,8 +91,9 @@ function anadir(tipo: 'evento' | 'tarea' | 'tratamiento') {
           <p class="app-shell__contexto"><span>{{ familiaVisible }}</span><span aria-hidden="true">·</span><span>{{ subtitulo }}</span></p>
         </div>
         <div class="app-shell__acciones">
-          <div ref="menuAnadir" class="menu-desplegable">
-            <button type="button" class="boton-anadir" aria-controls="menu-anadir" :aria-expanded="menuAbierto === 'anadir'" @click="alternarMenu('anadir')"><IconoApp nombre="anadir" /> <span>Añadir</span></button>
+          <div v-if="mostrarAnadir" ref="menuAnadir" class="menu-desplegable">
+            <button type="button" class="boton-anadir" :aria-controls="tipoAnadirDirecto ? undefined : 'menu-anadir'" :aria-expanded="tipoAnadirDirecto ? undefined : menuAbierto === 'anadir'" @click="activarAnadir"><IconoApp nombre="anadir" /> <span>{{ etiquetaAnadir || 'Añadir' }}</span></button>
+            <button v-if="menuAbierto === 'anadir'" type="button" class="menu-desplegable__velo" aria-label="Cerrar menú" @click="cerrarMenus"></button>
             <div v-if="menuAbierto === 'anadir'" id="menu-anadir" class="menu-desplegable__panel" aria-label="¿Qué deseas añadir?">
               <button type="button" @click="anadir('evento')">Evento</button>
               <button type="button" @click="anadir('tarea')">Tarea o recordatorio</button>
@@ -89,6 +103,7 @@ function anadir(tipo: 'evento' | 'tarea' | 'tratamiento') {
 
           <div ref="menuAvatar" class="menu-desplegable menu-desplegable--avatar">
             <button type="button" class="avatar" aria-label="Abrir menú de familia" aria-controls="menu-familia" :aria-expanded="menuAbierto === 'avatar'" @click="alternarMenu('avatar')"><IconoApp nombre="usuario" /></button>
+            <button v-if="menuAbierto === 'avatar'" type="button" class="menu-desplegable__velo" aria-label="Cerrar menú" @click="cerrarMenus"></button>
             <div v-if="menuAbierto === 'avatar'" id="menu-familia" class="menu-desplegable__panel" aria-label="Menú de familia">
               <RouterLink :to="{ name: 'familia' }" @click="cerrarMenus">Familia y permisos</RouterLink>
               <RouterLink :to="{ name: 'actividad' }" @click="cerrarMenus">Actividad</RouterLink>

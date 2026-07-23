@@ -5,7 +5,7 @@ import AppShell from './AppShell.vue'
 
 const Vista = { template: '<p>Vista</p>' }
 
-async function montar(ruta = '/agenda', familia = 'Familia Herrera') {
+async function montar(ruta = '/agenda', familia = 'Familia Herrera', props: Record<string, unknown> = {}) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -19,7 +19,7 @@ async function montar(ruta = '/agenda', familia = 'Familia Herrera') {
   await router.push(ruta)
   await router.isReady()
   const wrapper = mount(AppShell, {
-    props: { titulo: 'Agenda', subtitulo: 'Tareas y eventos', familia, cantidadAtencion: 2 },
+    props: { titulo: 'Agenda', subtitulo: 'Tareas y eventos', familia, cantidadAtencion: 2, ...props },
     slots: { default: '<p>Contenido del dominio</p>' },
     global: { plugins: [router] },
     attachTo: document.body
@@ -49,6 +49,14 @@ describe('AppShell', () => {
     await wrapper.get('.boton-anadir').trigger('click')
     await wrapper.get('.menu-desplegable__panel button').trigger('click')
     expect(wrapper.emitted('anadir')?.[0]).toEqual(['evento'])
+    wrapper.unmount()
+  })
+
+  it('ejecuta directamente el alta contextual sin abrir el menú global', async () => {
+    const { wrapper } = await montar('/agenda', 'Familia Herrera', { etiquetaAnadir: 'Evento', tipoAnadirDirecto: 'evento' })
+    await wrapper.get('.boton-anadir').trigger('click')
+    expect(wrapper.emitted('anadir')?.[0]).toEqual(['evento'])
+    expect(wrapper.find('.menu-desplegable__panel').exists()).toBe(false)
     wrapper.unmount()
   })
 
