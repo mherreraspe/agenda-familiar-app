@@ -5,7 +5,7 @@ import AppShell from './AppShell.vue'
 
 const Vista = { template: '<p>Vista</p>' }
 
-async function montar(ruta = '/agenda') {
+async function montar(ruta = '/agenda', familia = 'Familia Herrera') {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -19,7 +19,7 @@ async function montar(ruta = '/agenda') {
   await router.push(ruta)
   await router.isReady()
   const wrapper = mount(AppShell, {
-    props: { titulo: 'Agenda', subtitulo: 'Tareas y eventos', familia: 'Familia Herrera', cantidadAtencion: 2 },
+    props: { titulo: 'Agenda', subtitulo: 'Tareas y eventos', familia, cantidadAtencion: 2 },
     slots: { default: '<p>Contenido del dominio</p>' },
     global: { plugins: [router] },
     attachTo: document.body
@@ -33,6 +33,14 @@ describe('AppShell', () => {
     expect(wrapper.findAll('nav a')).toHaveLength(3)
     expect(wrapper.get('a[aria-current="page"]').text()).toContain('Agenda')
     expect(wrapper.text()).not.toContain('Objetos')
+    wrapper.unmount()
+  })
+
+  it('usa iconos accesibles y oculta el identificador técnico de la familia de prueba', async () => {
+    const { wrapper } = await montar('/hoy', 'FAMILIA_TEST')
+    expect(wrapper.findAll('.app-shell__navegacion svg')).toHaveLength(3)
+    expect(wrapper.text()).toContain('Mi familia')
+    expect(wrapper.text()).not.toContain('FAMILIA_TEST')
     wrapper.unmount()
   })
 
