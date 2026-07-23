@@ -5,33 +5,33 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `56225719f04eff1b17e0b8d95ef2d7c84879c3e6`.
-- Release activo: `20260719T033351Z`.
+- Commit desplegado: `368a0de129a68334be3732f20f0ce3ec2ff400b4`.
+- Release activo: `20260723T124905Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
 - Migraciones: V1–V8 aplicadas correctamente.
-- Último bloque: fotografías privadas de recetas y cuota familiar.
-- E2E HTTPS y revisión móvil V8 autenticada: aprobados.
+- Último bloque: formulario de evento adaptativo y rediseño estructural de la PWA.
+- E2E HTTPS aprobado; Playwright/axe verde en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #13 funcional y PR #14–#15 operativos integrados; CI final verde en frontend y backend.
-- Migración V8 con metadatos, UUID impredecibles, SHA-256 y RLS forzado para archivos familiares.
-- Originales y miniaturas re-encodeados sin EXIF/ubicación y cifrados con AES-256-GCM en volumen privado.
-- Captura/selección JPEG/PNG, reducción móvil, visualización autenticada y eliminación completa desde la PWA.
-- Cuota de 1 GiB serializada por familia, niveles 70/85/95/100 %, deduplicación familiar y bloqueo al límite.
-- Pruebas PostgreSQL 18 para formato/tamaño, cifrado, IDOR/RLS, cuota y subidas competidoras.
-- Bootstrap de clave persistente y permisos del volumen corregidos manteniendo Agenda sin privilegios.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-5622571-20260719T033351Z`.
-- E2E: alta 201, descarga cifrada, borrado, aislamiento 404, cuota, auditoría e indexación aprobados.
-- PWA a 390×844: bundle `index-I8YWU03E.js`, receta y cuota visibles; sin desborde ni errores de consola.
+- PR #17: formulario de evento por URL, contenedor adaptativo, zona horaria familiar, validaciones, sugerencias y conservación del borrador.
+- PR #18: AppShell, Pinia, rutas reales, navegación adaptable, filtro compartido y Familia/Actividad en el avatar.
+- PR #19: filas compactas, una acción primaria, menú Más, carga e invalidación por dominio y estados independientes.
+- Rutas activas: `/hoy`, `/agenda`, `/salud`, `/ajustes/familia` y `/actividad`; rutas antiguas redirigen de forma compatible.
+- Objetos/Baúl no se muestra todavía: requiere migración, API, RLS/IDOR, auditoría y UI en un PR propio.
+- CI final verde: frontend y backend de la PR #19, ejecución `30007766644`.
+- Verificación local: 30 pruebas frontend, build Vite y 6 pruebas backend aprobadas.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-368a0de-20260723T124904Z`.
+- E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
+- No hubo revisión visual autenticada manual porque el navegador de la sesión no estaba disponible; la cobertura automatizada multi-viewport y axe sí fue aprobada.
 
 ## Siguiente bloque funcional
 
-1. SSE con reconexión para reflejar cambios entre dispositivos abiertos.
-2. Caché de lectura PWA y aviso claro sin conexión, manteniendo las escrituras solo en línea.
-3. Web Push genérico en pantalla bloqueada y contenido privado únicamente tras autenticar.
-4. Preferencias, horario silencioso, deduplicación y reintentos de notificaciones.
-5. Pruebas de reconexión, privacidad, concurrencia entre dispositivos y experiencia offline.
+1. SSE autenticado con reconexión para reflejar cambios entre dispositivos abiertos.
+2. Invalidación selectiva de Hoy, Agenda y Salud al recibir eventos familiares.
+3. Caché de lectura PWA y aviso claro sin conexión, manteniendo las escrituras solo en línea.
+4. Pruebas de reconexión, privacidad, duplicados y concurrencia entre cuidadores.
+5. Después: Objetos/Baúl como dominio real; Web Push queda para un bloque posterior.
 
 ## Entrada operativa
 
