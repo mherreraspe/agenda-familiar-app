@@ -5,32 +5,31 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `8acccbaeb56753898b2724a3ba6fd37f1cc194a1`.
-- Release activo: `20260723T213222Z`.
+- Commit desplegado: `c155e00f974645a612e4561cdb50ed640319a249`.
+- Release activo: `20260723T233543Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
-- Migraciones: V1–V9 aplicadas correctamente.
-- Último bloque: formularios modales y capas interactivas exclusivas.
-- E2E HTTPS aprobado; 63 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
+- Migraciones: autenticación V1–V3 y agenda V1–V10 aplicadas correctamente.
+- Último bloque: administración global y alta real de familias.
+- E2E HTTPS aprobado; 66 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #32: las altas generales y la receta usan la capa modal nativa del navegador y bloquean el fondo.
-- El alta de tratamiento cabe en el viewport, desplaza solo el contenido y mantiene Guardar/Cancelar visibles.
-- Solo puede permanecer abierto un menú Más; pulsar fuera o Escape lo cierra y devuelve el foco.
-- Las altas de tarea, medicamento, tratamiento, perfil y objeto son mutuamente exclusivas y restauran el foco al activador.
-- Verificación local: 42 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
-- CI `30046463114`: frontend y backend/PostgreSQL 18 verdes; 63 escenarios Playwright/axe aprobados.
-- Release `20260723T213222Z` saludable; V1–V9 validadas.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-8acccba-20260723T213222Z`.
+- PR #34: rol global `ADMINISTRADOR_PLATAFORMA` firmado en JWT y protegido en backend.
+- Ruta `/admin` con listado y alta real e idempotente de familias; acceso oculto y denegado a usuarios familiares.
+- Auditoría de plataforma sin contenido médico y migración V10 con aislamiento por actor.
+- Verificación local: 43 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
+- CI de PR `30053417092` y CI de `main` `30053507456`: frontend y backend/PostgreSQL 18 verdes.
+- Release `20260723T233543Z` saludable; autenticación V1–V3 y agenda V1–V10 validadas.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-c155e00-20260723T233543Z`.
 - E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
 
 ## Siguiente bloque funcional
 
-1. Implementar Web Push con mensaje bloqueado genérico y contenido privado solo tras autenticar.
-2. Añadir preferencias por tipo de aviso y horario silencioso por familia/persona.
-3. Deduplicar, reintentar y permitir escalamiento opcional sin filtrar datos sensibles.
-4. Probar revocación, aislamiento familiar, múltiples dispositivos y navegadores sin permiso.
-5. Mantener SSE como fuente de actualización en vivo y las escrituras offline deshabilitadas.
+1. Añadir miembros desde `/admin` mediante invitaciones de un solo uso, con vencimiento y hash del token.
+2. Entregar un enlace que permita al invitado establecer su propia contraseña; nunca mostrar ni almacenar la contraseña en claro.
+3. Permitir al administrador iniciar un restablecimiento mediante enlace de un solo uso, con revocación de sesiones al completarlo.
+4. Auditar creación, consumo, expiración y revocación sin guardar tokens ni contenido familiar.
+5. Probar aislamiento, enumeración, reuso, concurrencia, expiración, CSRF e IDOR antes de desplegar.
 
 ## Entrada operativa
 

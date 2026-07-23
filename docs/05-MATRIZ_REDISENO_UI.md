@@ -34,6 +34,9 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Cerrar sesión | Menú de avatar | Cerrar sesión | — | `cerrarSesion` | E2E |
 | Reflejar cambios familiares | Hoy / Agenda / Salud / Objetos | Automática | Aviso de reconexión | SSE `/familias/{id}/eventos` | Vitest / IT / E2E |
 | Consultar durante un corte | Hoy / Agenda / Salud / Objetos | Lectura ya cargada | Aviso sin conexión | Caché en memoria por sujeto | Vitest / E2E |
+| Administrar familias | Administración / Familias | Crear familia | Error y reintento | `consultarFamiliasPlataforma`, `crearFamiliaPlataforma` | IT / E2E |
+| Invitar miembro | Administración / Familia | Generar invitación | Revocar o reenviar | Pendiente: invitación de un solo uso | Pendiente |
+| Restablecer acceso | Administración / Miembro | Generar enlace | Revocar enlace | Pendiente: recuperación de un solo uso | Pendiente |
 
 ## Estado por PR
 
@@ -46,6 +49,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Sincronización familiar — PR #28 desplegado en `20260723T190511Z`: SSE autenticado por familia, backoff, deduplicación, invalidación de Hoy/Agenda/Salud y lectura ya cargada sin escrituras offline; 45 escenarios Playwright/axe verdes.
 - Objetos — PR #30 desplegado en `20260723T203410Z`: V9, API, búsqueda, alta/edición, RLS/IDOR, idempotencia, concurrencia, auditoría y SSE; el prototipo DEV fue retirado.
 - Capas exclusivas — PR #32 desplegado en `20260723T213222Z`: altas generales y receta como modales nativos, tratamiento adaptable con acciones fijas, foco restaurado y un solo menú Más abierto; 63 escenarios Playwright/axe verdes.
-- PR 4 completado mediante #30. El siguiente bloque es Web Push privado con preferencias y horario silencioso.
+- Administración global — PR #34 desplegado en `20260723T233543Z`: rol global, `/admin`, listado y alta real e idempotente de familias, autorización backend y auditoría; 66 escenarios Playwright/axe verdes.
+- PR 4 completado mediante #30. El siguiente bloque es la gestión de miembros mediante invitaciones y recuperación de acceso de un solo uso; Web Push permanece pendiente después.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.
