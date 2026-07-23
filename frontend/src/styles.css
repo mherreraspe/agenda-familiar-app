@@ -258,7 +258,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .admin-familia h3, .admin-familia p { margin: 0; }
 .admin-familia h3 { font-size: 1rem; }
 .admin-familia p { margin-top: 3px; color: var(--tinta-suave); font-size: .84rem; }
-.admin-familia small { display: block; margin-top: 5px; color: #71807b; }
+.admin-familia small { display: block; margin-top: 5px; color: var(--tinta-suave); }
 .ayuda-admin { margin: 0; padding: 12px; border-radius: 10px; color: var(--tinta-suave); background: var(--niebla); font-size: .84rem; }
 .dialogo details { padding: 12px; border: 1px solid #ded9ce; border-radius: 12px; }
 .dialogo summary { cursor: pointer; color: #315b4c; font-weight: 800; }

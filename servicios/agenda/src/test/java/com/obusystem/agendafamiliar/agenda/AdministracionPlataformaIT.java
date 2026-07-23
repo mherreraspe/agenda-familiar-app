@@ -35,11 +35,12 @@ class AdministracionPlataformaIT {
     @Test
     void creaFamiliaDeFormaIdempotenteYAuditable() {
         var solicitud = new SolicitudFamiliaPlataforma("Familia Rivera", "America/Lima");
-        var primera = administracion.crear("familia-rivera-1", solicitud, jwt(true));
-        var repetida = administracion.crear("familia-rivera-1", solicitud, jwt(true));
+        var administrador = jwt(true);
+        var primera = administracion.crear("familia-rivera-1", solicitud, administrador);
+        var repetida = administracion.crear("familia-rivera-1", solicitud, administrador);
 
         assertThat(repetida.id()).isEqualTo(primera.id());
-        assertThat(administracion.consultar(jwt(true)).familias()).extracting("id").contains(primera.id());
+        assertThat(administracion.consultar(administrador).familias()).extracting("id").contains(primera.id());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_plataforma WHERE entidad_publica_id=?", Integer.class, primera.id()))
                 .isEqualTo(1);
     }
