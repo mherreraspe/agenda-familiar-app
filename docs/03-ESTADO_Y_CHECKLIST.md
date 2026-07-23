@@ -159,6 +159,23 @@ Integrado mediante el PR #28, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-c27b006-20260723T190510Z`.
 - [x] E2E HTTPS aprobado: aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — Objetos como dominio familiar real
+
+Integrado mediante el PR #30, desplegado y verificado en producción:
+
+- [x] Migración `V9` con objetos, ubicaciones jerárquicas e idempotencia; las tres tablas usan RLS forzado y claves familiares.
+- [x] Búsqueda normalizada por nombre, categoría y cualquier segmento de la ruta física, limitada a 100 resultados.
+- [x] Altas idempotentes y edición/movimiento con versión optimista para evitar sobrescrituras entre dispositivos.
+- [x] Autorización e IDOR con respuesta 404, auditoría de crear/actualizar y títulos visibles solo para adultos autorizados.
+- [x] Ruta real `/objetos`, alta contextual, edición y rutas legibles con `›`; el prototipo DEV fue eliminado.
+- [x] Invalidación `OBJETOS` por SSE, recarga en segundo plano y lectura ya cargada sin permitir escrituras offline.
+- [x] Pruebas PostgreSQL 18 de RLS, aislamiento, IDOR, idempotencia, concurrencia, búsqueda, auditoría y conflicto de versión.
+- [x] Verificación local: 41 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
+- [x] CI `30042503806` verde con 51 escenarios Playwright/axe en 320×700, 390×844 y 1280×900.
+- [x] PR #30 integrado como `7723d3e`; release `20260723T203410Z` saludable y V1–V9 validadas.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-7723d3e-20260723T203410Z`.
+- [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -175,12 +192,12 @@ Integrado mediante el PR #28, desplegado y verificado en producción:
 - [x] Renovación automática de sesión, usuario actual y cierre/revocación de sesión.
 - [x] RLS PostgreSQL y comprobación de membresía para aislar datos por familia.
 - [x] AppShell adaptable con barra inferior móvil, navegación lateral desde 840 px y ancho útil máximo de 1.200 px.
-- [x] Rutas reales `/hoy`, `/agenda`, `/salud`, `/ajustes/familia` y `/actividad`, con redirecciones desde rutas anteriores.
+- [x] Rutas reales `/hoy`, `/agenda`, `/salud`, `/objetos`, `/ajustes/familia` y `/actividad`, con redirecciones desde rutas anteriores.
 - [x] Filtro de persona compartido mediante Pinia; Familia y Actividad disponibles desde el avatar.
 - [x] Pantalla “Hoy” limitada a atención, tareas del día y tomas; Agenda y Salud muestran sus propios dominios.
-- [x] Acción global Añadir para evento, tarea y tratamiento; Objetos permanece oculto hasta disponer de backend.
+- [x] Acción global Añadir para evento, tarea, objeto y tratamiento; Objetos dispone además de alta contextual.
 - [x] Tarjetas repetitivas convertidas en filas compactas con una acción principal y menú Más.
-- [x] Carga global sustituida por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Familia y Actividad.
+- [x] Carga global sustituida por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Objetos, Familia y Actividad.
 - [x] Auditoría axe añadida para rutas, menús y estados, sin aceptar impactos críticos o serios.
 - [x] Salud dividida en Tomas, Tratamientos, Botiquín y Recetas; solo una subsección se renderiza por vez y cada lista inicia con un máximo de cinco filas.
 - [x] Menús Añadir/Familia mutuamente exclusivos, con cierre exterior y Escape, activadores accesibles y enlaces nativos preservados.
@@ -211,6 +228,7 @@ Integrado mediante el PR #28, desplegado y verificado en producción:
 - PR del fundamento visual y compactación de tratamientos: <https://github.com/mherreraspe/agenda-familiar-app/pull/23>; CI `30018761203` aprobado y release `20260723T151623Z` verificado.
 - PR de estados operativos, historial y prototipo de Objetos: <https://github.com/mherreraspe/agenda-familiar-app/pull/26>; CI `30024979468` aprobado y release `20260723T165603Z` verificado.
 - PR de sincronización familiar SSE y lectura offline: <https://github.com/mherreraspe/agenda-familiar-app/pull/28>; CI `30036392835` aprobado y release `20260723T190511Z` verificado.
+- PR de Objetos como dominio familiar real: <https://github.com/mherreraspe/agenda-familiar-app/pull/30>; CI `30042503806` aprobado y release `20260723T203410Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
@@ -281,13 +299,13 @@ Integrado mediante el PR #28, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Implementar Objetos como dominio real; Web Push privado queda para un bloque posterior:
+Implementar Web Push privado sin exponer contenido familiar en la pantalla bloqueada:
 
-1. Diseñar la migración V9 y el modelo de categorías, ubicaciones y rutas físicas.
-2. Incorporar API, búsqueda y auditoría sin persistencia simulada en frontend.
-3. Aplicar RLS forzado, IDOR y aislamiento por familia desde el primer cambio.
-4. Integrar la UI validada solo cuando el backend y las pruebas de concurrencia estén completos.
-5. Publicar por PR, exigir CI verde y desplegar únicamente desde `main`.
+1. Registrar y revocar suscripciones por usuario/dispositivo con RLS y auditoría.
+2. Enviar mensajes bloqueados genéricos; cargar el detalle solo después de autenticar.
+3. Añadir preferencias, horario silencioso, deduplicación y reintentos acotados.
+4. Probar aislamiento familiar, permisos denegados, múltiples dispositivos y escalamiento opcional.
+5. Mantener SSE para vistas abiertas y las escrituras offline deshabilitadas.
 
 ## Continuidad operativa
 
