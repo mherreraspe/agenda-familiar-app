@@ -1,6 +1,6 @@
 import { abrirFlujoEventos } from './api'
 
-export type RecursoSincronizacion = 'HOY' | 'AGENDA' | 'SALUD'
+export type RecursoSincronizacion = 'HOY' | 'AGENDA' | 'SALUD' | 'OBJETOS'
 export type EstadoSincronizacion = 'conectado' | 'reconectando' | 'sin-conexion'
 
 export interface EventoSincronizacion {

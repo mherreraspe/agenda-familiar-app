@@ -33,7 +33,7 @@ public class ServicioAuditoria {
         }
         var entradas = jdbc.query("SELECT a.operacion, a.entidad, a.entidad_publica_id, a.actor_publico_id, "
                 + "COALESCE(actor.nombre_visible, 'Adulto autorizado') actor, a.resumen_seguro, a.creado_en, "
-                + "COALESCE(e.titulo, t.nombre_libre, med.nombre, ta.titulo, ot.nombre_libre, 'Registro familiar') titulo "
+                + "COALESCE(e.titulo, t.nombre_libre, med.nombre, ta.titulo, ot.nombre_libre, obj.nombre, 'Registro familiar') titulo "
                 + "FROM auditoria a "
                 + "LEFT JOIN miembros_familia mf ON mf.familia_id=a.familia_id AND mf.usuario_publico_id=a.actor_publico_id "
                 + "LEFT JOIN perfiles actor ON actor.id=mf.perfil_id "
@@ -43,6 +43,7 @@ public class ServicioAuditoria {
                 + "LEFT JOIN tareas ta ON a.entidad='TAREA' AND ta.id_publico=a.entidad_publica_id "
                 + "LEFT JOIN ocurrencias_tratamiento o ON a.entidad='OCURRENCIA_TRATAMIENTO' AND o.id_publico=a.entidad_publica_id "
                 + "LEFT JOIN tratamientos ot ON ot.id=o.tratamiento_id "
+                + "LEFT JOIN objetos_familia obj ON a.entidad='OBJETO' AND obj.id_publico=a.entidad_publica_id "
                 + "WHERE a.familia_id=? ORDER BY a.creado_en DESC LIMIT 100",
                 (rs, fila) -> new RespuestaAuditoria.EntradaAuditoria(rs.getString("operacion"),
                         rs.getString("entidad"), rs.getObject("entidad_publica_id", UUID.class),

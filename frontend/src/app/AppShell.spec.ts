@@ -12,6 +12,7 @@ async function montar(ruta = '/agenda', familia = 'Familia Herrera', props: Reco
       { path: '/hoy', name: 'hoy', component: Vista },
       { path: '/agenda', name: 'agenda', component: Vista },
       { path: '/salud', name: 'salud', component: Vista },
+      { path: '/objetos', name: 'objetos', component: Vista },
       { path: '/ajustes/familia', name: 'familia', component: Vista },
       { path: '/actividad', name: 'actividad', component: Vista }
     ]
@@ -28,17 +29,17 @@ async function montar(ruta = '/agenda', familia = 'Familia Herrera', props: Reco
 }
 
 describe('AppShell', () => {
-  it('expone tres destinos y deriva el estado activo de la ruta', async () => {
+  it('expone cuatro destinos y deriva el estado activo de la ruta', async () => {
     const { wrapper } = await montar()
-    expect(wrapper.findAll('nav a')).toHaveLength(3)
+    expect(wrapper.findAll('nav a')).toHaveLength(4)
     expect(wrapper.get('a[aria-current="page"]').text()).toContain('Agenda')
-    expect(wrapper.text()).not.toContain('Objetos')
+    expect(wrapper.text()).toContain('Objetos')
     wrapper.unmount()
   })
 
   it('usa iconos accesibles y oculta el identificador técnico de la familia de prueba', async () => {
     const { wrapper } = await montar('/hoy', 'FAMILIA_TEST')
-    expect(wrapper.findAll('.app-shell__navegacion svg')).toHaveLength(3)
+    expect(wrapper.findAll('.app-shell__navegacion svg')).toHaveLength(4)
     expect(wrapper.text()).toContain('Mi familia')
     expect(wrapper.text()).not.toContain('FAMILIA_TEST')
     wrapper.unmount()
