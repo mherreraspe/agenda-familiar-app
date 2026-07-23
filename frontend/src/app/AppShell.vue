@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
 defineProps<{
@@ -14,10 +14,40 @@ const emit = defineEmits<{
   salir: []
 }>()
 
-const menuAnadir = ref<HTMLDetailsElement | null>(null)
+const menuAnadir = ref<HTMLElement | null>(null)
+const menuAvatar = ref<HTMLElement | null>(null)
+const menuAbierto = ref<'anadir' | 'avatar' | null>(null)
+
+function cerrarMenus() {
+  menuAbierto.value = null
+}
+
+function alternarMenu(tipo: 'anadir' | 'avatar') {
+  menuAbierto.value = menuAbierto.value === tipo ? null : tipo
+}
+
+function cerrarAlPulsarFuera(evento: PointerEvent) {
+  if (!(evento.target instanceof Node)) return
+  if (menuAnadir.value?.contains(evento.target) || menuAvatar.value?.contains(evento.target)) return
+  cerrarMenus()
+}
+
+function cerrarConEscape(evento: KeyboardEvent) {
+  if (evento.key === 'Escape') cerrarMenus()
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', cerrarAlPulsarFuera)
+  document.addEventListener('keydown', cerrarConEscape)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', cerrarAlPulsarFuera)
+  document.removeEventListener('keydown', cerrarConEscape)
+})
 
 function anadir(tipo: 'evento' | 'tarea' | 'tratamiento') {
-  menuAnadir.value?.removeAttribute('open')
+  cerrarMenus()
   emit('anadir', tipo)
 }
 </script>
@@ -42,23 +72,23 @@ function anadir(tipo: 'evento' | 'tarea' | 'tratamiento') {
           <p>{{ subtitulo }}</p>
         </div>
         <div class="app-shell__acciones">
-          <details ref="menuAnadir" class="menu-desplegable">
-            <summary class="boton-anadir"><span aria-hidden="true">+</span> Añadir</summary>
-            <div class="menu-desplegable__panel" aria-label="¿Qué deseas añadir?">
+          <div ref="menuAnadir" class="menu-desplegable">
+            <button type="button" class="boton-anadir" aria-controls="menu-anadir" :aria-expanded="menuAbierto === 'anadir'" @click="alternarMenu('anadir')"><span aria-hidden="true">+</span> Añadir</button>
+            <div v-if="menuAbierto === 'anadir'" id="menu-anadir" class="menu-desplegable__panel" aria-label="¿Qué deseas añadir?">
               <button type="button" @click="anadir('evento')">Evento</button>
               <button type="button" @click="anadir('tarea')">Tarea o recordatorio</button>
               <button type="button" @click="anadir('tratamiento')">Tratamiento</button>
             </div>
-          </details>
+          </div>
 
-          <details class="menu-desplegable menu-desplegable--avatar">
-            <summary class="avatar" aria-label="Abrir menú de familia">Familia</summary>
-            <div class="menu-desplegable__panel">
-              <RouterLink :to="{ name: 'familia' }">Familia y permisos</RouterLink>
-              <RouterLink :to="{ name: 'actividad' }">Actividad</RouterLink>
-              <button type="button" @click="emit('salir')">Cerrar sesión</button>
+          <div ref="menuAvatar" class="menu-desplegable menu-desplegable--avatar">
+            <button type="button" class="avatar" aria-label="Abrir menú de familia" aria-controls="menu-familia" :aria-expanded="menuAbierto === 'avatar'" @click="alternarMenu('avatar')">Familia</button>
+            <div v-if="menuAbierto === 'avatar'" id="menu-familia" class="menu-desplegable__panel" aria-label="Menú de familia">
+              <RouterLink :to="{ name: 'familia' }" @click="cerrarMenus">Familia y permisos</RouterLink>
+              <RouterLink :to="{ name: 'actividad' }" @click="cerrarMenus">Actividad</RouterLink>
+              <button type="button" @click="cerrarMenus(); emit('salir')">Cerrar sesión</button>
             </div>
-          </details>
+          </div>
         </div>
       </header>
 

@@ -55,9 +55,7 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .app-shell__navegacion .contador { position: absolute; top: 3px; right: 8px; }
 .app-shell__marca { display: none; }
 .boton-anadir { display: inline-flex; min-height: 44px; align-items: center; gap: 5px; padding: 9px 14px; border-radius: 999px; color: white; background: #315b4c; font-weight: 900; list-style: none; cursor: pointer; }
-.boton-anadir::-webkit-details-marker, .menu-desplegable--avatar summary::-webkit-details-marker { display: none; }
 .menu-desplegable { position: relative; }
-.menu-desplegable > summary { list-style: none; }
 .menu-desplegable__panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 6; display: grid; width: max-content; min-width: 210px; padding: 8px; border: 1px solid #ded9ce; border-radius: 14px; background: white; box-shadow: 0 16px 38px rgb(38 49 45 / 18%); }
 .menu-desplegable__panel a, .menu-desplegable__panel button { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 9px; color: #315b4c; background: transparent; text-align: left; text-decoration: none; font-weight: 800; }
 .menu-desplegable__panel a:hover, .menu-desplegable__panel a:focus-visible, .menu-desplegable__panel button:hover, .menu-desplegable__panel button:focus-visible { background: #eef2ef; outline: 2px solid #315b4c; outline-offset: -2px; }
@@ -89,6 +87,10 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .miembros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .miembros button { padding: 7px 11px; border: 2px solid #c8d2ce; border-radius: 999px; color: #315b4c; background: white; font-size: .8rem; font-weight: 800; }
 .miembros button.activo { color: white; background: #315b4c; box-shadow: 0 0 0 2px white, 0 0 0 4px #315b4c; }
+.subnavegacion { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 4px 0 18px; padding: 4px; border: 1px solid #d9dedb; border-radius: 14px; background: #eef2ef; }
+.subnavegacion a { display: grid; min-width: 0; min-height: 44px; place-items: center; padding: 6px 4px; border-radius: 10px; color: #53605b; text-align: center; text-decoration: none; font-size: .76rem; font-weight: 800; }
+.subnavegacion a[aria-current="page"] { color: white; background: #315b4c; box-shadow: 0 2px 8px rgb(38 49 45 / 18%); }
+.subnavegacion a:focus-visible { outline: 3px solid #bf7b65; outline-offset: 2px; }
 
 .resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 28px; }
 
@@ -99,12 +101,14 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .resumen span { color: #63706b; font-size: .82rem; }
 
 .seccion { margin-top: 30px; }
+.subnavegacion + .seccion { margin-top: 0; }
 
 .titulo-seccion { justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 
 .titulo-seccion h2 { margin: 3px 0 0; font-family: Georgia, serif; font-size: 1.4rem; }
 
 .titulo-seccion a { color: #315b4c; font-size: .88rem; font-weight: 800; }
+.boton-ver-mas { display: block; min-height: 44px; margin: 12px auto 0; padding: 8px 16px; border: 0; color: #315b4c; background: transparent; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 
 .etiqueta { color: #9c4f32; text-transform: uppercase; letter-spacing: .1em; font-size: .66rem; font-weight: 900; }
 .etiqueta--verde { color: #3c705d; }

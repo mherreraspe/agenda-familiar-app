@@ -46,8 +46,21 @@ describe('AppShell', () => {
 
   it('mantiene Familia y Actividad en el menú secundario', async () => {
     const { wrapper } = await montar('/salud')
+    await wrapper.get('.menu-desplegable--avatar > button').trigger('click')
     const enlaces = wrapper.findAll('.menu-desplegable--avatar a').map(enlace => enlace.text())
     expect(enlaces).toEqual(['Familia y permisos', 'Actividad'])
+    wrapper.unmount()
+  })
+
+  it('mantiene un solo menú de cabecera abierto', async () => {
+    const { wrapper } = await montar('/salud')
+    const menus = wrapper.findAll('.menu-desplegable')
+    await menus[0].get('button').trigger('click')
+    await menus[1].get('button').trigger('click')
+
+    expect(menus[0].get('button').attributes('aria-expanded')).toBe('false')
+    expect(menus[1].get('button').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.findAll('.menu-desplegable__panel')).toHaveLength(1)
     wrapper.unmount()
   })
 })
