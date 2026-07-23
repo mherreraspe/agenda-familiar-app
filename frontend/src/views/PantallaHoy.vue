@@ -65,6 +65,7 @@ const cargando = ref(false)
 const error = ref('')
 const mensaje = ref('')
 const sesionActiva = ref(false)
+const administradorPlataforma = ref(false)
 const restaurando = ref(true)
 const enLinea = ref(typeof navigator === 'undefined' || navigator.onLine)
 const estadoSincronizacion = ref<EstadoSincronizacion>('reconectando')
@@ -220,7 +221,8 @@ onMounted(async () => {
   window.addEventListener('online', actualizarEstadoRed)
   window.addEventListener('offline', actualizarEstadoRed)
   try {
-    await renovarSesion()
+    const sesion = await renovarSesion()
+    administradorPlataforma.value = sesion.rolPlataforma === 'ADMINISTRADOR_PLATAFORMA'
     sesionActiva.value = true
     await cargarSeccion(props.seccion)
     iniciarSincronizacion()
@@ -336,7 +338,8 @@ async function entrar() {
   cargando.value = true
   error.value = ''
   try {
-    await iniciarSesion(correo.value, clave.value)
+    const sesion = await iniciarSesion(correo.value, clave.value)
+    administradorPlataforma.value = sesion.rolPlataforma === 'ADMINISTRADOR_PLATAFORMA'
     sesionActiva.value = true
     await cargarSeccion(props.seccion, true)
     iniciarSincronizacion()
@@ -768,6 +771,7 @@ async function salir() {
     Object.keys(recursosCargados).forEach(recurso => { recursosCargados[recurso as keyof typeof recursosCargados] = false })
     cerrarRecetaVisible()
     sesionActiva.value = false
+    administradorPlataforma.value = false
     mensaje.value = ''
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo cerrar la sesión'
@@ -808,6 +812,7 @@ async function salir() {
       :etiqueta-anadir="etiquetaAnadirCabecera"
       :tipo-anadir-directo="tipoAnadirCabecera"
       :mostrar-anadir="mostrarAnadirCabecera"
+      :administrador-plataforma="administradorPlataforma"
       @anadir="abrirAlta"
       @salir="salir"
     >

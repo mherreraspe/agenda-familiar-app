@@ -11,7 +11,8 @@ const props = withDefaults(defineProps<{
   etiquetaAnadir?: string
   tipoAnadirDirecto?: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto'
   mostrarAnadir?: boolean
-}>(), { mostrarAnadir: true })
+  administradorPlataforma?: boolean
+}>(), { mostrarAnadir: true, administradorPlataforma: false })
 
 const familiaVisible = computed(() => {
   const nombre = props.familia?.trim()
@@ -107,6 +108,7 @@ function activarAnadir() {
             <div v-if="menuAbierto === 'avatar'" id="menu-familia" class="menu-desplegable__panel" aria-label="Menú de familia">
               <RouterLink :to="{ name: 'familia' }" @click="cerrarMenus">Familia y permisos</RouterLink>
               <RouterLink :to="{ name: 'actividad' }" @click="cerrarMenus">Actividad</RouterLink>
+              <RouterLink v-if="administradorPlataforma" :to="{ name: 'admin' }" @click="cerrarMenus">Administración</RouterLink>
               <button type="button" @click="cerrarMenus(); emit('salir')">Cerrar sesión</button>
             </div>
           </div>

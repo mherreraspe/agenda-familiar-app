@@ -20,10 +20,17 @@ async function prepararApi(page: Page) {
     id: 'objeto-1', nombre: 'Pasaporte de Lucía', categoria: 'Documentos', notas: 'Funda azul',
     ruta: ['Habitación principal', 'Ropero', 'Caja de documentos'], actualizadoEn: '2026-07-23T18:00:00Z', version: 0
   }]
+  const familiasAdmin = [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', creadaEn: '2026-07-23T18:00:00Z' }]
   await page.route('**/api/v1/**', async route => {
     const ruta = new URL(route.request().url()).pathname
     const responder = (datos: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(datos) })
-    if (ruta.endsWith('/autenticacion/renovar')) return responder({ accessToken: 'token-e2e', expiraEn: '2099-01-01T00:00:00Z', usuarioId: 'usuario-1', correo: 'mama@familia.test' })
+    if (ruta.endsWith('/autenticacion/renovar')) return responder({ accessToken: 'token-e2e', expiraEn: '2099-01-01T00:00:00Z', usuarioId: 'usuario-1', correo: 'papa@familia.test', rolPlataforma: 'ADMINISTRADOR_PLATAFORMA' })
+    if (ruta.endsWith('/administracion/familias') && route.request().method() === 'GET') return responder({ familias: familiasAdmin })
+    if (ruta.endsWith('/administracion/familias') && route.request().method() === 'POST') {
+      const datos = route.request().postDataJSON() as { nombre: string; zonaHoraria: string }
+      familiasAdmin.unshift({ id: `familia-${familiasAdmin.length + 1}`, ...datos, creadaEn: '2026-07-23T21:00:00Z' })
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(familiasAdmin[0]) })
+    }
     if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil], tareas: [] })
     if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos: [], lugares: [] })
     if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: historialTomas, revisar: [] })
@@ -39,6 +46,24 @@ async function prepararApi(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => prepararApi(page))
+
+test('administración lista y crea familias en una única capa modal', async ({ page }) => {
+  await page.goto('/admin')
+  await expect(page.getByRole('heading', { name: 'Familias', exact: true })).toBeVisible()
+  await expect(page.getByText('Familia Herrera', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+
+  const activador = page.getByRole('button', { name: 'Nueva familia' })
+  await activador.click()
+  const dialogo = page.getByRole('dialog', { name: 'Nueva familia' })
+  await expect(dialogo).toBeVisible()
+  expect(await page.locator('dialog:modal').count()).toBe(1)
+  await dialogo.getByLabel('Nombre de la familia').fill('Familia Rivera')
+  await dialogo.getByRole('button', { name: 'Crear familia' }).click()
+  await expect(dialogo).toBeHidden()
+  await expect(activador).toBeFocused()
+  await expect(page.getByText('Familia Rivera', { exact: true })).toBeVisible()
+})
 
 test('navega por destinos reales y muestra solo el dominio activo', async ({ page }) => {
   await page.goto('/hoy')
@@ -314,7 +339,7 @@ test('avisa cuando no hay conexión y mantiene las altas solo en línea', async 
 })
 
 test('no presenta violaciones críticas o serias de accesibilidad', async ({ page }) => {
-  for (const ruta of ['/hoy', '/agenda', '/salud', '/objetos', '/ajustes/familia', '/actividad']) {
+  for (const ruta of ['/hoy', '/agenda', '/salud', '/objetos', '/ajustes/familia', '/actividad', '/admin']) {
     await page.goto(ruta)
     await expect(page.locator('.estado-carga')).toHaveCount(0)
     const resultado = await new AxeBuilder({ page }).analyze()

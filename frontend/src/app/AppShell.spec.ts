@@ -14,7 +14,8 @@ async function montar(ruta = '/agenda', familia = 'Familia Herrera', props: Reco
       { path: '/salud', name: 'salud', component: Vista },
       { path: '/objetos', name: 'objetos', component: Vista },
       { path: '/ajustes/familia', name: 'familia', component: Vista },
-      { path: '/actividad', name: 'actividad', component: Vista }
+      { path: '/actividad', name: 'actividad', component: Vista },
+      { path: '/admin', name: 'admin', component: Vista }
     ]
   })
   await router.push(ruta)
@@ -66,6 +67,14 @@ describe('AppShell', () => {
     await wrapper.get('.menu-desplegable--avatar > button').trigger('click')
     const enlaces = wrapper.findAll('.menu-desplegable--avatar a').map(enlace => enlace.text())
     expect(enlaces).toEqual(['Familia y permisos', 'Actividad'])
+    wrapper.unmount()
+  })
+
+  it('muestra Administración únicamente al administrador de plataforma', async () => {
+    const { wrapper } = await montar('/salud', 'Familia Herrera', { administradorPlataforma: true })
+    await wrapper.get('.menu-desplegable--avatar > button').trigger('click')
+    expect(wrapper.findAll('.menu-desplegable--avatar a').map(enlace => enlace.text()))
+      .toEqual(['Familia y permisos', 'Actividad', 'Administración'])
     wrapper.unmount()
   })
 

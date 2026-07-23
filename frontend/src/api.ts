@@ -98,12 +98,22 @@ export type DatosPerfil = Omit<PerfilAdministrado, 'id'>
 export interface RespuestaCuota { cuotaBytes: number; usadosBytes: number; disponiblesBytes: number; porcentaje: number; nivel: 'NORMAL' | 'MEDIA' | 'ALTA' | 'CRITICA' | 'BLOQUEADA' }
 export interface RespuestaArchivo { id: string; tratamientoId: string; ancho: number; alto: number; bytesAlmacenados: number; creadoEn: string }
 
-interface RespuestaSesion {
+export interface RespuestaSesion {
   accessToken: string
   expiraEn: string
   usuarioId: string
   correo: string
+  rolPlataforma: 'USUARIO' | 'ADMINISTRADOR_PLATAFORMA'
 }
+
+export interface FamiliaAdministrada {
+  id: string
+  nombre: string
+  zonaHoraria: string
+  creadaEn: string
+}
+
+export interface RespuestaFamiliasPlataforma { familias: FamiliaAdministrada[] }
 
 function leerCookie(nombre: string) {
   const prefijo = `${encodeURIComponent(nombre)}=`
@@ -216,6 +226,16 @@ export async function abrirFlujoEventos(ultimoEventoId: string, signal: AbortSig
 
 export function consultarHoy() {
   return solicitud<RespuestaHoy>(`/api/v1/familias/${FAMILIA_TEST_ID}/hoy`)
+}
+
+export function consultarFamiliasPlataforma() {
+  return solicitud<RespuestaFamiliasPlataforma>('/api/v1/administracion/familias')
+}
+
+export function crearFamiliaPlataforma(datos: { nombre: string; zonaHoraria: string }) {
+  return solicitud<FamiliaAdministrada>('/api/v1/administracion/familias', {
+    method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
 }
 
 export function consultarCatalogo() {
