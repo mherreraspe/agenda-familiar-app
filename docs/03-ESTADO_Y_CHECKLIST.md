@@ -141,6 +141,24 @@ Integrado mediante el PR #26, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-5032b10-20260723T165603Z`.
 - [x] E2E HTTPS aprobado: aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — sincronización familiar y lectura offline
+
+Integrado mediante el PR #28, desplegado y verificado en producción:
+
+- [x] SSE autenticado con Bearer en memoria y comprobación de membresía antes de registrar cada conexión familiar.
+- [x] Eventos opacos limitados a Hoy, Agenda y Salud; ninguna tarea, evento, toma o dato médico viaja en el aviso.
+- [x] Latidos cada 25 segundos, reconexión con backoff y resincronización completa de los dominios afectados tras un corte.
+- [x] Deduplicación acotada por ID; las operaciones idempotentes generan el mismo ID de sincronización.
+- [x] Invalidación selectiva de datos y actualización en segundo plano para tareas, eventos, tratamientos y tomas.
+- [x] Caché de lectura en memoria separada por sujeto, eliminada al cerrar sesión y sin persistir datos privados en el service worker.
+- [x] Aviso accesible sin conexión y bloqueo central de escrituras, además de altas deshabilitadas en los formularios visibles.
+- [x] Pruebas de aislamiento familiar, 40 publicaciones concurrentes, backoff, duplicados, caché e invalidación entre vistas.
+- [x] Verificación local: 40 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
+- [x] CI `30036392835` verde con PostgreSQL 18 y 45 escenarios Playwright/axe en tres viewports.
+- [x] PR #28 integrado como `c27b006`; release `20260723T190511Z` saludable y V1–V8 validadas.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-c27b006-20260723T190510Z`.
+- [x] E2E HTTPS aprobado: aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -192,6 +210,7 @@ Integrado mediante el PR #26, desplegado y verificado en producción:
 - PR de Salud compacta y menús exclusivos: <https://github.com/mherreraspe/agenda-familiar-app/pull/21>; CI `30011966232` aprobado y release `20260723T134229Z` verificado.
 - PR del fundamento visual y compactación de tratamientos: <https://github.com/mherreraspe/agenda-familiar-app/pull/23>; CI `30018761203` aprobado y release `20260723T151623Z` verificado.
 - PR de estados operativos, historial y prototipo de Objetos: <https://github.com/mherreraspe/agenda-familiar-app/pull/26>; CI `30024979468` aprobado y release `20260723T165603Z` verificado.
+- PR de sincronización familiar SSE y lectura offline: <https://github.com/mherreraspe/agenda-familiar-app/pull/28>; CI `30036392835` aprobado y release `20260723T190511Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
@@ -227,10 +246,10 @@ Integrado mediante el PR #26, desplegado y verificado en producción:
 
 ### Sincronización y avisos
 
-- [ ] SSE con reconexión para reflejar cambios entre dispositivos abiertos.
+- [x] SSE con reconexión para reflejar cambios entre dispositivos abiertos.
 - [ ] Web Push con mensaje bloqueado genérico y contenido privado solo después de autenticar.
 - [ ] Preferencias, horario silencioso, deduplicación, reintentos y escalamiento opcional.
-- [ ] Caché de lectura PWA y aviso claro cuando no hay conexión; sin escritura offline en el MVP.
+- [x] Caché de lectura PWA y aviso claro cuando no hay conexión; sin escritura offline en el MVP.
 
 ### Fotografías y cuota
 
@@ -262,12 +281,12 @@ Integrado mediante el PR #26, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Completar primero la sincronización entre cuidadores; notificaciones privadas queda para un bloque posterior:
+Implementar Objetos como dominio real; Web Push privado queda para un bloque posterior:
 
-1. Añadir SSE con reconexión para reflejar cambios entre dispositivos abiertos.
-2. Incorporar caché de lectura PWA y aviso claro sin conexión, sin escrituras offline.
-3. Invalidar selectivamente los datos afectados y evitar eventos duplicados.
-4. Probar reconexión, privacidad, concurrencia entre dispositivos y experiencia offline.
+1. Diseñar la migración V9 y el modelo de categorías, ubicaciones y rutas físicas.
+2. Incorporar API, búsqueda y auditoría sin persistencia simulada en frontend.
+3. Aplicar RLS forzado, IDOR y aislamiento por familia desde el primer cambio.
+4. Integrar la UI validada solo cuando el backend y las pruebas de concurrencia estén completos.
 5. Publicar por PR, exigir CI verde y desplegar únicamente desde `main`.
 
 ## Continuidad operativa
