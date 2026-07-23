@@ -5,26 +5,27 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `2210abf6d08e81c1d69ff901b3733fe4c366eaee`.
-- Release activo: `20260723T134229Z`.
+- Commit desplegado: `3e326f97b9ef21dc23c817a1eec72bb1c27c8370`.
+- Release activo: `20260723T151623Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
 - Migraciones: V1–V8 aplicadas correctamente.
-- Último bloque: Salud compacta y menús superiores mutuamente exclusivos.
+- Último bloque: fundamento visual y compactación de tratamientos.
 - E2E HTTPS aprobado; 36 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #21: corrección de superposición entre Añadir y avatar; cierre exterior y con Escape.
-- Salud muestra una sola subsección: Hoy, Tratamientos, Botiquín o Recetas; la selección queda en la URL.
-- Cada colección de Salud muestra inicialmente cinco filas y ofrece expansión progresiva.
-- La cuota de fotografías se presenta en Recetas y los vencimientos permanecen dentro de Botiquín.
-- Los destinos del avatar conservan semántica de enlace y los activadores exponen `aria-expanded`/`aria-controls`.
+- PR #23: fundamento visual de «tablero doméstico claro», con tipografías locales, paleta calmada e iconos SVG propios.
+- Encabezado móvil reducido, identificador técnico de la familia oculto y filtro de persona convertido en un selector único.
+- Salud usa pestañas ligeras y lenguaje familiar: `Tomas` sustituye a `Ocurrencias` en la interfaz.
+- Los tratamientos muestran una fila compacta; indicación, responsables y receta quedan bajo `Ver detalles`.
+- En 390×844 la fila de tratamiento bajó de 160 px a 109 px, entran cinco elementos accionables y no existe overflow horizontal.
 - Objetos/Baúl no se muestra todavía: requiere migración, API, RLS/IDOR, auditoría y UI en un PR propio.
 - CI final verde: frontend y backend de la PR #21, ejecución `30011966232`.
-- Verificación local: 31 pruebas frontend, build Vite y 6 pruebas backend aprobadas.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-2210abf-20260723T134229Z`.
+- Verificación local: 32 pruebas frontend, build Vite, 6 pruebas backend y auditoría de dependencias de producción sin vulnerabilidades.
+- CI `30018761203`: frontend y backend verdes; 36 escenarios Playwright/axe aprobados.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-3e326f9-20260723T151623Z`.
 - E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
-- No hubo revisión visual autenticada manual porque el navegador de la sesión no estaba disponible; la cobertura automatizada multi-viewport y axe sí fue aprobada.
+- Revisión visual aislada realizada en 390×844 y 1280×900; la validación autenticada de producción se cubrió mediante E2E HTTPS.
 
 ## Siguiente bloque funcional
 

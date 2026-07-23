@@ -2,8 +2,8 @@
 
 **Corte:** 2026-07-23 (America/Lima)
 **Rama:** `main`
-**Commit desplegado:** `2210abf6d08e81c1d69ff901b3733fe4c366eaee`
-**Versión del servidor:** `20260723T134229Z`
+**Commit desplegado:** `3e326f97b9ef21dc23c817a1eec72bb1c27c8370`
+**Versión del servidor:** `20260723T151623Z`
 **Producción:** <https://www.obusystem.com>
 
 Este documento es el punto de relevo para continuar el proyecto en otro chat. No contiene contraseñas ni secretos.
@@ -108,6 +108,22 @@ Integrado mediante los PR #17–#19, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-368a0de-20260723T124904Z`.
 - [x] La revisión visual autenticada manual quedó no ejecutada por falta de navegador en la sesión; no se sustituye ni se declara como realizada.
 
+## Bloque completado — fundamento visual y compactación de Salud
+
+Integrado mediante el PR #23, desplegado y verificado en producción:
+
+- [x] Tipografías locales Atkinson Hyperlegible Next y Bricolage Grotesque, tokens cromáticos y superficies planas coherentes con un tablero doméstico.
+- [x] Iconos SVG propios en navegación, Añadir y avatar; identificador `FAMILIA_TEST` sustituido visualmente por `Mi familia`.
+- [x] Filtro de perfiles consolidado en un selector; subsecciones de Salud presentadas como pestañas ligeras.
+- [x] Terminología visible de tratamientos simplificada de `Ocurrencias` a `Tomas`.
+- [x] Tratamientos compactados con indicación, responsables y receta bajo divulgación progresiva; cinco filas visibles en 390×844.
+- [x] Sin overflow horizontal en 390×844 y 1280×900; altura de fila de tratamiento reducida de 160 px a 109 px.
+- [x] Contraste de estados de atención elevado a 5,14:1; axe sin impactos críticos o serios en 320×700, 390×844 y 1280×900.
+- [x] Verificación local: 32 pruebas frontend, build Vite, 6 pruebas backend y `npm audit --omit=dev` sin vulnerabilidades.
+- [x] CI `30018761203` verde, PR #23 integrado como `3e326f9` y release `20260723T151623Z` saludable.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-3e326f9-20260723T151623Z`.
+- [x] E2E HTTPS aprobado: aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -126,12 +142,12 @@ Integrado mediante los PR #17–#19, desplegado y verificado en producción:
 - [x] AppShell adaptable con barra inferior móvil, navegación lateral desde 840 px y ancho útil máximo de 1.200 px.
 - [x] Rutas reales `/hoy`, `/agenda`, `/salud`, `/ajustes/familia` y `/actividad`, con redirecciones desde rutas anteriores.
 - [x] Filtro de persona compartido mediante Pinia; Familia y Actividad disponibles desde el avatar.
-- [x] Pantalla “Hoy” limitada a atención, tareas del día y ocurrencias; Agenda y Salud muestran sus propios dominios.
+- [x] Pantalla “Hoy” limitada a atención, tareas del día y tomas; Agenda y Salud muestran sus propios dominios.
 - [x] Acción global Añadir para evento, tarea y tratamiento; Objetos permanece oculto hasta disponer de backend.
 - [x] Tarjetas repetitivas convertidas en filas compactas con una acción principal y menú Más.
 - [x] Carga global sustituida por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Familia y Actividad.
 - [x] Auditoría axe añadida para rutas, menús y estados, sin aceptar impactos críticos o serios.
-- [x] Salud dividida en Hoy, Tratamientos, Botiquín y Recetas; solo una subsección se renderiza por vez y cada lista inicia con un máximo de cinco filas.
+- [x] Salud dividida en Tomas, Tratamientos, Botiquín y Recetas; solo una subsección se renderiza por vez y cada lista inicia con un máximo de cinco filas.
 - [x] Menús Añadir/Familia mutuamente exclusivos, con cierre exterior y Escape, activadores accesibles y enlaces nativos preservados.
 - [x] Alta desde la interfaz de tareas, eventos, medicamentos y tratamientos.
 - [x] Completar tareas desde “Hoy”.
@@ -157,6 +173,7 @@ Integrado mediante los PR #17–#19, desplegado y verificado en producción:
 - PR de AppShell y rutas por dominio: <https://github.com/mherreraspe/agenda-familiar-app/pull/18>.
 - PR de listas, cargas selectivas y accesibilidad: <https://github.com/mherreraspe/agenda-familiar-app/pull/19>; CI `30007766644` aprobado.
 - PR de Salud compacta y menús exclusivos: <https://github.com/mherreraspe/agenda-familiar-app/pull/21>; CI `30011966232` aprobado y release `20260723T134229Z` verificado.
+- PR del fundamento visual y compactación de tratamientos: <https://github.com/mherreraspe/agenda-familiar-app/pull/23>; CI `30018761203` aprobado y release `20260723T151623Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
