@@ -118,7 +118,7 @@ public class ServicioSesiones {
         Usuario usuario = usuarios.findByIdPublico(idPublico)
                 .filter(encontrado -> "ACTIVO".equals(encontrado.getEstado()))
                 .orElseThrow(() -> new BadCredentialsException("Usuario inactivo"));
-        return new RespuestaUsuario(usuario.getIdPublico(), usuario.getCorreo());
+        return new RespuestaUsuario(usuario.getIdPublico(), usuario.getCorreo(), usuario.getRolPlataforma());
     }
 
     private PaqueteSesion crearSesion(Usuario usuario) {
@@ -141,10 +141,11 @@ public class ServicioSesiones {
                 .expiresAt(expiraAccess)
                 .subject(usuario.getIdPublico().toString())
                 .claim("correo", usuario.getCorreo())
+                .claim("rol_plataforma", usuario.getRolPlataforma())
                 .build();
         JwsHeader encabezado = JwsHeader.with(MacAlgorithm.HS256).build();
         String accessToken = jwtEncoder.encode(JwtEncoderParameters.from(encabezado, claims)).getTokenValue();
-        RespuestaSesion respuesta = new RespuestaSesion(accessToken, expiraAccess, usuario.getIdPublico(), usuario.getCorreo());
+        RespuestaSesion respuesta = new RespuestaSesion(accessToken, expiraAccess, usuario.getIdPublico(), usuario.getCorreo(), usuario.getRolPlataforma());
         return new PaqueteSesion(sesionId, respuesta, refreshToken, csrfToken, expiraRefresh);
     }
 

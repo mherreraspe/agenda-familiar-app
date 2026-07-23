@@ -30,6 +30,9 @@ public class Usuario {
     @Column(nullable = false)
     private String estado;
 
+    @Column(name = "rol_plataforma", nullable = false)
+    private String rolPlataforma;
+
     @Column(name = "creado_en", nullable = false)
     private Instant creadoEn;
 
@@ -47,6 +50,7 @@ public class Usuario {
         this.correo = correo.toLowerCase();
         this.claveHash = claveHash;
         this.estado = "ACTIVO";
+        this.rolPlataforma = "USUARIO";
         this.creadoEn = Instant.now();
         this.actualizadoEn = this.creadoEn;
     }
@@ -56,9 +60,15 @@ public class Usuario {
         this.actualizadoEn = Instant.now();
     }
 
+    public void hacerAdministradorPlataforma() {
+        this.rolPlataforma = "ADMINISTRADOR_PLATAFORMA";
+        this.actualizadoEn = Instant.now();
+    }
+
     public UUID getIdPublico() { return idPublico; }
     public Long getId() { return id; }
     public String getCorreo() { return correo; }
     public String getClaveHash() { return claveHash; }
     public String getEstado() { return estado; }
+    public String getRolPlataforma() { return rolPlataforma; }
 }
