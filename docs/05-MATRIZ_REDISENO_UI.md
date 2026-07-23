@@ -25,12 +25,15 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Ver botiquín | Salud / Botiquín | Abrir detalle | Filtros | `consultarCatalogo` | E2E |
 | Crear medicamento | Salud / Botiquín | Guardar | — | `crearMedicamento` | E2E |
 | Ver vencimientos | Salud / Botiquín | Abrir detalle | Filtro | `consultarCatalogo` | E2E |
+| Buscar objeto | Objetos / Buscador | Escribir consulta | Explorar lugares | `consultarObjetos` | IT / E2E |
+| Crear objeto | Objetos / Añadir | Guardar | — | `crearObjeto` | IT / E2E |
+| Editar o mover objeto | Objetos / Fila | Editar | — | `actualizarObjeto` | IT / E2E |
 | Administrar perfiles | Ajustes / Familia | Editar | — | `consultarConfiguracionFamilia`, `crearPerfil`, `actualizarPerfil` | E2E |
 | Ver auditoría | Ajustes / Actividad | Abrir | — | `consultarAuditoria` | E2E |
 | Filtrar por persona | Hoy / Agenda / Salud | Elegir persona | — | Estado compartido | Vitest / E2E |
 | Cerrar sesión | Menú de avatar | Cerrar sesión | — | `cerrarSesion` | E2E |
-| Reflejar cambios familiares | Hoy / Agenda / Salud | Automática | Aviso de reconexión | SSE `/familias/{id}/eventos` | Vitest / IT / E2E |
-| Consultar durante un corte | Hoy / Agenda / Salud | Lectura ya cargada | Aviso sin conexión | Caché en memoria por sujeto | Vitest / E2E |
+| Reflejar cambios familiares | Hoy / Agenda / Salud / Objetos | Automática | Aviso de reconexión | SSE `/familias/{id}/eventos` | Vitest / IT / E2E |
+| Consultar durante un corte | Hoy / Agenda / Salud / Objetos | Lectura ya cargada | Aviso sin conexión | Caché en memoria por sujeto | Vitest / E2E |
 
 ## Estado por PR
 
@@ -41,7 +44,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Fundamento visual — PR #23 desplegado en `20260723T151623Z`: tipografías legibles, tokens cromáticos, iconos SVG, encabezado y filtro compactos, terminología `Tomas` y detalle progresivo de tratamientos; axe verde en los tres viewports.
 - Interacción operativa — PR #26 desplegado en `20260723T165603Z`: Hoy oculta secciones vacías, el historial de tomas usa una vista paginada, las altas son contextuales y la cuota normal no compite con el contenido.
 - Sincronización familiar — PR #28 desplegado en `20260723T190511Z`: SSE autenticado por familia, backoff, deduplicación, invalidación de Hoy/Agenda/Salud y lectura ya cargada sin escrituras offline; 45 escenarios Playwright/axe verdes.
-- Objetos — existe un prototipo visual solo en desarrollo para validar búsqueda, recientes y rutas físicas; continúa excluido de producción hasta disponer de dominio, API, RLS/IDOR y auditoría.
-- PR 3 completado mediante #28. El siguiente bloque es Objetos como dominio completo; Web Push privado permanece posterior.
+- Objetos — PR #30 desplegado en `20260723T203410Z`: V9, API, búsqueda, alta/edición, RLS/IDOR, idempotencia, concurrencia, auditoría y SSE; el prototipo DEV fue retirado.
+- PR 4 completado mediante #30. El siguiente bloque es Web Push privado con preferencias y horario silencioso.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.
