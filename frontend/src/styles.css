@@ -26,7 +26,7 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .panel-acceso h1 { margin: 4px 0 8px; font: 700 2.1rem Georgia, serif; }
 .panel-acceso > p { color: #63706b; }
 .panel-acceso form { display: grid; gap: 16px; margin: 24px 0; }
-.panel-acceso small { color: #6e7773; }
+.panel-acceso small { color: #5f6965; }
 .panel-acceso--cargando { text-align: center; }
 .boton-principal { width: 100%; padding: 13px 18px; border: 0; border-radius: 12px; color: white; background: #315b4c; font-weight: 900; }
 .boton-principal:disabled { cursor: wait; opacity: .65; }
@@ -120,8 +120,8 @@ label { display: grid; gap: 6px; color: #46534e; font-size: .85rem; font-weight:
 .tarjeta__contenido { flex: 1; min-width: 0; }
 .tarjeta h3, .tarjeta p { margin: 0; }
 .tarjeta h3 { font-size: 1rem; }
-.tarjeta p { margin-top: 4px; color: #6e7773; font-size: .84rem; }
-.tarjeta small { display: block; margin-top: 7px; color: #6e7773; line-height: 1.4; }
+.tarjeta p { margin-top: 4px; color: #5f6965; font-size: .84rem; }
+.tarjeta small { display: block; margin-top: 7px; color: #5f6965; line-height: 1.4; }
 .boton-secundario { padding: 9px 13px; }
 .acciones-ocurrencia { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .acciones-ocurrencia .boton-secundario { padding: 7px 10px; font-size: .75rem; }
