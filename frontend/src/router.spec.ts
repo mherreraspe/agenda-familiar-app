@@ -10,6 +10,7 @@ describe('rutas principales', () => {
     ['/hoy', 'hoy'],
     ['/agenda', 'agenda'],
     ['/salud', 'salud'],
+    ['/objetos', 'objetos'],
     ['/ajustes/familia', 'familia'],
     ['/actividad', 'actividad']
   ])('resuelve %s como una vista real', async (ruta, nombre) => {
@@ -33,8 +34,7 @@ describe('rutas principales', () => {
     expect(router.currentRoute.value.query.filtro).toBe('atencion')
   })
 
-  it('expone el prototipo de Objetos únicamente durante desarrollo', async () => {
-    await router.push('/prototipo/objetos')
-    expect(router.currentRoute.value.name).toBe('objetos-prototipo')
+  it('no conserva la ruta del prototipo de Objetos', async () => {
+    expect(router.getRoutes().some(ruta => ruta.path === '/prototipo/objetos')).toBe(false)
   })
 })

@@ -22,7 +22,8 @@ import com.obusystem.agendafamiliar.agenda.family.AccesoFamilia;
 public class ServicioSincronizacionFamilia {
     private static final long SIN_LIMITE_SERVIDOR = 0L;
     private static final Set<RecursoSincronizacion> TODOS = Set.of(
-            RecursoSincronizacion.HOY, RecursoSincronizacion.AGENDA, RecursoSincronizacion.SALUD);
+            RecursoSincronizacion.HOY, RecursoSincronizacion.AGENDA, RecursoSincronizacion.SALUD,
+            RecursoSincronizacion.OBJETOS);
 
     private final AccesoFamilia acceso;
     private final LongFunction<SseEmitter> crearEmisor;

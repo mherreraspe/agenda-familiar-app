@@ -9,9 +9,8 @@ const props = withDefaults(defineProps<{
   familia?: string
   cantidadAtencion?: number
   etiquetaAnadir?: string
-  tipoAnadirDirecto?: 'evento' | 'tarea' | 'tratamiento' | 'medicamento'
+  tipoAnadirDirecto?: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto'
   mostrarAnadir?: boolean
-  mostrarObjetos?: boolean
 }>(), { mostrarAnadir: true })
 
 const familiaVisible = computed(() => {
@@ -21,7 +20,7 @@ const familiaVisible = computed(() => {
 })
 
 const emit = defineEmits<{
-  anadir: [tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento']
+  anadir: [tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto']
   salir: []
 }>()
 
@@ -57,7 +56,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', cerrarConEscape)
 })
 
-function anadir(tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento') {
+function anadir(tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto') {
   cerrarMenus()
   emit('anadir', tipo)
 }
@@ -81,7 +80,7 @@ function activarAnadir() {
       </RouterLink>
       <RouterLink :to="{ name: 'agenda' }"><IconoApp nombre="agenda" /><span>Agenda</span></RouterLink>
       <RouterLink :to="{ name: 'salud' }"><IconoApp nombre="salud" /><span>Salud</span></RouterLink>
-      <RouterLink v-if="mostrarObjetos" :to="{ name: 'objetos-prototipo' }"><IconoApp nombre="objetos" /><span>Objetos</span></RouterLink>
+      <RouterLink :to="{ name: 'objetos' }"><IconoApp nombre="objetos" /><span>Objetos</span></RouterLink>
     </nav>
 
     <div class="app-shell__contenido">
@@ -97,6 +96,7 @@ function activarAnadir() {
             <div v-if="menuAbierto === 'anadir'" id="menu-anadir" class="menu-desplegable__panel" aria-label="¿Qué deseas añadir?">
               <button type="button" @click="anadir('evento')">Evento</button>
               <button type="button" @click="anadir('tarea')">Tarea o recordatorio</button>
+              <button type="button" @click="anadir('objeto')">Objeto</button>
               <button type="button" @click="anadir('tratamiento')">Tratamiento</button>
             </div>
           </div>

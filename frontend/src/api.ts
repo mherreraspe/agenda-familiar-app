@@ -53,6 +53,9 @@ export interface EntradaAuditoria {
 }
 
 export interface RespuestaAuditoria { entradas: EntradaAuditoria[] }
+export interface ObjetoFamiliar { id: string; nombre: string; categoria: string; notas?: string; ruta: string[]; actualizadoEn: string; version: number }
+export interface RespuestaObjetos { objetos: ObjetoFamiliar[]; ubicaciones: Array<{ ruta: string[]; cantidad: number }> }
+export interface DatosObjeto { nombre: string; categoria: string; notas?: string; ruta: string[]; version?: number }
 export interface SugerenciaFamiliar { tipo: 'EVENTO' | 'LUGAR'; entidadId: string; titulo: string; lugar?: string; direccion?: string }
 export interface RespuestaSugerencias { sugerencias: SugerenciaFamiliar[] }
 
@@ -227,6 +230,10 @@ export function consultarAuditoria() {
   return solicitud<RespuestaAuditoria>(`/api/v1/familias/${FAMILIA_TEST_ID}/auditoria`)
 }
 
+export function consultarObjetos(consulta = '') {
+  return solicitud<RespuestaObjetos>(`/api/v1/familias/${FAMILIA_TEST_ID}/objetos?q=${encodeURIComponent(consulta)}`)
+}
+
 export function consultarConfiguracionFamilia() {
   return solicitud<RespuestaFamilia>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion`)
 }
@@ -295,6 +302,16 @@ export function crearMedicamento(datos: { nombre: string; presentacion: string; 
 
 export function crearTratamiento(datos: { perfilId: string; medicamentoId?: string; nombre: string; indicacion?: string; cantidadReceta?: string; frecuencia?: string; horario: string; horarios?: string[]; intervaloHoras?: number; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
   return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos`, { method: 'POST', body: JSON.stringify(datos) })
+}
+
+export function crearObjeto(datos: DatosObjeto) {
+  return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/objetos`, {
+    method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
+}
+
+export function actualizarObjeto(id: string, datos: DatosObjeto) {
+  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/objetos/${id}`, { method: 'PATCH', body: JSON.stringify(datos) })
 }
 
 export function subirReceta(tratamientoId: string, archivo: Blob) {

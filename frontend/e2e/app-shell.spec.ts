@@ -16,6 +16,10 @@ async function prepararApi(page: Page) {
     estado: 'TOMADA', programadaEn: `2026-07-22T${String(indice % 20).padStart(2, '0')}:00:00Z`,
     resueltaEn: `2026-07-22T${String(indice % 20).padStart(2, '0')}:04:00Z`, resueltaPorNombre: 'Mamá'
   }))
+  const objetos = [{
+    id: 'objeto-1', nombre: 'Pasaporte de Lucía', categoria: 'Documentos', notas: 'Funda azul',
+    ruta: ['Habitación principal', 'Ropero', 'Caja de documentos'], actualizadoEn: '2026-07-23T18:00:00Z', version: 0
+  }]
   await page.route('**/api/v1/**', async route => {
     const ruta = new URL(route.request().url()).pathname
     const responder = (datos: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(datos) })
@@ -26,6 +30,9 @@ async function prepararApi(page: Page) {
     if (ruta.endsWith('/auditoria')) return responder({ entradas: [] })
     if (ruta.endsWith('/configuracion')) return responder({ puedeAdministrar: true, perfiles: [{ ...perfil, activo: true, permiso: 'ADMINISTRADOR_FAMILIAR' }] })
     if (ruta.endsWith('/archivos/cuota')) return responder({ cuotaBytes: 1_000_000, usadosBytes: 0, disponiblesBytes: 1_000_000, porcentaje: 0, nivel: 'NORMAL' })
+    if (ruta.endsWith('/objetos') && route.request().method() === 'GET') return responder({ objetos, ubicaciones: [{ ruta: objetos[0].ruta, cantidad: 1 }] })
+    if (ruta.endsWith('/objetos') && route.request().method() === 'POST') return responder({ id: 'objeto-2' })
+    if (/\/objetos\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') return route.fulfill({ status: 204 })
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
   })
 }
@@ -112,7 +119,31 @@ test('mantiene Familia y Actividad fuera de la navegación principal', async ({ 
   await page.getByRole('link', { name: 'Familia y permisos' }).click()
   await expect(page).toHaveURL(/\/ajustes\/familia$/)
   await expect(page.getByRole('heading', { name: 'Perfiles y permisos' })).toBeVisible()
-  await expect(page.getByRole('navigation', { name: 'Navegación principal' }).getByText('Objetos')).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' }).getByText('Objetos')).toBeVisible()
+})
+
+test('busca y guarda Objetos con una ubicación jerárquica persistente', async ({ page }) => {
+  await page.goto('/objetos')
+  await expect(page.getByRole('heading', { name: 'Objetos de la familia' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Objetos de la familia' }).getByText('Habitación principal › Ropero › Caja de documentos', { exact: true })).toBeVisible()
+  const medidas = await page.evaluate(() => ({ ancho: document.documentElement.scrollWidth, viewport: window.innerWidth }))
+  expect(medidas.ancho).toBeLessThanOrEqual(medidas.viewport)
+
+  const consulta = page.waitForRequest(request => new URL(request.url()).searchParams.get('q') === 'pasaporte')
+  await page.getByRole('searchbox', { name: '¿Qué estás buscando?' }).fill('pasaporte')
+  await consulta
+  await expect(page.getByRole('heading', { name: 'Objetos encontrados' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Objeto', exact: true }).click()
+  const dialogo = page.getByRole('dialog')
+  await dialogo.getByLabel('Nombre').fill('Llaves de repuesto')
+  await dialogo.getByLabel('Categoría').fill('Llaves')
+  await dialogo.getByLabel('Ruta de ubicación').fill('Entrada › Cajón')
+  const alta = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/objetos'))
+  await dialogo.getByRole('button', { name: 'Guardar objeto' }).click()
+  const solicitud = await alta
+  expect(solicitud.postDataJSON()).toMatchObject({ nombre: 'Llaves de repuesto', categoria: 'Llaves', ruta: ['Entrada', 'Cajón'] })
+  await page.goto('about:blank')
 })
 
 test('redirige rutas antiguas y evita desbordamiento horizontal', async ({ page }) => {
@@ -164,6 +195,23 @@ test('invalida Hoy al recibir un cambio familiar y descarta repeticiones', async
   await expect.poll(() => consultasHoy).toBeGreaterThanOrEqual(2)
 })
 
+test('refleja cambios de Objetos entre dispositivos sin recargar la página', async ({ page }) => {
+  let consultasObjetos = 0
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.endsWith('/objetos')) consultasObjetos += 1
+  })
+  await page.route('**/familias/*/eventos', route => route.fulfill({
+    contentType: 'text/event-stream',
+    body: [
+      'id: inicial', 'event: sincronizar', 'data: {"id":"inicial","recursos":["HOY","AGENDA","SALUD","OBJETOS"]}', '',
+      'id: objeto-1', 'event: cambio', 'data: {"id":"objeto-1","recursos":["OBJETOS"]}', '', ''
+    ].join('\n')
+  }))
+
+  await page.goto('/objetos')
+  await expect.poll(() => consultasObjetos).toBeGreaterThanOrEqual(2)
+})
+
 test('avisa cuando no hay conexión y mantiene las altas solo en línea', async ({ page, context }) => {
   await page.goto('/hoy')
   await expect(page.getByRole('heading', { name: 'Todo está al día' })).toBeVisible()
@@ -178,7 +226,7 @@ test('avisa cuando no hay conexión y mantiene las altas solo en línea', async 
 })
 
 test('no presenta violaciones críticas o serias de accesibilidad', async ({ page }) => {
-  for (const ruta of ['/hoy', '/agenda', '/salud', '/ajustes/familia', '/actividad']) {
+  for (const ruta of ['/hoy', '/agenda', '/salud', '/objetos', '/ajustes/familia', '/actividad']) {
     await page.goto(ruta)
     await expect(page.locator('.estado-carga')).toHaveCount(0)
     const resultado = await new AxeBuilder({ page }).analyze()

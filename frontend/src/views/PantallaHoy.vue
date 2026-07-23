@@ -11,6 +11,7 @@ import { useInterfazStore } from '../stores/interfaz'
 import {
   cerrarSesion as eliminarSesion,
   actuarAgenda,
+  actualizarObjeto,
   actualizarPerfil,
   cambiarEstadoOcurrencia,
   cerrarElementoRevision,
@@ -22,8 +23,10 @@ import {
   consultarCatalogo,
   consultarHoy,
   consultarOcurrencias,
+  consultarObjetos,
   crearPerfil,
   crearMedicamento,
+  crearObjeto,
   crearTarea,
   crearTratamiento,
   descargarReceta,
@@ -34,20 +37,22 @@ import {
   type EstadoOcurrencia,
   type ElementoRevision,
   type OcurrenciaResumen,
+  type ObjetoFamiliar,
   type RespuestaAuditoria,
   type RespuestaCatalogo,
   type RespuestaHoy,
   type RespuestaFamilia,
   type RespuestaCuota,
   type RespuestaOcurrencias,
+  type RespuestaObjetos,
   type TareaResumen
 } from '../api'
 import { reducirImagenReceta, validarImagenReceta } from '../imagen'
 import { suscribirEventosFamilia, type EstadoSincronizacion, type RecursoSincronizacion } from '../sincronizacion'
 
-type SeccionPrincipal = 'hoy' | 'agenda' | 'salud' | 'familia' | 'actividad'
+type SeccionPrincipal = 'hoy' | 'agenda' | 'salud' | 'objetos' | 'familia' | 'actividad'
 type SeccionSalud = 'hoy' | 'tratamientos' | 'botiquin' | 'recetas'
-type TipoAlta = 'evento' | 'tarea' | 'tratamiento' | 'medicamento'
+type TipoAlta = 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto'
 
 const props = withDefaults(defineProps<{ seccion?: SeccionPrincipal }>(), { seccion: 'hoy' })
 const route = useRoute()
@@ -69,17 +74,22 @@ const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
 const auditoria = ref<RespuestaAuditoria | null>(null)
 const familia = ref<RespuestaFamilia | null>(null)
 const cuota = ref<RespuestaCuota | null>(null)
+const objetos = ref<RespuestaObjetos | null>(null)
 const estadoVista = ref<'cargando' | 'lista' | 'error'>('cargando')
 const errorVista = ref('')
-const recursosCargados = reactive({ base: false, catalogo: false, ocurrencias: false, auditoria: false, familia: false, cuota: false })
+const recursosCargados = reactive({ base: false, catalogo: false, ocurrencias: false, auditoria: false, familia: false, cuota: false, objetos: false })
 let cerrarSincronizacion: (() => void) | null = null
 let primeraNotificacionSincronizacion = true
 const mostrarTodoSalud = reactive<Record<SeccionSalud, boolean>>({ hoy: false, tratamientos: false, botiquin: false, recetas: false })
 const limiteHistorialTomas = ref(10)
-const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
+const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | 'objeto' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
 const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+const busquedaObjetos = ref('')
+const objetoEditadoId = ref<string | null>(null)
+const nuevoObjeto = reactive({ nombre: '', categoria: '', notas: '', ruta: '', version: undefined as number | undefined })
+let temporizadorBusquedaObjetos: ReturnType<typeof setTimeout> | null = null
 const recetaSeleccionada = ref<File | null>(null)
 const recetaVisible = ref<{ id: string; url: string } | null>(null)
 const perfilEditadoId = ref<string | null>(null)
@@ -132,23 +142,25 @@ const tratamientosVisibles = computed(() => tratamientosFiltrados.value.slice(0,
 const medicamentosVisibles = computed(() => (catalogo.value?.medicamentos ?? []).slice(0, mostrarTodoSalud.botiquin ? undefined : 5))
 const recetasVisibles = computed(() => tratamientosFiltrados.value.filter(tratamiento => tratamiento.recetaId).slice(0, mostrarTodoSalud.recetas ? undefined : 5))
 const tituloFormulario = computed(() => ({
-  tarea: 'Nueva tarea', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento', perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil'
+  tarea: 'Nueva tarea', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento',
+  perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil', objeto: objetoEditadoId.value ? 'Editar objeto' : 'Nuevo objeto'
 })[formulario.value ?? 'tarea'])
 const tituloPantalla = computed(() => ({
-  hoy: 'Hoy', agenda: 'Agenda', salud: 'Salud', familia: 'Familia y permisos', actividad: 'Actividad'
+  hoy: 'Hoy', agenda: 'Agenda', salud: 'Salud', objetos: 'Objetos', familia: 'Familia y permisos', actividad: 'Actividad'
 })[props.seccion])
 const subtituloPantalla = computed(() => ({
   hoy: fechaActual, agenda: 'Tareas y eventos próximos', salud: 'Tomas, tratamientos, botiquín y recetas',
-  familia: 'Personas, cuentas y permisos', actividad: 'Historial de cambios familiares'
+  objetos: 'Encuentra lo que guardó tu familia', familia: 'Personas, cuentas y permisos', actividad: 'Historial de cambios familiares'
 })[props.seccion])
 const tipoAnadirCabecera = computed<TipoAlta | undefined>(() => {
   if (props.seccion === 'agenda') return 'evento'
+  if (props.seccion === 'objetos') return 'objeto'
   if (props.seccion === 'salud' && seccionSalud.value === 'tratamientos') return 'tratamiento'
   if (props.seccion === 'salud' && seccionSalud.value === 'botiquin') return 'medicamento'
   return undefined
 })
 const etiquetaAnadirCabecera = computed(() => tipoAnadirCabecera.value
-  ? ({ evento: 'Evento', tarea: 'Tarea', tratamiento: 'Tratamiento', medicamento: 'Medicamento' })[tipoAnadirCabecera.value]
+  ? ({ evento: 'Evento', tarea: 'Tarea', tratamiento: 'Tratamiento', medicamento: 'Medicamento', objeto: 'Objeto' })[tipoAnadirCabecera.value]
   : 'Añadir')
 const mostrarAnadirCabecera = computed(() => props.seccion !== 'familia' && props.seccion !== 'actividad' && !(props.seccion === 'salud' && (seccionSalud.value === 'recetas' || mostrandoHistorialTomas.value)))
 
@@ -181,6 +193,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   cerrarSincronizacion?.()
+  if (temporizadorBusquedaObjetos) clearTimeout(temporizadorBusquedaObjetos)
   window.removeEventListener('online', actualizarEstadoRed)
   window.removeEventListener('offline', actualizarEstadoRed)
 })
@@ -223,12 +236,21 @@ function invalidarRecursos(recursos: RecursoSincronizacion[]) {
     recursosCargados.ocurrencias = false
     recursosCargados.cuota = false
   }
+  if (recursos.includes('OBJETOS')) recursosCargados.objetos = false
 }
 
 watch(() => props.seccion, seccion => {
   mensaje.value = ''
   error.value = ''
   void cargarSeccion(seccion)
+})
+
+watch(busquedaObjetos, () => {
+  if (props.seccion !== 'objetos') return
+  if (temporizadorBusquedaObjetos) clearTimeout(temporizadorBusquedaObjetos)
+  temporizadorBusquedaObjetos = setTimeout(() => void cargarObjetos(true, true).catch(causa => {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo completar la búsqueda.'
+  }), 250)
 })
 
 function hora(tarea: TareaResumen) {
@@ -251,6 +273,10 @@ function abrirAlta(tipo: TipoAlta) {
   if (tipo === 'evento') {
     void abrirFormularioEvento()
     return
+  }
+  if (tipo === 'objeto') {
+    objetoEditadoId.value = null
+    Object.assign(nuevoObjeto, { nombre: '', categoria: '', notas: '', ruta: '', version: undefined })
   }
   formulario.value = tipo === 'medicamento' ? 'medicamento' : tipo
 }
@@ -311,6 +337,12 @@ async function cargarCuota(forzar = false) {
   recursosCargados.cuota = true
 }
 
+async function cargarObjetos(forzar = false, buscar = false) {
+  if (recursosCargados.objetos && !forzar && !buscar) return
+  objetos.value = await consultarObjetos(busquedaObjetos.value)
+  recursosCargados.objetos = true
+}
+
 async function cargarSeccion(seccion: SeccionPrincipal, forzar = false, enSegundoPlano = false) {
   if (!enSegundoPlano) {
     estadoVista.value = 'cargando'
@@ -320,6 +352,7 @@ async function cargarSeccion(seccion: SeccionPrincipal, forzar = false, enSegund
     if (seccion === 'hoy') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar), cargarOcurrencias(forzar)])
     if (seccion === 'agenda') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar)])
     if (seccion === 'salud') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar), cargarOcurrencias(forzar), cargarCuota(forzar)])
+    if (seccion === 'objetos') await Promise.all([cargarBase(forzar), cargarObjetos(forzar)])
     if (seccion === 'familia') await Promise.all([cargarBase(forzar), cargarFamilia(forzar)])
     if (seccion === 'actividad') await Promise.all([cargarBase(forzar), cargarAuditoria(forzar)])
     if (!enSegundoPlano) estadoVista.value = 'lista'
@@ -626,6 +659,33 @@ async function guardarPerfil() {
   }, 'La configuración familiar fue actualizada.', () => Promise.all([cargarFamilia(true), cargarBase(true)]).then(() => undefined))
 }
 
+function editarObjeto(objeto: ObjetoFamiliar) {
+  objetoEditadoId.value = objeto.id
+  Object.assign(nuevoObjeto, {
+    nombre: objeto.nombre,
+    categoria: objeto.categoria,
+    notas: objeto.notas ?? '',
+    ruta: objeto.ruta.join(' › '),
+    version: objeto.version
+  })
+  formulario.value = 'objeto'
+}
+
+async function guardarObjeto() {
+  const ruta = nuevoObjeto.ruta.split(/[›>]/).map(segmento => segmento.trim()).filter(Boolean)
+  if (!ruta.length) {
+    error.value = 'Indica al menos un lugar para guardar el objeto.'
+    return
+  }
+  await ejecutarGuardado(async () => {
+    const datosObjeto = { nombre: nuevoObjeto.nombre, categoria: nuevoObjeto.categoria, notas: nuevoObjeto.notas || undefined, ruta, version: nuevoObjeto.version }
+    if (objetoEditadoId.value) await actualizarObjeto(objetoEditadoId.value, datosObjeto)
+    else await crearObjeto(datosObjeto)
+    Object.assign(nuevoObjeto, { nombre: '', categoria: '', notas: '', ruta: '', version: undefined })
+    objetoEditadoId.value = null
+  }, objetoEditadoId.value ? 'El objeto fue actualizado.' : 'El objeto fue guardado.', () => cargarObjetos(true))
+}
+
 async function ejecutarGuardado(accion: () => Promise<void>, confirmacion: string, recargar: () => Promise<void>) {
   cargando.value = true
   error.value = ''
@@ -713,7 +773,7 @@ async function salir() {
         <button type="button" class="boton-secundario" @click="cargarSeccion(seccion, true)">Reintentar</button>
       </div>
       <template v-else>
-      <section v-if="seccion !== 'familia' && seccion !== 'actividad'" class="selector-persona" aria-label="Filtrar agenda por persona">
+      <section v-if="seccion !== 'familia' && seccion !== 'actividad' && seccion !== 'objetos'" class="selector-persona" aria-label="Filtrar agenda por persona">
         <label for="filtro-persona">Ver agenda de</label>
         <select id="filtro-persona" v-model="filtroPerfil">
           <option value="TODOS">Todos</option>
@@ -888,6 +948,34 @@ async function salir() {
         </button>
       </section>
 
+      <section v-if="seccion === 'objetos'" class="objetos-vista" aria-labelledby="titulo-busqueda-objetos">
+        <div class="buscador-objetos">
+          <label id="titulo-busqueda-objetos" for="busqueda-objetos">¿Qué estás buscando?</label>
+          <input id="busqueda-objetos" v-model.trim="busquedaObjetos" type="search" placeholder="Objeto, categoría o lugar" autocomplete="off" />
+        </div>
+
+        <section class="seccion" aria-labelledby="titulo-objetos">
+          <div class="titulo-seccion titulo-seccion--objetos">
+            <div><span class="etiqueta etiqueta--verde">{{ busquedaObjetos ? 'Resultados' : 'Actualizados recientemente' }}</span><h2 id="titulo-objetos">{{ busquedaObjetos ? 'Objetos encontrados' : 'Objetos de la familia' }}</h2></div>
+          </div>
+          <div v-if="objetos?.objetos.length" class="lista-objetos">
+            <article v-for="objeto in objetos.objetos" :key="objeto.id" class="fila-objeto">
+              <span class="fila-objeto__marca" aria-hidden="true"></span>
+              <div><h3>{{ objeto.nombre }}</h3><p>{{ objeto.ruta.join(' › ') }}</p><small>{{ objeto.categoria }}<span v-if="objeto.notas"> · {{ objeto.notas }}</span></small></div>
+              <button type="button" class="boton-secundario" :aria-label="`Editar ${objeto.nombre}`" @click="editarObjeto(objeto)">Editar</button>
+            </article>
+          </div>
+          <p v-else class="estado-vacio">{{ busquedaObjetos ? 'No encontramos objetos con esa búsqueda.' : 'Todavía no hay objetos guardados. Añade el primero indicando dónde está.' }}</p>
+        </section>
+
+        <section v-if="objetos?.ubicaciones.length" class="seccion lugares-objetos" aria-labelledby="titulo-lugares-objetos">
+          <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Explorar</span><h2 id="titulo-lugares-objetos">Lugares de la casa</h2></div></div>
+          <div class="lugares-objetos__ruta">
+            <p v-for="ubicacion in objetos.ubicaciones" :key="ubicacion.ruta.join('/')"><strong>{{ ubicacion.ruta.join(' › ') }}</strong><span>{{ ubicacion.cantidad }} {{ ubicacion.cantidad === 1 ? 'objeto' : 'objetos' }}</span></p>
+          </div>
+        </section>
+      </section>
+
       <section v-if="seccion === 'actividad'" id="historial" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Trazabilidad</span><h2>Historial familiar</h2></div></div>
         <article v-for="entrada in auditoria?.entradas.slice(0, 20)" :key="`${entrada.entidad}-${entrada.entidadId}-${entrada.fecha}`" class="tarjeta">
@@ -980,6 +1068,14 @@ async function salir() {
         </template>
         <label class="opcion-linea"><input v-model="nuevoPerfil.activo" type="checkbox" /> Perfil activo</label>
         <button class="boton-principal" :disabled="cargando || !enLinea">Guardar perfil</button>
+      </form>
+
+      <form v-else-if="formulario === 'objeto'" @submit.prevent="guardarObjeto">
+        <label>Nombre<input v-model.trim="nuevoObjeto.nombre" maxlength="180" required /></label>
+        <label>Categoría<input v-model.trim="nuevoObjeto.categoria" maxlength="80" placeholder="Documentos, herramientas…" required /></label>
+        <label>Ruta de ubicación<input v-model.trim="nuevoObjeto.ruta" maxlength="604" placeholder="Habitación principal › Ropero › Caja de documentos" required /><small>Separa cada nivel con ›.</small></label>
+        <label>Nota opcional<textarea v-model.trim="nuevoObjeto.notas" maxlength="500" rows="3" placeholder="Un detalle que ayude a reconocerlo" /></label>
+        <button class="boton-principal" :disabled="cargando || !enLinea">{{ objetoEditadoId ? 'Guardar cambios' : 'Guardar objeto' }}</button>
       </form>
     </dialog>
 

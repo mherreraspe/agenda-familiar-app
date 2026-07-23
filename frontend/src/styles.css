@@ -147,8 +147,7 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .historial-tomas { margin-top: 10px; }
 .estado-vacio--centrado { margin-top: 24px; text-align: center; }
 
-.objetos-prototipo { max-width: 760px; }
-.prototipo-aviso { display: inline-flex; margin: 0 0 18px; padding: 6px 9px; border-radius: 7px; color: #76562f; background: #f3ead9; font-size: .76rem; font-weight: 750; }
+.objetos-vista { max-width: 760px; }
 .buscador-objetos { margin-bottom: 28px; }
 .buscador-objetos label { margin-bottom: 8px; color: var(--tinta); font: 700 1.35rem var(--fuente-display); }
 .buscador-objetos input { min-height: 52px; padding-left: 16px; font-size: 1rem; }
@@ -165,6 +164,7 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .fila-objeto > span:last-child { color: var(--verde); font-size: 1.4rem; }
 .lugares-objetos { margin-top: 30px; }
 .lugares-objetos__ruta { display: grid; gap: 2px; border-left: 2px solid var(--salvia); }
+.lugares-objetos__ruta p { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; margin: 0; }
 .lugares-objetos__ruta strong, .lugares-objetos__ruta span { min-height: 42px; padding: 10px 14px; border-bottom: 1px solid var(--linea); }
 .lugares-objetos__ruta span { margin-left: 18px; color: var(--tinta-suave); }
 
