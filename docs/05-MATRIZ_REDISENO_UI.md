@@ -45,6 +45,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Interacción operativa — PR #26 desplegado en `20260723T165603Z`: Hoy oculta secciones vacías, el historial de tomas usa una vista paginada, las altas son contextuales y la cuota normal no compite con el contenido.
 - Sincronización familiar — PR #28 desplegado en `20260723T190511Z`: SSE autenticado por familia, backoff, deduplicación, invalidación de Hoy/Agenda/Salud y lectura ya cargada sin escrituras offline; 45 escenarios Playwright/axe verdes.
 - Objetos — PR #30 desplegado en `20260723T203410Z`: V9, API, búsqueda, alta/edición, RLS/IDOR, idempotencia, concurrencia, auditoría y SSE; el prototipo DEV fue retirado.
+- Capas exclusivas — PR #32 desplegado en `20260723T213222Z`: altas generales y receta como modales nativos, tratamiento adaptable con acciones fijas, foco restaurado y un solo menú Más abierto; 63 escenarios Playwright/axe verdes.
 - PR 4 completado mediante #30. El siguiente bloque es Web Push privado con preferencias y horario silencioso.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.

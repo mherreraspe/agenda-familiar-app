@@ -5,24 +5,23 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `7723d3efca13f5606a0ec0f1482054079a0f17ae`.
-- Release activo: `20260723T203410Z`.
+- Commit desplegado: `8acccbaeb56753898b2724a3ba6fd37f1cc194a1`.
+- Release activo: `20260723T213222Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
 - Migraciones: V1–V9 aplicadas correctamente.
-- Último bloque: Objetos como dominio familiar persistente.
-- E2E HTTPS aprobado; 51 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
+- Último bloque: formularios modales y capas interactivas exclusivas.
+- E2E HTTPS aprobado; 63 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #30: migración V9 con objetos, ubicaciones jerárquicas e idempotencia; las tres tablas tienen RLS forzado.
-- API autenticada para buscar por nombre, categoría o lugar, crear y editar/mover objetos con control optimista de versión.
-- IDOR devuelve 404, las rutas no pueden cruzar familias y la auditoría registra altas y cambios con actor adulto.
-- `/objetos` sustituyó al prototipo DEV; responde “¿Qué estás buscando?” y muestra rutas con `›`.
-- Objetos participa en SSE familiar, reconexión y lectura ya cargada; las escrituras siguen solo en línea.
-- Verificación local: 41 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
-- CI `30042503806`: frontend y backend/PostgreSQL 18 verdes; 51 escenarios Playwright/axe aprobados.
-- Release `20260723T203410Z` saludable; V1–V9 validadas.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-7723d3e-20260723T203410Z`.
+- PR #32: las altas generales y la receta usan la capa modal nativa del navegador y bloquean el fondo.
+- El alta de tratamiento cabe en el viewport, desplaza solo el contenido y mantiene Guardar/Cancelar visibles.
+- Solo puede permanecer abierto un menú Más; pulsar fuera o Escape lo cierra y devuelve el foco.
+- Las altas de tarea, medicamento, tratamiento, perfil y objeto son mutuamente exclusivas y restauran el foco al activador.
+- Verificación local: 42 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
+- CI `30046463114`: frontend y backend/PostgreSQL 18 verdes; 63 escenarios Playwright/axe aprobados.
+- Release `20260723T213222Z` saludable; V1–V9 validadas.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-8acccba-20260723T213222Z`.
 - E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
 
 ## Siguiente bloque funcional
