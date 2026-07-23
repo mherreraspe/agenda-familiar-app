@@ -112,9 +112,9 @@ Integrado mediante los PR #13–#15, desplegado y verificado en producción:
 - [x] Filtro de persona compartido mediante Pinia; Familia y Actividad disponibles desde el avatar.
 - [x] Pantalla “Hoy” limitada a atención, tareas del día y ocurrencias; Agenda y Salud muestran sus propios dominios.
 - [x] Acción global Añadir para evento, tarea y tratamiento; Objetos permanece oculto hasta disponer de backend.
-- [ ] Convertir tarjetas repetitivas en filas compactas con una acción principal y menú Más.
-- [ ] Sustituir la carga global por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Familia y Actividad.
-- [ ] Añadir auditoría axe de accesibilidad para rutas, menús y estados.
+- [x] Tarjetas repetitivas convertidas en filas compactas con una acción principal y menú Más.
+- [x] Carga global sustituida por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Familia y Actividad.
+- [x] Auditoría axe añadida para rutas, menús y estados, sin aceptar impactos críticos o serios.
 - [x] Alta desde la interfaz de tareas, eventos, medicamentos y tratamientos.
 - [x] Completar tareas desde “Hoy”.
 - [x] Catálogo inicial de medicamento, tratamiento y evento para `familia_test`.

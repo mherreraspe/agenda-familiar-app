@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import AppShell from '../app/AppShell.vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
+import MenuMas from '../components/listas/MenuMas.vue'
 import FormularioEvento from '../features/eventos/FormularioEvento.vue'
 import { useFormularioRuta } from '../composables/useFormularioRuta'
 import { useInterfazStore } from '../stores/interfaz'
@@ -61,6 +62,9 @@ const agendaTratamientos = ref<RespuestaOcurrencias | null>(null)
 const auditoria = ref<RespuestaAuditoria | null>(null)
 const familia = ref<RespuestaFamilia | null>(null)
 const cuota = ref<RespuestaCuota | null>(null)
+const estadoVista = ref<'cargando' | 'lista' | 'error'>('cargando')
+const errorVista = ref('')
+const recursosCargados = reactive({ base: false, catalogo: false, ocurrencias: false, auditoria: false, familia: false, cuota: false })
 const formulario = ref<'tarea' | 'medicamento' | 'tratamiento' | 'perfil' | null>(null)
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
@@ -120,12 +124,18 @@ onMounted(async () => {
   try {
     await renovarSesion()
     sesionActiva.value = true
-    await cargar()
+    await cargarSeccion(props.seccion)
   } catch {
     sesionActiva.value = false
   } finally {
     restaurando.value = false
   }
+})
+
+watch(() => props.seccion, seccion => {
+  mensaje.value = ''
+  error.value = ''
+  void cargarSeccion(seccion)
 })
 
 function hora(tarea: TareaResumen) {
@@ -154,7 +164,7 @@ async function entrar() {
   try {
     await iniciarSesion(correo.value, clave.value)
     sesionActiva.value = true
-    await cargar()
+    await cargarSeccion(props.seccion, true)
     clave.value = ''
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo iniciar sesión'
@@ -163,20 +173,60 @@ async function entrar() {
   }
 }
 
-async function cargar() {
-  const [hoy, detalle, ocurrencias, historial, configuracion, almacenamiento] = await Promise.all([
-    consultarHoy(), consultarCatalogo(), consultarOcurrencias(), consultarAuditoria(), consultarConfiguracionFamilia(), consultarCuota()
-  ])
-  datos.value = hoy
-  catalogo.value = detalle
-  agendaTratamientos.value = ocurrencias
-  auditoria.value = historial
-  familia.value = configuracion
-  cuota.value = almacenamiento
+async function cargarBase(forzar = false) {
+  if (recursosCargados.base && !forzar) return
+  datos.value = await consultarHoy()
+  recursosCargados.base = true
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
   if (!nuevoTratamiento.perfilId && datos.value.perfiles.length) nuevoTratamiento.perfilId = datos.value.perfiles[0].id
+}
+
+async function cargarCatalogo(forzar = false) {
+  if (recursosCargados.catalogo && !forzar) return
+  catalogo.value = await consultarCatalogo()
+  recursosCargados.catalogo = true
+}
+
+async function cargarOcurrencias(forzar = false) {
+  if (recursosCargados.ocurrencias && !forzar) return
+  agendaTratamientos.value = await consultarOcurrencias()
+  recursosCargados.ocurrencias = true
+}
+
+async function cargarAuditoria(forzar = false) {
+  if (recursosCargados.auditoria && !forzar) return
+  auditoria.value = await consultarAuditoria()
+  recursosCargados.auditoria = true
+}
+
+async function cargarFamilia(forzar = false) {
+  if (recursosCargados.familia && !forzar) return
+  familia.value = await consultarConfiguracionFamilia()
+  recursosCargados.familia = true
+}
+
+async function cargarCuota(forzar = false) {
+  if (recursosCargados.cuota && !forzar) return
+  cuota.value = await consultarCuota()
+  recursosCargados.cuota = true
+}
+
+async function cargarSeccion(seccion: SeccionPrincipal, forzar = false) {
+  estadoVista.value = 'cargando'
+  errorVista.value = ''
+  try {
+    if (seccion === 'hoy') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar), cargarOcurrencias(forzar)])
+    if (seccion === 'agenda') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar)])
+    if (seccion === 'salud') await Promise.all([cargarBase(forzar), cargarCatalogo(forzar), cargarOcurrencias(forzar), cargarCuota(forzar)])
+    if (seccion === 'familia') await Promise.all([cargarBase(forzar), cargarFamilia(forzar)])
+    if (seccion === 'actividad') await Promise.all([cargarBase(forzar), cargarAuditoria(forzar)])
+    estadoVista.value = 'lista'
+  } catch (causa) {
+    errorVista.value = causa instanceof Error ? causa.message : 'No se pudo cargar esta sección.'
+    estadoVista.value = 'error'
+  }
 }
 
 async function marcarHecho(tarea: TareaResumen) {
@@ -184,7 +234,7 @@ async function marcarHecho(tarea: TareaResumen) {
   try {
     await completarTarea(tarea.id)
     mensaje.value = `${tarea.titulo} quedó marcado como hecho.`
-    await cargar()
+    await cargarBase(true)
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo completar la tarea'
   }
@@ -206,7 +256,7 @@ async function guardarTarea() {
     nuevaTarea.hasta = ''
     formulario.value = null
     mensaje.value = 'La tarea fue agregada.'
-    await cargar()
+    await cargarBase(true)
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo guardar la tarea'
   } finally {
@@ -221,7 +271,7 @@ async function guardarMedicamento() {
       fechaVencimiento: nuevoMedicamento.fechaVencimiento || undefined
     })
     Object.assign(nuevoMedicamento, { nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
-  }, 'El medicamento fue agregado.')
+  }, 'El medicamento fue agregado.', () => cargarCatalogo(true))
 }
 
 async function guardarTratamiento() {
@@ -251,7 +301,7 @@ async function guardarTratamiento() {
     }
     Object.assign(nuevoTratamiento, { perfilId: nuevoTratamiento.perfilId, medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
     recetaSeleccionada.value = null
-  }, 'El tratamiento fue agregado.')
+  }, 'El tratamiento fue agregado.', () => Promise.all([cargarCatalogo(true), cargarOcurrencias(true), cargarCuota(true)]).then(() => undefined))
   if (avisoReceta) mensaje.value = avisoReceta
 }
 
@@ -297,7 +347,7 @@ async function agregarReceta(evento: Event, tratamientoId: string) {
     validarImagenReceta(archivo)
     await subirReceta(tratamientoId, await reducirImagenReceta(archivo))
     mensaje.value = 'La fotografía de receta fue guardada de forma privada.'
-    await cargar()
+    await Promise.all([cargarCatalogo(true), cargarCuota(true)])
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo guardar la receta'
   } finally {
@@ -319,7 +369,7 @@ async function borrarReceta(archivoId: string) {
     cerrarRecetaVisible()
     await eliminarReceta(archivoId)
     mensaje.value = 'La fotografía de receta fue eliminada.'
-    await cargar()
+    await Promise.all([cargarCatalogo(true), cargarCuota(true)])
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo eliminar la receta'
   } finally {
@@ -335,7 +385,7 @@ async function eventoGuardado() {
   modificadoEvento.value = false
   await cerrarFormularioEvento(true)
   mensaje.value = 'El evento fue agregado.'
-  await cargar()
+  await cargarCatalogo(true)
 }
 
 async function resolverOcurrencia(ocurrencia: OcurrenciaResumen, estado: Exclude<EstadoOcurrencia, 'PENDIENTE'>) {
@@ -358,12 +408,19 @@ async function resolverOcurrencia(ocurrencia: OcurrenciaResumen, estado: Exclude
   try {
     await cambiarEstadoOcurrencia(ocurrencia.id, estado, pospuestaA)
     mensaje.value = `${ocurrencia.tratamiento} quedó ${estado.toLowerCase()}.`
-    await cargar()
+    await cargarOcurrencias(true)
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo resolver la ocurrencia'
   } finally {
     cargando.value = false
   }
+}
+
+function accionOcurrencia(ocurrencia: OcurrenciaResumen, accion: string) {
+  const estados: Record<string, Exclude<EstadoOcurrencia, 'PENDIENTE'>> = {
+    omitir: 'OMITIDA', posponer: 'POSPUESTA', reprogramar: 'REPROGRAMADA', cancelar: 'CANCELADA'
+  }
+  if (estados[accion]) void resolverOcurrencia(ocurrencia, estados[accion])
 }
 
 async function cerrarTratamientoActivo(tratamiento: RespuestaCatalogo['tratamientos'][number]) {
@@ -374,12 +431,17 @@ async function cerrarTratamientoActivo(tratamiento: RespuestaCatalogo['tratamien
   try {
     await cerrarTratamiento(tratamiento.id, motivo)
     mensaje.value = `${tratamiento.medicamento} quedó cerrado.`
-    await cargar()
+    await Promise.all([cargarCatalogo(true), cargarOcurrencias(true)])
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo cerrar el tratamiento'
   } finally {
     cargando.value = false
   }
+}
+
+function accionTratamiento(tratamiento: RespuestaCatalogo['tratamientos'][number], accion: string) {
+  if (accion === 'eliminar-receta' && tratamiento.recetaId) void borrarReceta(tratamiento.recetaId)
+  if (accion === 'cerrar') void cerrarTratamientoActivo(tratamiento)
 }
 
 async function resolverDesdeRevision(elemento: ElementoRevision, estado?: Exclude<EstadoOcurrencia, 'PENDIENTE'>) {
@@ -393,12 +455,19 @@ async function resolverDesdeRevision(elemento: ElementoRevision, estado?: Exclud
   try {
     await cerrarElementoRevision(elemento.id)
     mensaje.value = `${elemento.titulo} quedó cerrado.`
-    await cargar()
+    await cargarOcurrencias(true)
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo cerrar el elemento'
   } finally {
     cargando.value = false
   }
+}
+
+function accionRevision(elemento: ElementoRevision, accion: string) {
+  const estados: Record<string, Exclude<EstadoOcurrencia, 'PENDIENTE'>> = {
+    omitir: 'OMITIDA', posponer: 'POSPUESTA', reprogramar: 'REPROGRAMADA', cancelar: 'CANCELADA'
+  }
+  if (estados[accion]) void resolverDesdeRevision(elemento, estados[accion])
 }
 
 async function resolverAgenda(entidad: 'tareas' | 'eventos', elemento: { id: string; titulo: string }, accion: 'OMITIR' | 'REPROGRAMAR') {
@@ -418,12 +487,18 @@ async function resolverAgenda(entidad: 'tareas' | 'eventos', elemento: { id: str
   try {
     await actuarAgenda(entidad, elemento.id, accion, fechaNueva)
     mensaje.value = `${elemento.titulo} quedó ${accion === 'OMITIR' ? 'omitido' : 'reprogramado'} sin borrar su historial.`
-    await cargar()
+    if (entidad === 'tareas') await cargarBase(true)
+    else await cargarCatalogo(true)
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo actualizar la agenda'
   } finally {
     cargando.value = false
   }
+}
+
+function accionAgenda(entidad: 'tareas' | 'eventos', elemento: { id: string; titulo: string }, accion: string) {
+  if (accion === 'omitir') void resolverAgenda(entidad, elemento, 'OMITIR')
+  if (accion === 'reprogramar') void resolverAgenda(entidad, elemento, 'REPROGRAMAR')
 }
 
 function abrirPerfil(perfil?: RespuestaFamilia['perfiles'][number]) {
@@ -448,17 +523,17 @@ async function guardarPerfil() {
     if (perfilEditadoId.value) await actualizarPerfil(perfilEditadoId.value, datosPerfil)
     else await crearPerfil(datosPerfil)
     perfilEditadoId.value = null
-  }, 'La configuración familiar fue actualizada.')
+  }, 'La configuración familiar fue actualizada.', () => Promise.all([cargarFamilia(true), cargarBase(true)]).then(() => undefined))
 }
 
-async function ejecutarGuardado(accion: () => Promise<void>, confirmacion: string) {
+async function ejecutarGuardado(accion: () => Promise<void>, confirmacion: string, recargar: () => Promise<void>) {
   cargando.value = true
   error.value = ''
   try {
     await accion()
     formulario.value = null
     mensaje.value = confirmacion
-    await cargar()
+    await recargar()
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo guardar la información'
   } finally {
@@ -476,6 +551,7 @@ async function salir() {
     auditoria.value = null
     familia.value = null
     cuota.value = null
+    Object.keys(recursosCargados).forEach(recurso => { recursosCargados[recurso as keyof typeof recursosCargados] = false })
     cerrarRecetaVisible()
     sesionActiva.value = false
     mensaje.value = ''
@@ -518,7 +594,13 @@ async function salir() {
       @anadir="abrirAlta"
       @salir="salir"
     >
-      <section v-if="seccion !== 'familia' && seccion !== 'actividad'" class="miembros" aria-label="Filtrar agenda por persona">
+      <p v-if="estadoVista === 'cargando'" class="estado-carga" role="status">Cargando {{ tituloPantalla.toLowerCase() }}…</p>
+      <div v-else-if="estadoVista === 'error'" class="estado-error" role="alert">
+        <p>{{ errorVista }}</p>
+        <button type="button" class="boton-secundario" @click="cargarSeccion(seccion, true)">Reintentar</button>
+      </div>
+      <template v-else>
+        <section v-if="seccion !== 'familia' && seccion !== 'actividad'" class="miembros" aria-label="Filtrar agenda por persona">
         <button type="button" :class="{ activo: filtroPerfil === 'TODOS' }" :aria-pressed="filtroPerfil === 'TODOS'" @click="filtroPerfil = 'TODOS'">Todos</button>
         <button v-for="perfil in datos?.perfiles" :key="perfil.id" type="button"
           :class="{ activo: filtroPerfil === perfil.id }" :aria-pressed="filtroPerfil === perfil.id"
@@ -567,11 +649,12 @@ async function salir() {
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.programadaEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ ocurrencia.tratamiento }}</h3><p>Para {{ ocurrencia.persona }}</p></div>
           <div class="acciones-ocurrencia">
-            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'TOMADA')">Tomada</button>
-            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'OMITIDA')">Omitir</button>
-            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'POSPUESTA')">Posponer 30 min</button>
-            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'REPROGRAMADA')">Reprogramar</button>
-            <button type="button" class="boton-secundario" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'CANCELADA')">Cancelar</button>
+            <button type="button" class="boton-accion" :disabled="cargando" @click="resolverOcurrencia(ocurrencia, 'TOMADA')">Tomada</button>
+            <MenuMas
+              :acciones="[{ id: 'omitir', etiqueta: 'Omitir' }, { id: 'posponer', etiqueta: 'Posponer 30 min' }, { id: 'reprogramar', etiqueta: 'Reprogramar' }, { id: 'cancelar', etiqueta: 'Cancelar', peligrosa: true }]"
+              :etiqueta="`Más acciones para ${ocurrencia.tratamiento}`"
+              @seleccionar="accionOcurrencia(ocurrencia, $event)"
+            />
           </div>
         </article>
         <p v-if="!ocurrenciasPendientes.length" class="estado-vacio">No hay ocurrencias pendientes para este filtro.</p>
@@ -594,19 +677,20 @@ async function salir() {
         <article v-for="evento in eventosAtrasados" :key="`revisar-${evento.id}`" class="tarjeta tarjeta--atrasado">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>Evento pendiente de revisión</p><small v-if="evento.recurrente">Recurrente</small></div>
-          <div class="acciones-ocurrencia"><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'OMITIR')">Omitir</button><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'REPROGRAMAR')">Reprogramar</button></div>
+          <MenuMas :acciones="[{ id: 'omitir', etiqueta: 'Omitir' }, { id: 'reprogramar', etiqueta: 'Reprogramar' }]" :etiqueta="`Más acciones para ${evento.titulo}`" @seleccionar="accionAgenda('eventos', evento, $event)" />
         </article>
         <article v-for="elemento in elementosRevision" :key="elemento.id" class="tarjeta tarjeta--atrasado">
           <time v-if="elemento.fecha">{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(elemento.fecha)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ elemento.titulo }}</h3><p>{{ elemento.motivo.replaceAll('_', ' ').toLowerCase() }}</p></div>
           <div v-if="elemento.origen === 'OCURRENCIA'" class="acciones-ocurrencia">
-            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'TOMADA')">Tomada</button>
-            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'OMITIDA')">Omitir</button>
-            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'POSPUESTA')">Posponer 30 min</button>
-            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'REPROGRAMADA')">Reprogramar</button>
-            <button type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento, 'CANCELADA')">Cancelar</button>
+            <button type="button" class="boton-accion" @click="resolverDesdeRevision(elemento, 'TOMADA')">Tomada</button>
+            <MenuMas
+              :acciones="[{ id: 'omitir', etiqueta: 'Omitir' }, { id: 'posponer', etiqueta: 'Posponer 30 min' }, { id: 'reprogramar', etiqueta: 'Reprogramar' }, { id: 'cancelar', etiqueta: 'Cancelar', peligrosa: true }]"
+              :etiqueta="`Más acciones para ${elemento.titulo}`"
+              @seleccionar="accionRevision(elemento, $event)"
+            />
           </div>
-          <button v-else type="button" class="boton-secundario" @click="resolverDesdeRevision(elemento)">Cerrar</button>
+          <button v-else type="button" class="boton-accion" @click="resolverDesdeRevision(elemento)">Cerrar</button>
         </article>
         <p v-if="!elementosRevision.length && !atrasadas.length && !eventosAtrasados.length" class="estado-vacio">No hay elementos por revisar.</p>
       </section>
@@ -616,7 +700,7 @@ async function salir() {
         <article v-for="evento in eventosFiltrados" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p><small v-if="evento.recurrente">Recurrente</small></div>
-          <div class="acciones-ocurrencia"><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'OMITIR')">Omitir</button><button type="button" class="boton-secundario" @click="resolverAgenda('eventos', evento, 'REPROGRAMAR')">Reprogramar</button></div>
+          <MenuMas :acciones="[{ id: 'omitir', etiqueta: 'Omitir' }, { id: 'reprogramar', etiqueta: 'Reprogramar' }]" :etiqueta="`Más acciones para ${evento.titulo}`" @seleccionar="accionAgenda('eventos', evento, $event)" />
         </article>
       </section>
 
@@ -624,7 +708,7 @@ async function salir() {
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--verde">Cuidado</span><h2>Tratamientos</h2></div><button type="button" class="boton-secundario" @click="formulario = 'tratamiento'">Agregar</button></div>
         <article v-for="tratamiento in tratamientosFiltrados" :key="tratamiento.id" class="tarjeta">
           <div class="tarjeta__contenido"><h3>{{ tratamiento.persona }} · {{ tratamiento.medicamento }}</h3><p>Responsable: {{ tratamiento.responsable }}<span v-if="tratamiento.responsableAlternativo"> · alternativo: {{ tratamiento.responsableAlternativo }}</span></p><p>{{ tratamiento.intervaloHoras ? `Cada ${tratamiento.intervaloHoras} h desde ${tratamiento.horarios[0]}` : `Horarios: ${tratamiento.horarios.join(', ')}` }}</p><p v-if="tratamiento.dosisIndicada || tratamiento.frecuencia">{{ [tratamiento.dosisIndicada, tratamiento.frecuencia].filter(Boolean).join(' · ') }}</p><small v-if="tratamiento.indicacion">{{ tratamiento.indicacion }}</small></div>
-          <div class="acciones-ocurrencia"><span class="estado">{{ tratamiento.estado }}</span><label v-if="!tratamiento.recetaId" class="boton-secundario boton-archivo">Agregar receta<input type="file" accept="image/jpeg,image/png" capture="environment" :disabled="cargando" @change="agregarReceta($event, tratamiento.id)" /></label><button v-if="tratamiento.recetaId" type="button" class="boton-secundario" :disabled="cargando" @click="verReceta(tratamiento.recetaId)">Ver receta</button><button v-if="tratamiento.recetaId" type="button" class="boton-secundario" :disabled="cargando" @click="borrarReceta(tratamiento.recetaId)">Eliminar receta</button><button v-if="tratamiento.estado === 'ACTIVO'" type="button" class="boton-secundario" :disabled="cargando" @click="cerrarTratamientoActivo(tratamiento)">Cerrar</button></div>
+          <div class="acciones-ocurrencia"><span class="estado">{{ tratamiento.estado }}</span><label v-if="!tratamiento.recetaId" class="boton-accion boton-archivo">Agregar receta<input type="file" accept="image/jpeg,image/png" capture="environment" :disabled="cargando" @change="agregarReceta($event, tratamiento.id)" /></label><button v-if="tratamiento.recetaId" type="button" class="boton-accion" :disabled="cargando" @click="verReceta(tratamiento.recetaId)">Ver receta</button><MenuMas v-if="tratamiento.recetaId || tratamiento.estado === 'ACTIVO'" :acciones="[{ id: 'eliminar-receta', etiqueta: 'Eliminar receta', peligrosa: true }, { id: 'cerrar', etiqueta: 'Finalizar tratamiento', peligrosa: true }].filter(accion => (accion.id !== 'eliminar-receta' || tratamiento.recetaId) && (accion.id !== 'cerrar' || tratamiento.estado === 'ACTIVO'))" :etiqueta="`Más acciones para ${tratamiento.medicamento}`" @seleccionar="accionTratamiento(tratamiento, $event)" /></div>
         </article>
         <p class="aviso-medico">La aplicación conserva el texto ingresado por la familia; no calcula ni recomienda dosis.</p>
       </section>
@@ -669,7 +753,8 @@ async function salir() {
           <button v-if="familia?.puedeAdministrar" type="button" class="boton-secundario" @click="abrirPerfil(perfil)">Editar</button>
         </article>
         <p v-if="!familia?.puedeAdministrar" class="estado-vacio">Solo un administrador familiar puede cambiar perfiles y permisos.</p>
-      </section>
+        </section>
+      </template>
     </AppShell>
 
     <FormularioEvento
