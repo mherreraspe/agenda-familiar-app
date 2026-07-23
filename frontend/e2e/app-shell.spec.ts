@@ -89,6 +89,7 @@ test('los menús de cabecera son mutuamente exclusivos', async ({ page }) => {
 
 test('mantiene Familia y Actividad fuera de la navegación principal', async ({ page }) => {
   await page.goto('/salud')
+  await expect(page.getByRole('heading', { name: 'Ocurrencias' })).toBeVisible()
   await page.locator('button[aria-label="Abrir menú de familia"]').click()
   await page.getByRole('link', { name: 'Familia y permisos' }).click()
   await expect(page).toHaveURL(/\/ajustes\/familia$/)
