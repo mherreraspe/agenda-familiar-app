@@ -159,7 +159,7 @@ public class ServicioAdministracionPlataforma {
 
     private MiembroActual miembroActual(Long familiaInterna, UUID perfilId) {
         List<MiembroActual> filas = jdbc.query("""
-                SELECT m.id, m.usuario_publico_id, m.rol, m.activo
+                SELECT p.id, m.usuario_publico_id, m.rol, m.activo
                 FROM perfiles p
                 JOIN miembros_familia m ON m.familia_id=p.familia_id AND m.usuario_publico_id=p.usuario_publico_id
                 WHERE p.familia_id=? AND p.id_publico=?

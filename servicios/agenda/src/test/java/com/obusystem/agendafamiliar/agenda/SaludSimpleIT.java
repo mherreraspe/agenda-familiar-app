@@ -99,7 +99,7 @@ class SaludSimpleIT {
                 });
         assertThat(jdbc.queryForObject("SELECT estado FROM ocurrencias_tratamiento WHERE familia_id=? AND id_publico=?",
                 String.class, familiaId, ocurrenciaResuelta)).isEqualTo("TOMADA");
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id JOIN horarios_tratamiento h ON h.id=o.horario_id WHERE t.familia_id=? AND t.grupo_publico_id=? AND o.programada_en>=NOW() AND NOT h.activo",
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id JOIN horarios_tratamiento h ON h.id=o.horario_id WHERE t.familia_id=? AND t.grupo_publico_id=? AND o.estado='PENDIENTE' AND o.programada_en>=NOW() AND NOT h.activo",
                 Integer.class, familiaId, creado.grupoId())).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auditoria WHERE familia_id=? AND entidad='TRATAMIENTO' AND entidad_publica_id=? AND operacion='ACTUALIZAR'",
                 Integer.class, familiaId, creado.grupoId())).isEqualTo(1);
