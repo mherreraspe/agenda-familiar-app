@@ -26,7 +26,14 @@ async function prepararApi(page: Page) {
   await page.route('**/api/v1/**', async route => {
     const ruta = new URL(route.request().url()).pathname
     const responder = (datos: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(datos) })
-    if (ruta.endsWith('/autenticacion/renovar')) return responder({ accessToken: 'token-e2e', expiraEn: '2099-01-01T00:00:00Z', usuarioId: 'usuario-1', correo: 'papa@familia.test', rolPlataforma: 'ADMINISTRADOR_PLATAFORMA' })
+    if (ruta.endsWith('/autenticacion/renovar')) {
+      const pagina = new URL(page.url())
+      const tipoAcceso = pagina.searchParams.get('acceso')
+      const administrador = tipoAcceso === 'admin' || (pagina.pathname === '/admin' && tipoAcceso !== 'familia')
+      return responder({ accessToken: 'token-e2e', expiraEn: '2099-01-01T00:00:00Z', usuarioId: 'usuario-1',
+        correo: administrador ? 'propietario@example.com' : 'papa@familia.test',
+        rolPlataforma: administrador ? 'ADMINISTRADOR_PLATAFORMA' : 'USUARIO' })
+    }
     if (ruta.endsWith('/administracion/familias') && route.request().method() === 'GET') return responder({ familias: familiasAdmin })
     if (ruta.endsWith('/administracion/familias') && route.request().method() === 'POST') {
       const datos = route.request().postDataJSON() as { nombre: string; zonaHoraria: string }
@@ -73,6 +80,18 @@ async function prepararApi(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => prepararApi(page))
+
+test('deriva una sesión administrativa al panel global', async ({ page }) => {
+  await page.goto('/hoy?acceso=admin')
+  await expect(page).toHaveURL(/\/admin$/)
+  await expect(page.getByRole('heading', { name: 'Familias', exact: true })).toBeVisible()
+})
+
+test('devuelve una sesión familiar desde administración a su agenda', async ({ page }) => {
+  await page.goto('/admin?acceso=familia')
+  await expect(page).toHaveURL(/\/hoy$/)
+  await expect(page.getByRole('heading', { name: 'Todo está al día' })).toBeVisible()
+})
 
 test('administración lista y crea familias en una única capa modal', async ({ page }) => {
   await page.goto('/admin')

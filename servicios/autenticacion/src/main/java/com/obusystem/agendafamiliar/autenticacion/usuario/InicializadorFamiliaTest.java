@@ -47,12 +47,10 @@ public class InicializadorFamiliaTest implements ApplicationRunner {
         var existente = usuarios.findByCorreoIgnoreCase(correo);
         if (existente.isEmpty()) {
             Usuario nuevo = new Usuario(id, correo, claves.encode(claveInicial));
-            if (PAPA_ID.equals(id)) nuevo.hacerAdministradorPlataforma();
             usuarios.save(nuevo);
             return;
         }
         Usuario usuario = existente.get();
-        if (PAPA_ID.equals(id)) usuario.hacerAdministradorPlataforma();
         if (!claves.matches(claveInicial, usuario.getClaveHash())) {
             usuario.actualizarClave(claves.encode(claveInicial));
         }

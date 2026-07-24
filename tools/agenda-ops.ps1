@@ -1,13 +1,14 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('Resumen', 'Estado', 'Entorno', 'VerificarLocal', 'VerificarIntegracion', 'Servidor', 'Desplegar', 'E2EV5')]
+    [ValidateSet('Resumen', 'Estado', 'Entorno', 'VerificarLocal', 'VerificarIntegracion', 'Servidor', 'Desplegar', 'E2EV5', 'AdminAcceso')]
     [string]$Accion = 'Resumen',
 
     [string]$Servidor = '148.116.110.18',
     [string]$UsuarioSsh = 'ubuntu',
     [string]$RaizRemota = '/srv/agenda-familiar',
     [string]$RutaClave,
+    [string]$CorreoAdmin,
     [switch]$Detallado
 )
 
@@ -142,6 +143,18 @@ function Argumentos-Ssh {
     )
 }
 
+function Nuevo-TokenAcceso {
+    $bytes = New-Object byte[] 32
+    $generador = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $generador.GetBytes($bytes) } finally { $generador.Dispose() }
+    $aleatorio = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    $token = "$([Guid]::NewGuid()).$aleatorio"
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try { $hash = ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($token)))).Replace('-', '').ToLowerInvariant() }
+    finally { $sha.Dispose() }
+    return [PSCustomObject]@{ Token = $token; Hash = $hash }
+}
+
 function Con-ClaveSsh {
     param([scriptblock]$Operacion)
     $clave = Nueva-ClaveTemporal
@@ -216,6 +229,36 @@ switch ($Accion) {
             Get-Content -Encoding UTF8 $scriptEstado | Select-Object -Skip 1 | & ssh @argumentos $destino "sed '1s/^\xEF\xBB\xBF//; s/`r$//' | bash -s"
             if ($LASTEXITCODE -ne 0) { throw 'Falló la comprobación remota.' }
         }
+    }
+    'AdminAcceso' {
+        if ([string]::IsNullOrWhiteSpace($CorreoAdmin)) {
+            throw 'La acción AdminAcceso requiere -CorreoAdmin usuario@dominio.com.'
+        }
+        $correoNormalizado = $CorreoAdmin.Trim().ToLowerInvariant()
+        if ($correoNormalizado -notmatch '^[a-z0-9.!#$%&*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}$' -or
+                $correoNormalizado.EndsWith('.test')) {
+            throw 'Indica -CorreoAdmin con un correo real válido; no se admiten cuentas .test.'
+        }
+        $acceso = Nuevo-TokenAcceso
+        $enlaceId = [Guid]::NewGuid().ToString()
+        Con-ClaveSsh {
+            param($clave)
+            $argumentos = Argumentos-Ssh $clave
+            $destino = "$UsuarioSsh@$Servidor"
+            $scriptLocal = Join-Path $PSScriptRoot 'servidor\admin-acceso.sh'
+            $scriptRemoto = "/tmp/agenda-admin-acceso-$PID.sh"
+            try {
+                & scp @argumentos $scriptLocal "${destino}:$scriptRemoto"
+                if ($LASTEXITCODE -ne 0) { throw 'No se pudo copiar la operación administrativa.' }
+                & ssh @argumentos $destino "chmod 700 $scriptRemoto && $scriptRemoto '$RaizRemota' '$correoNormalizado' '$enlaceId' '$($acceso.Hash)'"
+                if ($LASTEXITCODE -ne 0) { throw 'No se pudo preparar el acceso administrativo.' }
+            }
+            finally {
+                & ssh @argumentos $destino "rm -f $scriptRemoto" | Out-Null
+            }
+        }
+        Write-Output "ENLACE_ADMIN=https://www.obusystem.com/activar#token=$($acceso.Token)"
+        Write-Output 'VENCE_EN=30 minutos; al usarlo se revocan las sesiones anteriores y se retira el rol global de la cuenta de prueba.'
     }
     'Desplegar' {
         $estado = @(Invocar-GitSeguro status --porcelain)
