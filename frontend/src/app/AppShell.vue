@@ -3,13 +3,16 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import IconoApp from '../components/IconoApp.vue'
 
+type TipoAlta = 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto'
+
 const props = withDefaults(defineProps<{
   titulo: string
   subtitulo: string
   familia?: string
   cantidadAtencion?: number
   etiquetaAnadir?: string
-  tipoAnadirDirecto?: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto'
+  tipoAnadirDirecto?: TipoAlta
+  tiposAnadir?: TipoAlta[]
   mostrarAnadir?: boolean
   administradorPlataforma?: boolean
   familias?: Array<{ id: string; nombre: string }>
@@ -21,9 +24,19 @@ const familiaVisible = computed(() => {
   if (!nombre || /^familia_?test$/i.test(nombre)) return 'Mi familia'
   return nombre.replaceAll('_', ' ')
 })
+const tiposAnadirVisibles = computed<TipoAlta[]>(() => props.tiposAnadir?.length
+  ? props.tiposAnadir
+  : ['evento', 'tarea', 'objeto', 'tratamiento'])
+const etiquetaTipoAlta: Record<TipoAlta, string> = {
+  evento: 'Evento, cita o salida',
+  tarea: 'Tarea',
+  objeto: 'Objeto',
+  tratamiento: 'Tratamiento',
+  medicamento: 'Medicamento'
+}
 
 const emit = defineEmits<{
-  anadir: [tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto']
+  anadir: [tipo: TipoAlta]
   salir: []
   cambiarFamilia: [familiaId: string]
 }>()
@@ -60,7 +73,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', cerrarConEscape)
 })
 
-function anadir(tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto') {
+function anadir(tipo: TipoAlta) {
   cerrarMenus()
   emit('anadir', tipo)
 }
@@ -98,10 +111,7 @@ function activarAnadir() {
             <button type="button" class="boton-anadir" :aria-controls="tipoAnadirDirecto ? undefined : 'menu-anadir'" :aria-expanded="tipoAnadirDirecto ? undefined : menuAbierto === 'anadir'" @click="activarAnadir"><IconoApp nombre="anadir" /> <span>{{ etiquetaAnadir || 'Añadir' }}</span></button>
             <button v-if="menuAbierto === 'anadir'" type="button" class="menu-desplegable__velo" aria-label="Cerrar menú" @click="cerrarMenus"></button>
             <div v-if="menuAbierto === 'anadir'" id="menu-anadir" class="menu-desplegable__panel" aria-label="¿Qué deseas añadir?">
-              <button type="button" @click="anadir('evento')">Evento</button>
-              <button type="button" @click="anadir('tarea')">Tarea o recordatorio</button>
-              <button type="button" @click="anadir('objeto')">Objeto</button>
-              <button type="button" @click="anadir('tratamiento')">Tratamiento</button>
+              <button v-for="tipo in tiposAnadirVisibles" :key="tipo" type="button" @click="anadir(tipo)">{{ etiquetaTipoAlta[tipo] }}</button>
             </div>
           </div>
 

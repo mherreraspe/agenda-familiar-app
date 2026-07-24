@@ -209,12 +209,13 @@ const subtituloPantalla = computed(() => ({
   objetos: 'Encuentra lo que guardó tu familia', familia: 'Personas, cuentas y permisos', actividad: 'Historial de cambios familiares'
 })[props.seccion])
 const tipoAnadirCabecera = computed<TipoAlta | undefined>(() => {
-  if (props.seccion === 'agenda') return 'evento'
   if (props.seccion === 'objetos') return 'objeto'
   if (props.seccion === 'salud' && seccionSalud.value === 'tratamientos') return 'tratamiento'
   if (props.seccion === 'salud' && seccionSalud.value === 'botiquin') return 'medicamento'
   return undefined
 })
+const tiposAnadirCabecera = computed<TipoAlta[] | undefined>(() =>
+  props.seccion === 'agenda' ? ['tarea', 'evento'] : undefined)
 const etiquetaAnadirCabecera = computed(() => tipoAnadirCabecera.value
   ? ({ evento: 'Evento', tarea: 'Tarea', tratamiento: 'Tratamiento', medicamento: 'Medicamento', objeto: 'Objeto' })[tipoAnadirCabecera.value]
   : 'Añadir')
@@ -324,6 +325,12 @@ function hora(tarea: TareaResumen) {
   return new Intl.DateTimeFormat('es-PE', {
     weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos.value?.zonaHoraria ?? 'America/Lima'
   }).format(new Date(tarea.fechaLimite))
+}
+
+function presentacionEvento(tipo?: string) {
+  if (tipo === 'CITA') return { etiqueta: 'Cita', clase: 'tipo-entrada--cita', simbolo: '●' }
+  if (tipo === 'SALIDA') return { etiqueta: 'Salida', clase: 'tipo-entrada--salida', simbolo: '⌖' }
+  return { etiqueta: 'Evento', clase: 'tipo-entrada--evento', simbolo: '▣' }
 }
 
 function claveFecha(valor: string) {
@@ -967,6 +974,7 @@ async function salir() {
       :cantidad-atencion="cantidadRevision"
       :etiqueta-anadir="etiquetaAnadirCabecera"
       :tipo-anadir-directo="tipoAnadirCabecera"
+      :tipos-anadir="tiposAnadirCabecera"
       :mostrar-anadir="mostrarAnadirCabecera"
       :administrador-plataforma="administradorPlataforma"
       :familias="familiasUsuario"
@@ -1107,7 +1115,10 @@ async function salir() {
         <div class="titulo-seccion"><div><span class="etiqueta etiqueta--arena">Calendario</span><h2>Próximos eventos</h2></div></div>
         <article v-for="evento in eventosFiltrados" :key="evento.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(evento.inicioEn)) }}</time>
-          <div class="tarjeta__contenido"><h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p><small v-if="evento.recurrente">Recurrente</small></div>
+          <div class="tarjeta__contenido">
+            <span class="tipo-entrada" :class="presentacionEvento(evento.tipo).clase"><span aria-hidden="true">{{ presentacionEvento(evento.tipo).simbolo }}</span> {{ presentacionEvento(evento.tipo).etiqueta }}</span>
+            <h3>{{ evento.titulo }}</h3><p>{{ [evento.persona, evento.lugar].filter(Boolean).join(' · ') || 'Sin persona ni lugar asignados' }}</p><small v-if="evento.recurrente">Recurrente</small>
+          </div>
           <MenuMas :acciones="[{ id: 'omitir', etiqueta: 'Omitir' }, { id: 'reprogramar', etiqueta: 'Reprogramar' }]" :etiqueta="`Más acciones para ${evento.titulo}`" @seleccionar="accionAgenda('eventos', evento, $event)" />
         </article>
       </section>

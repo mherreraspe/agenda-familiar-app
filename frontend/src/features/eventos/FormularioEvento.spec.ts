@@ -70,6 +70,22 @@ describe('FormularioEvento', () => {
     wrapper.unmount()
   })
 
+  it('ofrece cita y salida como tipos visibles y conserva la selección', async () => {
+    const wrapper = montar()
+    await flushPromises()
+    expect(wrapper.get('#evento-tipo').isVisible()).toBe(true)
+    expect(wrapper.get('#evento-tipo').findAll('option').map(opcion => opcion.text()))
+      .toContain('Cita')
+    await wrapper.get('#evento-titulo').setValue('Control dental')
+    await wrapper.get('#evento-inicio').setValue('2099-07-19T10:00')
+    await wrapper.get('#evento-tipo').setValue('CITA')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(crearEvento).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'CITA' }))
+    wrapper.unmount()
+  })
+
   it('consulta desde dos caracteres, espera 275 ms y limita a tres sugerencias', async () => {
     vi.useFakeTimers()
     vi.mocked(consultarSugerencias).mockResolvedValue({

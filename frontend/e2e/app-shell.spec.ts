@@ -4,6 +4,15 @@ import AxeBuilder from '@axe-core/playwright'
 async function prepararApi(page: Page) {
   const perfil = { id: 'perfil-1', nombre: 'Mamá', tipo: 'ADULTO', color: '#315b4c', relacion: 'Mamá' }
   const perfilHijo = { id: 'perfil-2', nombre: 'Alessio', tipo: 'DEPENDIENTE', color: '#b57b35', relacion: 'Hijo' }
+  const manana = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  const tareas = [{ id: 'tarea-1', perfilId: perfil.id, titulo: 'Comprar ingredientes', descripcion: 'Para la cena',
+    responsable: 'Mamá', fechaLimite: manana, estado: 'PENDIENTE', recurrente: false }]
+  const eventos = [
+    { id: 'evento-cita', perfilId: perfil.id, persona: 'Mamá', titulo: 'Control dental', tipo: 'CITA',
+      lugar: 'Clínica familiar', inicioEn: manana, estado: 'PROGRAMADO', recurrente: false },
+    { id: 'evento-salida', perfilId: perfilHijo.id, persona: 'Alessio', titulo: 'Visita al museo', tipo: 'SALIDA',
+      lugar: 'Museo de Arte', inicioEn: manana, estado: 'PROGRAMADO', recurrente: false }
+  ]
   const tratamientos = Array.from({ length: 6 }, (_, indice) => ({
     id: `tratamiento-${indice}`, grupoId: `grupo-${indice}`, perfilId: perfil.id, persona: 'Mamá', medicamento: `Tratamiento ${indice + 1}`,
     responsablePerfilId: perfil.id, responsable: 'Mamá', horarios: ['08:00:00'], fechaInicio: '2026-07-23',
@@ -78,8 +87,8 @@ async function prepararApi(page: Page) {
     if (ruta.endsWith('/autenticacion/enlaces/consultar')) return responder({ tipo: 'INVITACION', correo: 'p***@example.com', familia: 'Familia Herrera', expiraEn: '2099-01-01T00:00:00Z' })
     if (ruta.endsWith('/autenticacion/enlaces/consumir')) return route.fulfill({ status: 204, body: '' })
     if (ruta === '/api/v1/familias') return responder({ familias: [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', rol: 'ADMINISTRADOR_FAMILIAR' }] })
-    if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil, perfilHijo], tareas: [] })
-    if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos: [], lugares: [] })
+    if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil, perfilHijo], tareas })
+    if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos, lugares: [] })
     if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: historialTomas, revisar: [] })
     if (ruta.endsWith('/auditoria')) return responder({ entradas: [] })
     if (ruta.endsWith('/configuracion')) return responder({ puedeAdministrar: true, perfiles: [{ ...perfil, activo: true, permiso: 'ADMINISTRADOR_FAMILIAR' }] })
@@ -191,6 +200,15 @@ test('navega por destinos reales y muestra solo el dominio activo', async ({ pag
   await expect(page).toHaveURL(/\/agenda$/)
   await expect(page.getByRole('link', { name: 'Agenda' })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('heading', { name: 'Próximos eventos' })).toBeVisible()
+  await expect(page.locator('.tipo-entrada--tarea')).toContainText('Tarea')
+  await expect(page.locator('.tipo-entrada--cita')).toContainText('Cita')
+  await expect(page.locator('.tipo-entrada--salida')).toContainText('Salida')
+  const anadirAgenda = page.getByRole('button', { name: 'Añadir', exact: true })
+  await anadirAgenda.click()
+  await expect(page.getByRole('button', { name: 'Tarea', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Evento, cita o salida', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Objeto', exact: true })).toHaveCount(0)
+  await page.keyboard.press('Escape')
   await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Salud' }).click()
@@ -198,6 +216,34 @@ test('navega por destinos reales y muestra solo el dominio activo', async ({ pag
   await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Tratamientos' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Próximos eventos' })).toHaveCount(0)
+})
+
+test('Agenda diferencia tareas, citas y salidas y permite crear ambos dominios', async ({ page }) => {
+  await page.goto('/agenda')
+  await expect(page.locator('.tipo-entrada--tarea')).toContainText('Tarea')
+  await expect(page.locator('.tipo-entrada--cita')).toContainText('Cita')
+  await expect(page.locator('.tipo-entrada--salida')).toContainText('Salida')
+
+  const anadir = page.getByRole('button', { name: 'Añadir', exact: true })
+  await anadir.click()
+  await expect(page.getByRole('button', { name: 'Tarea', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Evento, cita o salida', exact: true }).click()
+
+  const dialogoEvento = page.getByRole('dialog', { name: 'Nuevo evento' })
+  await expect(dialogoEvento).toBeVisible()
+  await expect(dialogoEvento.getByLabel('Tipo o categoría')).toBeVisible()
+  await dialogoEvento.getByLabel('Tipo o categoría').selectOption('CITA')
+  await expect(dialogoEvento.getByLabel('Tipo o categoría')).toHaveValue('CITA')
+  const accesibilidad = await new AxeBuilder({ page }).include('dialog').analyze()
+  expect(accesibilidad.violations.filter(item => item.impact === 'critical' || item.impact === 'serious')).toEqual([])
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog', { name: '¿Descartar los cambios?' }).getByRole('button', { name: 'Descartar' }).click()
+  await expect(dialogoEvento).toBeHidden()
+
+  await anadir.click()
+  await page.getByRole('button', { name: 'Tarea', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Nueva tarea' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 
 test('mantiene Por resolver como vista separada de Hoy', async ({ page }) => {
@@ -384,7 +430,7 @@ test('todas las altas generales son modales, exclusivas y restauran el foco', as
   await page.goto('/hoy')
   const anadir = page.locator('button.boton-anadir')
   await anadir.click()
-  await page.getByRole('button', { name: 'Tarea o recordatorio', exact: true }).click()
+  await page.getByRole('button', { name: 'Tarea', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Nueva tarea' })).toBeVisible()
   expect(await page.locator('dialog:modal').count()).toBe(1)
   await page.keyboard.press('Escape')
@@ -526,7 +572,7 @@ test('avisa cuando no hay conexión y mantiene las altas solo en línea', async 
 
   await expect(page.getByText(/Sin conexión: puedes consultar lo ya cargado/)).toBeVisible()
   await page.locator('button.boton-anadir').click()
-  await page.getByRole('button', { name: 'Evento', exact: true }).click()
+  await page.getByRole('button', { name: 'Evento, cita o salida', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Vuelve a estar en línea')
   await expect(page.locator('.formulario-adaptativo')).not.toBeVisible()
   await context.setOffline(false)
