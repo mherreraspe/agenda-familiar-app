@@ -7,8 +7,9 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Completar tarea | Hoy / Agenda | Checkbox | Más | `actuarAgenda(..., COMPLETAR)` | Vitest / E2E |
 | Omitir tarea | Agenda / Más | — | Menú Más | `actuarAgenda(..., OMITIR)` | Vitest |
 | Reprogramar tarea | Agenda / Más | — | Formulario | `actuarAgenda(..., REPROGRAMAR)` | E2E |
-| Crear tarea | Agenda / Añadir | Guardar | — | `crearTarea` | E2E |
-| Crear evento | Agenda / Añadir | Guardar | — | `crearEvento` | Vitest / E2E |
+| Crear tarea | Agenda / Añadir / Tarea | Guardar | — | `crearTarea` | Vitest / E2E |
+| Crear evento, cita o salida | Agenda / Añadir / Evento, cita o salida | Guardar | Tipo o categoría visible | `crearEvento` | Vitest / E2E |
+| Distinguir tarea de evento | Agenda / Tarjeta | Insignia textual y símbolo; `Hecho` solo en tarea | Color de apoyo | `consultarHoy`, `consultarCatalogo` | E2E / axe |
 | Omitir evento | Agenda / Más | — | Menú Más | `actuarAgenda(..., OMITIR)` | Vitest |
 | Reprogramar evento | Agenda / Más | — | Formulario | `actuarAgenda(..., REPROGRAMAR)` | E2E |
 | Marcar toma | Hoy / Salud | Tomada | — | `cambiarEstadoOcurrencia` | E2E |
@@ -59,6 +60,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Familia activa — PR #40 desplegado en `20260724T025339Z`: membresías resueltas desde el JWT bajo RLS, sin UUID fijo; selección automática o cambio en el menú, con limpieza de datos y SSE; 78 escenarios Playwright/axe completados.
 - Salud práctica — PR #42 desplegado en `20260724T051336Z`: tratamiento grupal con horarios guiados y receta compartida, Hoy/Por resolver separados, envases independientes y vigencia por vencimiento o apertura; V12/RLS/índices y 87 escenarios Playwright/axe verdes.
 - Miembros y tratamientos — PR #44 desplegado en `20260724T111747Z`: familia administrada visible, cambio de rol y baja/reactivación con protección del último administrador; edición de tratamientos activos conservando historial y sustituyendo solo pendientes futuros; CI PostgreSQL 18 y E2E HTTPS verdes.
+- Agenda legible — PR #46 desplegado en `20260724T123957Z`: altas de tarea y evento/cita/salida, insignias de tipo sin depender solo del color, categoría visible y término `recordatorio` retirado hasta disponer de notificación; 93 escenarios Playwright/axe verdes.
 - PR 4 completado mediante #30. El siguiente bloque es Web Push privado, con avisos genéricos y detalle únicamente dentro de la PWA autenticada.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.
