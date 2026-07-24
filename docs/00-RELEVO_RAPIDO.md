@@ -5,34 +5,36 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `23e65f7cab7324ccb1ff0b62cc12771005900d67`.
-- Release activo: `20260724T123957Z`.
+- Commit desplegado: `b1518b3e681035892e5a60830d0d4e133380f04e`.
+- Release activo: `20260724T141134Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
-- Migraciones: autenticación V1–V4 y agenda V1–V12 aplicadas correctamente.
-- Último bloque: diferenciación de tareas, eventos, citas y salidas en Agenda.
-- E2E HTTPS aprobado; 93 escenarios Playwright/axe completados en 320×700, 390×844 y 1280×900.
+- Migraciones: autenticación V1–V4 y Agenda V1–V13 aplicadas correctamente.
+- Último bloque: bandeja privada y generación de avisos de tareas, eventos, salud y botiquín.
+- E2E HTTPS aprobado; 96 escenarios Playwright/axe completados en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #46: Agenda ofrece `Tarea` y `Evento, cita o salida` desde un alta contextual limitada a ese dominio.
-- Las tarjetas distinguen el tipo mediante texto, símbolo y color; las tareas conservan `Hecho` y los eventos no simulan una acción de completar.
-- El tipo o categoría del evento es visible y admite `Cita` y `Salida o visita` sin migración de base de datos.
-- `Tarea o recordatorio` se renombró a `Tarea` mientras no exista una notificación real.
-- Verificación local: 47 pruebas frontend, build Vite y 11 pruebas backend aprobadas.
-- Playwright/axe: 93 escenarios verdes en 320×700, 390×844 y 1280×900.
-- CI de PR `30092897920` y CI de `main` `30093885014`: frontend y backend verdes.
-- Release `20260724T123957Z` saludable; autenticación V1–V4 y agenda V1–V12 validadas.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-23e65f7-20260724T123957Z`.
-- La PWA adoptó el nuevo frontend tras una recarga; una pestaña abierta durante el despliegue mostró el release anterior en su primer render.
-- E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
+- PR #48: campana global y bandeja `Pulso familiar`, inferior en móvil y lateral en escritorio.
+- Leer un aviso no resuelve la tarea, evento, toma ni revisión de origen.
+- Preferencias privadas por usuario y familia para tareas, eventos, salud, botiquín y horario silencioso.
+- Las tareas pueden avisar al vencer; los eventos admiten avisos 24 h y 1 h antes.
+- El motor genera avisos deduplicados, conserva aislamiento familiar y solo entrega a membresías activas.
+- Agenda V13 añade preferencias, bandeja y suscripciones Web Push con FORCE RLS e índices por usuario.
+- La pantalla bloqueada usa siempre texto genérico; endpoints y claves de dispositivo se validan y pueden revocarse.
+- Las claves VAPID siguen vacías: la bandeja interna funciona y la activación push permanece deshabilitada con explicación visible.
+- Verificación local: 50 pruebas frontend, build Vite y 11 pruebas backend aprobadas.
+- Playwright/axe: 96 escenarios verdes; revisión real aprobada en los tres viewports.
+- CI de PR `30099653318` y CI de `main` `30099813895`: frontend y backend verdes.
+- Release `20260724T141134Z` saludable; V13 y E2E HTTPS real validados.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-b1518b3-20260724T141133Z`.
 
 ## Siguiente bloque funcional
 
-1. Implementar Web Push solo después de permiso explícito del usuario y por dispositivo autenticado.
-2. Enviar notificaciones privadas sin nombres, medicamentos ni contenido sensible en la pantalla bloqueada; abrir la PWA autenticada para ver el detalle.
-3. Aislar suscripciones por usuario y familia, permitir revocar cada dispositivo y eliminar endpoints inválidos.
-4. Mantener Hoy como bandeja operativa; las notificaciones no deben duplicar ni reemplazar sus estados de atención.
-5. Probar permisos denegados, aislamiento, renovación de suscripción, entrega duplicada y dispositivo revocado.
+1. Autorizar y configurar claves VAPID mediante el flujo protegido, sin registrarlas en Git.
+2. Probar entrega Web Push real en iPhone instalado como PWA y en un segundo dispositivo.
+3. Verificar permiso denegado, renovación de suscripción, endpoint expirado y revocación por dispositivo.
+4. Decidir si se añaden avisos de cambios familiares importantes o escalamiento opcional.
+5. Continuar con sesiones activas y revocación individual, sin mezclar este alcance con Push.
 
 ## Entrada operativa
 
