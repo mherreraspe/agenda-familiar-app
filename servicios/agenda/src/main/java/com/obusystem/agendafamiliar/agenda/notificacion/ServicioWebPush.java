@@ -12,7 +12,7 @@ import nl.martijndwars.webpush.PushService;
 
 @Service
 public class ServicioWebPush {
-    private static final String MENSAJE_GENERICO = "{\"titulo\":\"Agenda Familiar\",\"cuerpo\":\"Tienes algo por revisar.\",\"destino\":\"/hoy?avisos=1\"}";
+    private static final String MENSAJE_GENERICO = "{\"titulo\":\"Obu Familia\",\"cuerpo\":\"Tienes algo por revisar.\",\"destino\":\"/hoy?avisos=1\"}";
 
     private final String clavePublica;
     private final PushService servicio;

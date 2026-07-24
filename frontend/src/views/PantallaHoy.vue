@@ -940,16 +940,16 @@ async function salir() {
 <template>
   <main v-if="restaurando" class="acceso">
     <section class="panel-acceso panel-acceso--cargando" aria-live="polite">
-      <img src="/icono.svg" alt="" width="72" height="72" />
+      <img src="/icono-192.png" alt="" width="72" height="72" />
       <p>Recuperando tu sesión segura…</p>
     </section>
   </main>
 
   <main v-else-if="!sesionActiva" class="acceso">
     <section class="panel-acceso">
-      <img src="/icono.svg" alt="" width="72" height="72" />
-      <p class="sobretitulo">OBU System</p>
-      <h1>Ingresa a OBU System</h1>
+      <img src="/icono-192.png" alt="" width="72" height="72" />
+      <p class="sobretitulo">Obu Familia</p>
+      <h1>Ingresa a Obu Familia</h1>
       <p>Te llevaremos automáticamente al espacio que corresponde a tu cuenta.</p>
       <form @submit.prevent="entrar">
         <label>Correo<input v-model.trim="correo" type="email" autocomplete="username" required /></label>
@@ -963,7 +963,7 @@ async function salir() {
 
   <main v-else-if="!familiaActivaId" class="acceso">
     <section class="panel-acceso panel-acceso--sin-familia">
-      <img src="/icono.svg" alt="" width="72" height="72" />
+      <img src="/icono-192.png" alt="" width="72" height="72" />
       <p class="sobretitulo">Cuenta activa</p>
       <h1>Aún no tienes una familia asignada</h1>
       <p>Pide al administrador de la plataforma que agregue tu cuenta a una familia. Después, vuelve a ingresar.</p>

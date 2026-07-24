@@ -1,8 +1,8 @@
 self.addEventListener('push', (evento) => {
-  evento.waitUntil(self.registration.showNotification('Agenda Familiar', {
+  evento.waitUntil(self.registration.showNotification('Obu Familia', {
     body: 'Tienes algo por revisar.',
-    icon: '/icono.svg',
-    badge: '/icono.svg',
+    icon: '/icono-192.png',
+    badge: '/icono-192.png',
     tag: 'agenda-familiar-aviso',
     renotify: true,
     data: { destino: '/hoy?avisos=1' }

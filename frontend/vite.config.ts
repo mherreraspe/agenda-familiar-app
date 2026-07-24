@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Agenda Familiar OBU System',
-        short_name: 'Agenda Familiar',
+        name: 'Obu Familia',
+        short_name: 'Obu Familia',
         description: 'Recordatorios familiares privados y sencillos.',
         theme_color: '#315b4c',
         background_color: '#f7f4ec',
@@ -18,10 +18,28 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/icono.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            src: '/icono-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icono-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icono-maskable-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/icono-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },

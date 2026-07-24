@@ -222,22 +222,22 @@ async function salir() {
 </script>
 
 <template>
-  <main v-if="restaurando" class="acceso"><section class="panel-acceso panel-acceso--cargando" aria-live="polite"><img src="/icono.svg" alt="" width="72" height="72" /><p>Comprobando acceso administrativo…</p></section></main>
+  <main v-if="restaurando" class="acceso"><section class="panel-acceso panel-acceso--cargando" aria-live="polite"><img src="/icono-192.png" alt="" width="72" height="72" /><p>Comprobando acceso administrativo…</p></section></main>
 
   <main v-else-if="!sesionActiva" class="acceso acceso--admin">
-    <section class="panel-acceso"><img src="/icono.svg" alt="" width="72" height="72" /><p class="sobretitulo">OBU System · Administración</p><h1>Control de familias</h1><p>Ingresa con una cuenta autorizada para administrar la plataforma.</p>
+    <section class="panel-acceso"><img src="/icono-192.png" alt="" width="72" height="72" /><p class="sobretitulo">OBU System · Administración</p><h1>Control de familias</h1><p>Ingresa con una cuenta autorizada para administrar la plataforma.</p>
       <form @submit.prevent="entrar"><label>Correo<input v-model.trim="correo" type="email" autocomplete="username" required /></label><label>Contraseña<input v-model="clave" type="password" autocomplete="current-password" required /></label><button class="boton-principal" :disabled="cargando">{{ cargando ? 'Ingresando…' : 'Ingresar' }}</button></form>
-      <p v-if="error" class="error" role="alert">{{ error }}</p><RouterLink to="/hoy">Volver a Agenda Familiar</RouterLink>
+      <p v-if="error" class="error" role="alert">{{ error }}</p><RouterLink to="/hoy">Volver a Obu Familia</RouterLink>
     </section>
   </main>
 
-  <main v-else-if="!autorizado" class="acceso acceso--admin"><section class="panel-acceso panel-acceso--denegado"><p class="sobretitulo">Acceso restringido</p><h1>Esta cuenta no administra la plataforma</h1><p>Puedes continuar usando únicamente las familias a las que perteneces.</p><RouterLink class="boton-principal enlace-boton" to="/hoy">Ir a Agenda Familiar</RouterLink><button type="button" class="boton-secundario" @click="salir">Cerrar sesión</button></section></main>
+  <main v-else-if="!autorizado" class="acceso acceso--admin"><section class="panel-acceso panel-acceso--denegado"><p class="sobretitulo">Acceso restringido</p><h1>Esta cuenta no administra la plataforma</h1><p>Puedes continuar usando únicamente las familias a las que perteneces.</p><RouterLink class="boton-principal enlace-boton" to="/hoy">Ir a Obu Familia</RouterLink><button type="button" class="boton-secundario" @click="salir">Cerrar sesión</button></section></main>
 
   <main v-else class="admin-plataforma">
     <header class="admin-cabecera"><div><p class="sobretitulo">Administración de plataforma</p><h1>Familias</h1><p>Registro y acceso de los grupos familiares de OBU System.</p></div><div class="admin-cabecera__acciones"><button type="button" class="boton-principal" @click="abrir(dialogoFamilia, $event)">Nueva familia</button><button type="button" class="boton-admin-salir" @click="salir">Cerrar sesión</button></div></header>
 
     <section class="admin-registro" aria-labelledby="titulo-registro-familias">
-      <div class="admin-registro__titulo"><div><span class="etiqueta etiqueta--verde">Registro activo</span><h2 id="titulo-registro-familias">{{ familias.length }} {{ familias.length === 1 ? 'familia' : 'familias' }}</h2></div><RouterLink to="/hoy">Abrir Agenda Familiar</RouterLink></div>
+      <div class="admin-registro__titulo"><div><span class="etiqueta etiqueta--verde">Registro activo</span><h2 id="titulo-registro-familias">{{ familias.length }} {{ familias.length === 1 ? 'familia' : 'familias' }}</h2></div><RouterLink to="/hoy">Abrir Obu Familia</RouterLink></div>
       <div v-if="familias.length" class="admin-familias">
         <button v-for="familia in familias" :key="familia.id" type="button" class="admin-familia" :class="{ 'admin-familia--activa': familiaActiva?.id === familia.id }" :aria-pressed="familiaActiva?.id === familia.id" @click="seleccionarFamilia(familia)"><span class="admin-familia__marca" aria-hidden="true">F</span><span class="admin-familia__datos"><strong>{{ familia.nombre }}</strong><span>{{ familia.zonaHoraria }}</span><small>Creada {{ fecha(familia.creadaEn) }}</small></span><span class="estado">{{ familiaActiva?.id === familia.id ? 'Seleccionada' : 'Gestionar' }}</span></button>
       </div>

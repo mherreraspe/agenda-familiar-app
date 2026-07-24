@@ -92,7 +92,7 @@ function activarAnadir() {
 <template>
   <div class="app-shell">
     <nav class="app-shell__navegacion" aria-label="Navegación principal">
-      <strong class="app-shell__marca">Agenda Familiar</strong>
+      <strong class="app-shell__marca">Obu Familia</strong>
       <RouterLink :to="{ name: 'hoy' }">
         <IconoApp nombre="hoy" /><span>Hoy</span>
         <span v-if="cantidadAtencion" class="contador">{{ cantidadAtencion }}</span>
