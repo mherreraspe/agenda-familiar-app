@@ -32,6 +32,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Ver auditoría | Ajustes / Actividad | Abrir | — | `consultarAuditoria` | E2E |
 | Filtrar por persona | Hoy / Agenda / Salud | Elegir persona | — | Estado compartido | Vitest / E2E |
 | Cerrar sesión | Menú de avatar | Cerrar sesión | — | `cerrarSesion` | E2E |
+| Cambiar de familia | Menú de avatar | Elegir familia | Estado sin familia | `consultarFamiliasUsuario`, `establecerFamiliaActiva` | Vitest / IT / E2E |
 | Reflejar cambios familiares | Hoy / Agenda / Salud / Objetos | Automática | Aviso de reconexión | SSE `/familias/{id}/eventos` | Vitest / IT / E2E |
 | Consultar durante un corte | Hoy / Agenda / Salud / Objetos | Lectura ya cargada | Aviso sin conexión | Caché en memoria por sujeto | Vitest / E2E |
 | Administrar familias | Administración / Familias | Crear familia | Error y reintento | `consultarFamiliasPlataforma`, `crearFamiliaPlataforma` | IT / E2E |
@@ -51,6 +52,8 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Capas exclusivas — PR #32 desplegado en `20260723T213222Z`: altas generales y receta como modales nativos, tratamiento adaptable con acciones fijas, foco restaurado y un solo menú Más abierto; 63 escenarios Playwright/axe verdes.
 - Administración global — PR #34 desplegado en `20260723T233543Z`: rol global, `/admin`, listado y alta real e idempotente de familias, autorización backend y auditoría; 66 escenarios Playwright/axe verdes.
 - Acceso administrado — PR #36 desplegado en `20260724T003756Z`: miembros adultos, invitaciones de 48 h, restablecimientos de 30 min, tokens de un solo uso, sesiones revocadas y capas exclusivas; 72 escenarios Playwright/axe verdes.
+- Separación administrativa — PR #38: la cuenta global deriva a `/admin` y queda fuera de `familia_test`; PR #39 corrige la recuperación operativa con el proyecto Compose real.
+- Familia activa — PR #40 desplegado en `20260724T025339Z`: membresías resueltas desde el JWT bajo RLS, sin UUID fijo; selección automática o cambio en el menú, con limpieza de datos y SSE; 78 escenarios Playwright/axe completados.
 - PR 4 completado mediante #30. El siguiente bloque es Web Push privado, con avisos genéricos y detalle únicamente dentro de la PWA autenticada.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.

@@ -2,7 +2,7 @@
 
 **Corte:** 2026-07-23 (America/Lima)
 **Rama:** `main`
-**Commit desplegado:** `c155e00f974645a612e4561cdb50ed640319a249`
+**Commit desplegado:** `aeb1f81fed396ecf189722ab7b94048dd1798fc6`
 **Versión del servidor:** `20260723T233543Z`
 **Producción:** <https://www.obusystem.com>
 
@@ -222,6 +222,22 @@ Integrado mediante el PR #36, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-d73b8c6-20260724T003756Z`.
 - [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — acceso administrativo y familia activa
+
+Integrado mediante los PR #38–#40, desplegado y verificado en producción:
+
+- [x] La cuenta administrativa global queda separada de `familia_test`; el rol firmado deriva login y renovación a `/admin`.
+- [x] `AdminAcceso` recupera el acceso mediante el proyecto Compose desplegado, sin mostrar secretos ni tocar volúmenes.
+- [x] `GET /familias` enumera exclusivamente membresías activas del sujeto autenticado, comprobadas bajo el contexto RLS de cada familia.
+- [x] Hoy, Agenda, Salud, Objetos, archivos y SSE usan la familia seleccionada; se eliminó el UUID fijo de `familia_test` del frontend.
+- [x] Una familia se selecciona automáticamente, varias pueden alternarse limpiando caché/datos/SSE y cero familias muestra un estado explícito.
+- [x] La comprobación de membresía usa el índice único existente `(familia_id, usuario_publico_id)` y conserva 404 para IDOR.
+- [x] Verificación local: 45 pruebas frontend, build Vite y 11 pruebas backend; 78 escenarios Playwright/axe en tres viewports.
+- [x] CI de PR `30062673683` y CI de `main` `30062763663` verdes con PostgreSQL 18.
+- [x] PR #40 integrado como `aeb1f81`; release `20260724T025339Z` saludable, V1–V11 validadas.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-aeb1f81-20260724T025339Z`.
+- [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -279,6 +295,9 @@ Integrado mediante el PR #36, desplegado y verificado en producción:
 - PR de formularios modales y capas exclusivas: <https://github.com/mherreraspe/agenda-familiar-app/pull/32>; CI `30046463114` aprobado y release `20260723T213222Z` verificado.
 - PR de administración global y alta de familias: <https://github.com/mherreraspe/agenda-familiar-app/pull/34>; CI `30053417092` y `30053507456` aprobados, release `20260723T233543Z` verificado.
 - PR de miembros, invitaciones y recuperación de acceso: <https://github.com/mherreraspe/agenda-familiar-app/pull/36>; CI `30056539025` y `30056643411` aprobados, release `20260724T003756Z` verificado.
+- PR de cuenta administrativa separada: <https://github.com/mherreraspe/agenda-familiar-app/pull/38>; CI `30058962041` aprobado.
+- PR de recuperación administrativa con Compose: <https://github.com/mherreraspe/agenda-familiar-app/pull/39>; CI `30059403460` aprobado.
+- PR de resolución de familia activa: <https://github.com/mherreraspe/agenda-familiar-app/pull/40>; CI `30062673683` y `30062763663` aprobados, release `20260724T025339Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
