@@ -54,8 +54,8 @@ async function guardar() {
 <template>
   <main class="acceso acceso--admin">
     <section class="panel-acceso panel-activar">
-      <img src="/icono.svg" alt="" width="72" height="72" />
-      <p class="sobretitulo">Agenda Familiar · Acceso seguro</p>
+      <img src="/icono-192.png" alt="" width="72" height="72" />
+      <p class="sobretitulo">Obu Familia · Acceso seguro</p>
       <template v-if="cargando"><h1>Comprobando enlace…</h1></template>
       <template v-else-if="completado">
         <h1>Contraseña guardada</h1>

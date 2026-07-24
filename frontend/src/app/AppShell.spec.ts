@@ -33,6 +33,7 @@ describe('AppShell', () => {
   it('expone cuatro destinos y deriva el estado activo de la ruta', async () => {
     const { wrapper } = await montar()
     expect(wrapper.findAll('nav a')).toHaveLength(4)
+    expect(wrapper.get('.app-shell__marca').text()).toBe('Obu Familia')
     expect(wrapper.get('a[aria-current="page"]').text()).toContain('Agenda')
     expect(wrapper.text()).toContain('Objetos')
     wrapper.unmount()
