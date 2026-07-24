@@ -302,6 +302,20 @@ Integrado mediante el PR #48, desplegado y verificado en producción:
 - [x] Release `20260724T141134Z` saludable, V1–V13 y E2E HTTPS real aprobados.
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-b1518b3-20260724T141133Z`.
 
+## Bloque completado — marca Obu Familia
+
+Integrado mediante el PR #50, desplegado y verificado en producción:
+
+- [x] Nombre visible, título HTML, manifiesto instalable y notificación Web Push genérica actualizados a `Obu Familia`.
+- [x] Búho original conservado en forma y colores, con calendario reconocible como señal específica de la agenda familiar.
+- [x] Iconos PNG `any` y `maskable` en 192/512 px, más favicon y `apple-touch-icon`; área segura de Android comprobada.
+- [x] Pantallas de acceso, activación y navegación actualizadas; `OBU System` permanece solo en administración global.
+- [x] Sin migración nueva ni cambios de seguridad, sesiones, CSRF, RLS, IDOR, auditoría o aislamiento familiar.
+- [x] Verificación local: 50 pruebas frontend, build PWA y 11 pruebas backend; Playwright/axe 96 escenarios verdes.
+- [x] CI de PR `30118049481` y CI de `main` `30118213368` verdes; PR #50 integrado como `7a10f2e`.
+- [x] Release `20260724T185658Z` saludable; título y manifiesto de producción confirmados y E2E HTTPS real aprobado.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-7a10f2e-20260724T185657Z`.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.

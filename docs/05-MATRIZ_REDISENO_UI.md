@@ -16,6 +16,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Configurar avisos | Pulso familiar / Configurar avisos | Guardar preferencias | Activar o revocar dispositivo | `guardarPreferenciasNotificacion`, `registrarPush`, `revocarPush` | Vitest / IT / E2E |
 | Programar recordatorio de tarea | Agenda / Añadir / Tarea | Avisar al vencer | Desactivar aviso | `crearTarea` | Vitest / IT / E2E |
 | Programar avisos de evento | Agenda / Añadir / Evento, cita o salida / Más opciones | 24 h antes | 1 h antes | `crearEvento` | Vitest / IT / E2E |
+| Identificar la aplicación instalada | PWA / Lanzador / Acceso | Abrir `Obu Familia` | Icono normal o `maskable` según plataforma | Manifiesto PWA | Build / navegador / E2E |
 | Marcar toma | Hoy / Salud | Tomada | — | `cambiarEstadoOcurrencia` | E2E |
 | Posponer toma | Salud / Más | — | Menú Más | `cambiarEstadoOcurrencia` | E2E |
 | Omitir toma | Salud / Más | — | Menú Más | `cambiarEstadoOcurrencia` | E2E |
@@ -66,6 +67,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Miembros y tratamientos — PR #44 desplegado en `20260724T111747Z`: familia administrada visible, cambio de rol y baja/reactivación con protección del último administrador; edición de tratamientos activos conservando historial y sustituyendo solo pendientes futuros; CI PostgreSQL 18 y E2E HTTPS verdes.
 - Agenda legible — PR #46 desplegado en `20260724T123957Z`: altas de tarea y evento/cita/salida, insignias de tipo sin depender solo del color, categoría visible y término `recordatorio` retirado hasta disponer de notificación; 93 escenarios Playwright/axe verdes.
 - Notificaciones privadas — PR #48 desplegado en `20260724T141134Z`: campana y bandeja `Pulso familiar`, preferencias por usuario, horario silencioso, recordatorios de tareas/eventos y motor deduplicado para Salud y Botiquín; V13/FORCE RLS, 96 escenarios Playwright/axe y revisión real en los tres viewports. Push queda preparado pero deshabilitado hasta autorizar claves VAPID.
+- Marca Obu Familia — PR #50 desplegado en `20260724T185658Z`: búho original con calendario, nombre visible y manifiesto actualizados, iconos `any`/`maskable` 192/512, favicon y `apple-touch-icon`; 96 escenarios Playwright/axe, CI y E2E HTTPS verdes.
 - PR 4 completado mediante #30. El siguiente bloque es la activación y prueba real de Web Push en dos dispositivos, sin ampliar el contenido visible en la pantalla bloqueada.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.
