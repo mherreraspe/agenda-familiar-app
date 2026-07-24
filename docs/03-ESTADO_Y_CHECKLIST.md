@@ -285,6 +285,23 @@ Integrado mediante el PR #46, desplegado y verificado en producción:
 - [x] Release `20260724T123957Z` saludable, V1–V12 validadas y E2E HTTPS real aprobado.
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-23e65f7-20260724T123957Z`.
 
+## Bloque completado — notificaciones privadas
+
+Integrado mediante el PR #48, desplegado y verificado en producción:
+
+- [x] Campana global con bandeja privada inferior en móvil y lateral en escritorio; leer no modifica el estado del elemento de origen.
+- [x] Avisos deduplicados de tareas, eventos, tomas y botiquín, dirigidos al usuario correspondiente y limitados a membresías activas.
+- [x] Preferencias por usuario y familia, categorías configurables, horario silencioso y revocación por dispositivo.
+- [x] Recordatorio de tarea al vencer y avisos de evento configurables 24 h y 1 h antes.
+- [x] Agenda V13 con FORCE RLS para preferencias, notificaciones y suscripciones; auditoría e índices por familia/usuario.
+- [x] Web Push preparado con permiso explícito, destinos permitidos, claves de suscripción validadas, reintento y baja de endpoints expirados.
+- [x] La pantalla bloqueada usa un mensaje genérico sin nombres ni datos médicos; la bandeja autenticada conserva el detalle privado.
+- [x] Las claves VAPID no se configuraron: Push permanece deshabilitado y la interfaz lo explica; no se modificaron secretos.
+- [x] Verificación local: 50 pruebas frontend, build Vite y 11 pruebas backend; Playwright/axe 96 escenarios verdes.
+- [x] CI de PR `30099653318` y CI de `main` `30099813895` verdes; PR #48 integrado como `b1518b3`.
+- [x] Release `20260724T141134Z` saludable, V1–V13 y E2E HTTPS real aprobados.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-b1518b3-20260724T141133Z`.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -384,8 +401,8 @@ Integrado mediante el PR #46, desplegado y verificado en producción:
 ### Sincronización y avisos
 
 - [x] SSE con reconexión para reflejar cambios entre dispositivos abiertos.
-- [ ] Web Push con mensaje bloqueado genérico y contenido privado solo después de autenticar.
-- [ ] Preferencias, horario silencioso, deduplicación, reintentos y escalamiento opcional.
+- [ ] Activar Web Push con claves VAPID autorizadas y completar un piloto real en dos dispositivos; el servidor, la suscripción y el mensaje bloqueado genérico ya están implementados.
+- [x] Preferencias, horario silencioso, deduplicación y reintentos; el escalamiento opcional queda fuera del bloque inicial.
 - [x] Caché de lectura PWA y aviso claro cuando no hay conexión; sin escritura offline en el MVP.
 
 ### Fotografías y cuota
@@ -421,13 +438,13 @@ Integrado mediante el PR #46, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Añadir Web Push privado sin convertir la notificación en una fuga de datos:
+Completar la activación operativa de Web Push ya implementado:
 
-1. Solicitar permiso solo tras una acción explícita y registrar cada suscripción para el usuario y dispositivo autenticados.
-2. Mostrar en la pantalla bloqueada solo un aviso genérico, sin nombres, medicamentos ni contenido familiar; el detalle se consulta dentro de la PWA autenticada.
-3. Permitir revocar dispositivos, depurar endpoints inválidos y evitar entregas duplicadas.
-4. Mantener Hoy como bandeja operativa y usar Push únicamente como aviso de cambios relevantes.
-5. Probar aislamiento familiar, permiso denegado, renovación de suscripción, dispositivo revocado y concurrencia.
+1. Autorizar y configurar las claves VAPID mediante el flujo protegido, sin escribirlas en Git ni mostrarlas en logs.
+2. Instalar la PWA en un iPhone y probar también un segundo dispositivo con cuentas separadas.
+3. Validar permiso denegado, renovación de suscripción, endpoint expirado, reintento y revocación individual.
+4. Confirmar que la pantalla bloqueada conserva siempre el texto genérico y que el detalle exige una sesión autenticada.
+5. Decidir por separado si el MVP necesita avisos de cambios familiares o escalamiento opcional.
 
 ## Continuidad operativa
 
