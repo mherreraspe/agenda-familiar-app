@@ -20,6 +20,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.obusystem.agendafamiliar.agenda.administracion.ServicioAdministracionPlataforma;
+import com.obusystem.agendafamiliar.agenda.administracion.SolicitudActualizacionMiembroPlataforma;
 import com.obusystem.agendafamiliar.agenda.administracion.SolicitudFamiliaPlataforma;
 import com.obusystem.agendafamiliar.agenda.administracion.SolicitudMiembroPlataforma;
 
@@ -92,6 +93,57 @@ class AdministracionPlataformaIT {
                 new SolicitudMiembroPlataforma(UUID.randomUUID(), "Persona adulta", "ADULTO"), administrador))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void cambiaRolDaDeBajaYConservaUnAdministradorActivo() {
+        Jwt administrador = jwt(true);
+        var familia = administracion.crear("familia-roles-1",
+                new SolicitudFamiliaPlataforma("Familia Roles", "America/Lima"), administrador);
+        var primerAdmin = administracion.crearMiembro(familia.id(), "roles-admin-1",
+                new SolicitudMiembroPlataforma(UUID.randomUUID(), "Primera administradora", "ADMINISTRADOR_FAMILIAR"),
+                administrador);
+        var adulto = administracion.crearMiembro(familia.id(), "roles-adulto-1",
+                new SolicitudMiembroPlataforma(UUID.randomUUID(), "Segundo adulto", "ADULTO"), administrador);
+
+        assertThatThrownBy(() -> administracion.actualizarMiembro(familia.id(), primerAdmin.perfilId(),
+                new SolicitudActualizacionMiembroPlataforma("ADULTO", true), administrador))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        var promovido = administracion.actualizarMiembro(familia.id(), adulto.perfilId(),
+                new SolicitudActualizacionMiembroPlataforma("ADMINISTRADOR_FAMILIAR", true), administrador);
+        assertThat(promovido.permiso()).isEqualTo("ADMINISTRADOR_FAMILIAR");
+
+        var baja = administracion.actualizarMiembro(familia.id(), primerAdmin.perfilId(),
+                new SolicitudActualizacionMiembroPlataforma("ADULTO", false), administrador);
+        assertThat(baja.activo()).isFalse();
+        assertThat(administracion.consultarMiembros(familia.id(), administrador).miembros())
+                .filteredOn(miembro -> miembro.perfilId().equals(primerAdmin.perfilId()))
+                .extracting("activo").containsExactly(false);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_plataforma WHERE entidad='MIEMBRO' AND entidad_publica_id=? AND operacion='ACTUALIZAR'",
+                Integer.class, primerAdmin.perfilId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auditoria WHERE entidad='PERFIL' AND entidad_publica_id=? AND operacion='ACTUALIZAR'",
+                Integer.class, primerAdmin.perfilId())).isEqualTo(1);
+    }
+
+    @Test
+    void aislaLaActualizacionPorFamiliaYExigeAdministradorDePlataforma() {
+        Jwt administrador = jwt(true);
+        var familiaA = administracion.crear("familia-aislamiento-roles-a",
+                new SolicitudFamiliaPlataforma("Familia A", "America/Lima"), administrador);
+        var familiaB = administracion.crear("familia-aislamiento-roles-b",
+                new SolicitudFamiliaPlataforma("Familia B", "America/Lima"), administrador);
+        var miembroA = administracion.crearMiembro(familiaA.id(), "miembro-aislamiento-roles-a",
+                new SolicitudMiembroPlataforma(UUID.randomUUID(), "Persona A", "ADMINISTRADOR_FAMILIAR"), administrador);
+        var solicitud = new SolicitudActualizacionMiembroPlataforma("ADULTO", true);
+
+        assertThatThrownBy(() -> administracion.actualizarMiembro(familiaB.id(), miembroA.perfilId(), solicitud, administrador))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThatThrownBy(() -> administracion.actualizarMiembro(familiaA.id(), miembroA.perfilId(), solicitud, jwt(false)))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     private Jwt jwt(boolean administrador) {

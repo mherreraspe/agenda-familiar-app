@@ -12,6 +12,7 @@ import {
   cerrarSesion as eliminarSesion,
   actuarAgenda,
   actualizarEnvase,
+  actualizarTratamiento,
   actualizarObjeto,
   actualizarPerfil,
   cambiarEstadoOcurrencia,
@@ -99,6 +100,7 @@ let activadorReceta: HTMLElement | null = null
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '', estadoEnvase: 'SIN_ABRIR' as 'SIN_ABRIR' | 'ABIERTO', abiertoEn: '', duracionAbiertoDias: '', avisarVencimiento: true, anticipacionVencimientoDias: 7, avisarApertura: true, anticipacionAperturaDias: 3 })
 const nuevoTratamiento = reactive({ perfilIds: [] as string[], medicamentoId: '', nombre: '', nombreMedicamento: '', dosis: '', aplicacion: '', indicacion: '', frecuencia: '', modoHorario: 'HORAS' as 'HORAS' | 'INTERVALO', horarios: ['08:00'] as string[], intervaloHoras: 8, fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+const grupoTratamientoEditadoId = ref<string | null>(null)
 const busquedaObjetos = ref('')
 const objetoEditadoId = ref<string | null>(null)
 const nuevoObjeto = reactive({ nombre: '', categoria: '', notas: '', ruta: '', version: undefined as number | undefined })
@@ -191,11 +193,11 @@ const tratamientosVisibles = computed(() => tratamientosFiltrados.value.slice(0,
 const medicamentosVisibles = computed(() => (catalogo.value?.medicamentos ?? []).slice(0, mostrarTodoSalud.botiquin ? undefined : 5))
 const recetasVisibles = computed(() => tratamientosFiltrados.value.filter(tratamiento => tratamiento.recetaId).slice(0, mostrarTodoSalud.recetas ? undefined : 5))
 const tituloFormulario = computed(() => ({
-  tarea: 'Nueva tarea', medicamento: 'Nuevo medicamento', tratamiento: 'Nuevo tratamiento',
+  tarea: 'Nueva tarea', medicamento: 'Nuevo medicamento', tratamiento: grupoTratamientoEditadoId.value ? 'Editar tratamiento' : 'Nuevo tratamiento',
   perfil: perfilEditadoId.value ? 'Editar perfil' : 'Nuevo perfil', objeto: objetoEditadoId.value ? 'Editar objeto' : 'Nuevo objeto'
 })[formulario.value ?? 'tarea'])
 const etiquetaGuardarFormulario = computed(() => ({
-  tarea: 'Guardar tarea', medicamento: 'Guardar medicamento', tratamiento: 'Guardar tratamiento',
+  tarea: 'Guardar tarea', medicamento: 'Guardar medicamento', tratamiento: grupoTratamientoEditadoId.value ? 'Guardar cambios' : 'Guardar tratamiento',
   perfil: perfilEditadoId.value ? 'Guardar cambios' : 'Guardar perfil',
   objeto: objetoEditadoId.value ? 'Guardar cambios' : 'Guardar objeto'
 })[formulario.value ?? 'tarea'])
@@ -350,11 +352,41 @@ function abrirAlta(tipo: TipoAlta) {
     objetoEditadoId.value = null
     Object.assign(nuevoObjeto, { nombre: '', categoria: '', notas: '', ruta: '', version: undefined })
   }
+  if (tipo === 'tratamiento') {
+    if (grupoTratamientoEditadoId.value) {
+      Object.assign(nuevoTratamiento, { perfilIds: datos.value?.perfiles[0] ? [datos.value.perfiles[0].id] : [], medicamentoId: '', nombre: '', nombreMedicamento: '', dosis: '', aplicacion: '', indicacion: '', frecuencia: '', modoHorario: 'HORAS', horarios: ['08:00'], intervaloHoras: 8, fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+    }
+    grupoTratamientoEditadoId.value = null
+    recetaSeleccionada.value = null
+  }
   formulario.value = tipo === 'medicamento' ? 'medicamento' : tipo
 }
 
 function cerrarFormulario() {
   formulario.value = null
+}
+
+function abrirEdicionTratamiento(tratamiento: RespuestaCatalogo['tratamientos'][number]) {
+  if (!enLinea.value) {
+    error.value = 'Sin conexión. Vuelve a estar en línea para editar el tratamiento.'
+    return
+  }
+  const grupo = (catalogo.value?.tratamientos ?? []).filter(item => item.grupoId === tratamiento.grupoId && item.estado === 'ACTIVO')
+  grupoTratamientoEditadoId.value = tratamiento.grupoId
+  activadorFormulario = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  Object.assign(nuevoTratamiento, {
+    perfilIds: grupo.map(item => item.perfilId), medicamentoId: tratamiento.medicamentoId ?? '',
+    nombre: tratamiento.medicamento, nombreMedicamento: tratamiento.nombreMedicamento ?? '',
+    dosis: tratamiento.dosisIndicada ?? '', aplicacion: tratamiento.aplicacion ?? '',
+    indicacion: tratamiento.indicacion ?? '', frecuencia: tratamiento.frecuencia ?? '',
+    modoHorario: tratamiento.intervaloHoras ? 'INTERVALO' : 'HORAS',
+    horarios: tratamiento.horarios.map(horario => horario.slice(0, 5)),
+    intervaloHoras: tratamiento.intervaloHoras ?? 8, fechaInicio: tratamiento.fechaInicio,
+    fechaFin: tratamiento.fechaFin ?? '', responsablePerfilId: tratamiento.responsablePerfilId ?? '',
+    responsableAlternativoPerfilId: tratamiento.responsableAlternativoPerfilId ?? ''
+  })
+  recetaSeleccionada.value = null
+  formulario.value = 'tratamiento'
 }
 
 async function entrar() {
@@ -542,8 +574,7 @@ async function guardarTratamiento() {
   let avisoReceta = ''
   await ejecutarGuardado(async () => {
     if (!nuevoTratamiento.perfilIds.length) throw new Error('Selecciona al menos una persona.')
-    const creado = await crearTratamiento({
-      perfilIds: nuevoTratamiento.perfilIds,
+    const datosTratamiento = {
       medicamentoId: nuevoTratamiento.medicamentoId || undefined,
       nombre: nuevoTratamiento.nombre,
       nombreMedicamento: nuevoTratamiento.nombreMedicamento || undefined,
@@ -553,21 +584,31 @@ async function guardarTratamiento() {
       frecuencia: nuevoTratamiento.frecuencia || undefined,
       horarios: nuevoTratamiento.modoHorario === 'HORAS' ? nuevoTratamiento.horarios : [nuevoTratamiento.horarios[0]],
       intervaloHoras: nuevoTratamiento.modoHorario === 'INTERVALO' ? Number(nuevoTratamiento.intervaloHoras) : undefined,
-      fechaInicio: nuevoTratamiento.fechaInicio || undefined,
       fechaFin: nuevoTratamiento.fechaFin || undefined,
       responsablePerfilId: nuevoTratamiento.responsablePerfilId || undefined,
       responsableAlternativoPerfilId: nuevoTratamiento.responsableAlternativoPerfilId || undefined
-    })
-    if (recetaSeleccionada.value) {
-      try {
-        await subirReceta(creado.ids[0], await reducirImagenReceta(recetaSeleccionada.value))
-      } catch (causa) {
-        avisoReceta = `El tratamiento fue creado, pero la receta no se guardó: ${causa instanceof Error ? causa.message : 'error desconocido'}`
+    }
+    if (grupoTratamientoEditadoId.value) {
+      await actualizarTratamiento(grupoTratamientoEditadoId.value, {
+        ...datosTratamiento, fechaInicio: nuevoTratamiento.fechaInicio
+      })
+    } else {
+      const creado = await crearTratamiento({
+        ...datosTratamiento, perfilIds: nuevoTratamiento.perfilIds,
+        fechaInicio: nuevoTratamiento.fechaInicio || undefined
+      })
+      if (recetaSeleccionada.value) {
+        try {
+          await subirReceta(creado.ids[0], await reducirImagenReceta(recetaSeleccionada.value))
+        } catch (causa) {
+          avisoReceta = `El tratamiento fue creado, pero la receta no se guardó: ${causa instanceof Error ? causa.message : 'error desconocido'}`
+        }
       }
     }
     Object.assign(nuevoTratamiento, { perfilIds: [...nuevoTratamiento.perfilIds], medicamentoId: '', nombre: '', nombreMedicamento: '', dosis: '', aplicacion: '', indicacion: '', frecuencia: '', modoHorario: 'HORAS', horarios: ['08:00'], intervaloHoras: 8, fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
     recetaSeleccionada.value = null
-  }, 'El tratamiento fue agregado.', () => Promise.all([cargarCatalogo(true), cargarOcurrencias(true), cargarCuota(true)]).then(() => undefined))
+    grupoTratamientoEditadoId.value = null
+  }, grupoTratamientoEditadoId.value ? 'El tratamiento fue actualizado.' : 'El tratamiento fue agregado.', () => Promise.all([cargarCatalogo(true), cargarOcurrencias(true), cargarCuota(true)]).then(() => undefined))
   if (avisoReceta) mensaje.value = avisoReceta
 }
 
@@ -737,6 +778,7 @@ async function cerrarTratamientoActivo(tratamiento: RespuestaCatalogo['tratamien
 }
 
 function accionTratamiento(tratamiento: RespuestaCatalogo['tratamientos'][number], accion: string) {
+  if (accion === 'editar') abrirEdicionTratamiento(tratamiento)
   if (accion === 'eliminar-receta' && tratamiento.recetaId) void borrarReceta(tratamiento.recetaId)
   if (accion === 'cerrar') void cerrarTratamientoActivo(tratamiento)
 }
@@ -1089,7 +1131,7 @@ async function salir() {
               </div>
             </details>
           </div>
-          <MenuMas v-if="tratamiento.recetaId || tratamiento.estado === 'ACTIVO'" :acciones="[{ id: 'eliminar-receta', etiqueta: 'Eliminar receta', peligrosa: true }, { id: 'cerrar', etiqueta: 'Finalizar tratamiento', peligrosa: true }].filter(accion => (accion.id !== 'eliminar-receta' || tratamiento.recetaId) && (accion.id !== 'cerrar' || tratamiento.estado === 'ACTIVO'))" :etiqueta="`Más acciones para ${tratamiento.medicamento}`" @seleccionar="accionTratamiento(tratamiento, $event)" />
+          <MenuMas v-if="tratamiento.recetaId || tratamiento.estado === 'ACTIVO'" :acciones="[{ id: 'editar', etiqueta: 'Editar tratamiento' }, { id: 'eliminar-receta', etiqueta: 'Eliminar receta', peligrosa: true }, { id: 'cerrar', etiqueta: 'Finalizar tratamiento', peligrosa: true }].filter(accion => (accion.id !== 'editar' || tratamiento.estado === 'ACTIVO') && (accion.id !== 'eliminar-receta' || tratamiento.recetaId) && (accion.id !== 'cerrar' || tratamiento.estado === 'ACTIVO'))" :etiqueta="`Más acciones para ${tratamiento.medicamento}`" @seleccionar="accionTratamiento(tratamiento, $event)" />
         </article>
         <p v-if="!tratamientosFiltrados.length" class="estado-vacio">No hay tratamientos para este filtro.</p>
         <button v-if="tratamientosFiltrados.length > 5" type="button" class="boton-ver-mas" @click="mostrarTodoSalud.tratamientos = !mostrarTodoSalud.tratamientos">
@@ -1244,7 +1286,8 @@ async function salir() {
       </form>
 
       <form v-else-if="formulario === 'tratamiento'" id="formulario-general" @submit.prevent="guardarTratamiento">
-        <fieldset class="grupo-formulario"><legend>¿Para quién es?</legend><div class="chips-personas"><label v-for="perfil in datos?.perfiles" :key="perfil.id"><input v-model="nuevoTratamiento.perfilIds" type="checkbox" :value="perfil.id" /> {{ perfil.nombre }}</label></div><small>Puedes registrar la misma indicación para varias personas.</small></fieldset>
+        <p v-if="grupoTratamientoEditadoId" class="ayuda-admin">Estás corrigiendo el tratamiento activo. Las tomas ya confirmadas conservarán su historial.</p>
+        <fieldset class="grupo-formulario"><legend>{{ grupoTratamientoEditadoId ? 'Personas de este tratamiento' : '¿Para quién es?' }}</legend><div class="chips-personas"><label v-for="perfil in datos?.perfiles" v-show="!grupoTratamientoEditadoId || nuevoTratamiento.perfilIds.includes(perfil.id)" :key="perfil.id"><input v-model="nuevoTratamiento.perfilIds" type="checkbox" :value="perfil.id" :disabled="!!grupoTratamientoEditadoId" /> {{ perfil.nombre }}</label></div><small>{{ grupoTratamientoEditadoId ? 'Para cambiar las personas, finaliza este tratamiento y registra uno nuevo.' : 'Puedes registrar la misma indicación para varias personas.' }}</small></fieldset>
         <label>Nombre corto del tratamiento<input v-model.trim="nuevoTratamiento.nombre" maxlength="180" placeholder="Ej. Gotas para los ojos" required /></label>
         <div class="campos-dobles"><label>Medicamento opcional<input v-model.trim="nuevoTratamiento.nombreMedicamento" maxlength="180" placeholder="Nombre de la receta" /></label><label>Dosis opcional<input v-model.trim="nuevoTratamiento.dosis" maxlength="300" placeholder="Ej. 2 gotas" /></label></div>
         <label>Dónde o cómo se aplica (opcional)<input v-model.trim="nuevoTratamiento.aplicacion" maxlength="300" placeholder="Ej. En ambos ojos" /></label>
@@ -1257,15 +1300,15 @@ async function salir() {
           <div v-else class="campos-dobles"><label>Primera hora<input v-model="nuevoTratamiento.horarios[0]" type="time" required /></label><label>Cada cuántas horas<input v-model.number="nuevoTratamiento.intervaloHoras" type="number" min="1" max="168" required /></label></div>
           <p class="resumen-tratamiento">{{ nuevoTratamiento.perfilIds.length || 0 }} persona(s) · {{ nuevoTratamiento.modoHorario === 'HORAS' ? nuevoTratamiento.horarios.length : `cada ${nuevoTratamiento.intervaloHoras} h` }}</p>
         </fieldset>
-        <label class="carga-receta">Foto de la receta (opcional)<input type="file" accept="image/jpeg,image/png" capture="environment" @change="seleccionarReceta" /><small>Puedes fotografiarla para consultar el detalle sin copiar todo. Se elimina ubicación/EXIF y se guarda cifrada.</small></label>
-        <p v-if="recetaSeleccionada" class="confirmacion">{{ recetaSeleccionada.name }} · {{ (recetaSeleccionada.size / 1048576).toFixed(1) }} MiB</p>
+        <label v-if="!grupoTratamientoEditadoId" class="carga-receta">Foto de la receta (opcional)<input type="file" accept="image/jpeg,image/png" capture="environment" @change="seleccionarReceta" /><small>Puedes fotografiarla para consultar el detalle sin copiar todo. Se elimina ubicación/EXIF y se guarda cifrada.</small></label>
+        <p v-if="!grupoTratamientoEditadoId && recetaSeleccionada" class="confirmacion">{{ recetaSeleccionada.name }} · {{ (recetaSeleccionada.size / 1048576).toFixed(1) }} MiB</p>
         <details><summary>Más opciones</summary><div class="detalles-progresivos">
           <label>Vincular al botiquín<select v-model="nuevoTratamiento.medicamentoId"><option value="">Sin vincular</option><option v-for="medicamento in catalogo?.medicamentos" :key="medicamento.id" :value="medicamento.id">{{ medicamento.nombre }} · {{ medicamento.concentracion }}</option></select></label>
           <label>Indicaciones o cuidados<textarea v-model.trim="nuevoTratamiento.indicacion" maxlength="1000" rows="2" /></label>
           <label>Nota sobre la frecuencia<input v-model.trim="nuevoTratamiento.frecuencia" maxlength="300" /></label>
           <label>Responsable opcional<select v-model="nuevoTratamiento.responsablePerfilId"><option value="">La misma persona</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
           <label>Responsable alternativo<select v-model="nuevoTratamiento.responsableAlternativoPerfilId"><option value="">Sin alternativo</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
-          <div class="campos-dobles"><label>Inicio opcional<input v-model="nuevoTratamiento.fechaInicio" type="date" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
+          <div class="campos-dobles"><label>{{ grupoTratamientoEditadoId ? 'Inicio' : 'Inicio opcional' }}<input v-model="nuevoTratamiento.fechaInicio" type="date" :required="!!grupoTratamientoEditadoId" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
         </div></details>
       </form>
 

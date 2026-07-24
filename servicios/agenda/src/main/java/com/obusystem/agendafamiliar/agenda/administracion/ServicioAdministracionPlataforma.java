@@ -111,6 +111,34 @@ public class ServicioAdministracionPlataforma {
         return buscarMiembro(familiaInterna, perfilId);
     }
 
+    @Transactional
+    public RespuestaMiembrosPlataforma.MiembroAdministrado actualizarMiembro(UUID familiaId, UUID perfilId,
+            SolicitudActualizacionMiembroPlataforma solicitud, Jwt jwt) {
+        UUID actor = autorizar(jwt);
+        String permiso = validarPermiso(solicitud.permiso());
+        Long familiaInterna = familiaInterna(familiaId);
+        contexto.activar(familiaInterna);
+        jdbc.queryForList("SELECT pg_advisory_xact_lock(?)", familiaInterna);
+        MiembroActual actual = miembroActual(familiaInterna, perfilId);
+        protegerUltimoAdministrador(familiaInterna, actual, permiso, solicitud.activo());
+
+        int perfiles = jdbc.update("UPDATE perfiles SET activo=?, actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND id_publico=?",
+                solicitud.activo(), familiaInterna, perfilId);
+        int miembros = jdbc.update("UPDATE miembros_familia SET rol=?, activo=?, actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND usuario_publico_id=? AND perfil_id=?",
+                permiso, solicitud.activo(), familiaInterna, actual.usuarioId(), actual.perfilInternoId());
+        if (perfiles != 1 || miembros != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Miembro no encontrado en esta familia");
+        }
+        String resumen = solicitud.activo()
+                ? "Rol o acceso familiar actualizado desde administración"
+                : "Acceso a la familia dado de baja desde administración";
+        jdbc.update("INSERT INTO auditoria_plataforma (actor_publico_id, operacion, entidad, entidad_publica_id, resumen_seguro) VALUES (?, 'ACTUALIZAR', 'MIEMBRO', ?, ?)",
+                actor, perfilId, resumen);
+        jdbc.update("INSERT INTO auditoria (familia_id, actor_publico_id, operacion, entidad, entidad_publica_id, resumen_seguro) VALUES (?, ?, 'ACTUALIZAR', 'PERFIL', ?, ?)",
+                familiaInterna, actor, perfilId, resumen);
+        return buscarMiembro(familiaInterna, perfilId);
+    }
+
     private RespuestaFamiliasPlataforma.FamiliaAdministrada buscar(UUID id) {
         return jdbc.queryForObject("SELECT id_publico, nombre, zona_horaria, creado_en FROM familias WHERE id_publico=?",
                 (rs, fila) -> new RespuestaFamiliasPlataforma.FamiliaAdministrada(
@@ -127,6 +155,32 @@ public class ServicioAdministracionPlataforma {
                 """, (rs, fila) -> new RespuestaMiembrosPlataforma.MiembroAdministrado(
                         rs.getObject("id_publico", UUID.class), rs.getObject("usuario_publico_id", UUID.class),
                         rs.getString("nombre_visible"), rs.getString("rol"), rs.getBoolean("activo")), familiaInterna, perfilId);
+    }
+
+    private MiembroActual miembroActual(Long familiaInterna, UUID perfilId) {
+        List<MiembroActual> filas = jdbc.query("""
+                SELECT m.id, m.usuario_publico_id, m.rol, m.activo
+                FROM perfiles p
+                JOIN miembros_familia m ON m.familia_id=p.familia_id AND m.usuario_publico_id=p.usuario_publico_id
+                WHERE p.familia_id=? AND p.id_publico=?
+                """, (rs, fila) -> new MiembroActual(rs.getLong("id"),
+                        rs.getObject("usuario_publico_id", UUID.class), rs.getString("rol"),
+                        rs.getBoolean("activo")), familiaInterna, perfilId);
+        if (filas.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Miembro no encontrado en esta familia");
+        }
+        return filas.getFirst();
+    }
+
+    private void protegerUltimoAdministrador(Long familiaInterna, MiembroActual actual, String permiso, boolean activo) {
+        if (!actual.activo() || !"ADMINISTRADOR_FAMILIAR".equals(actual.rol())
+                || (activo && "ADMINISTRADOR_FAMILIAR".equals(permiso))) return;
+        Integer administradores = jdbc.queryForObject("SELECT COUNT(*) FROM miembros_familia WHERE familia_id=? AND activo AND rol='ADMINISTRADOR_FAMILIAR'",
+                Integer.class, familiaInterna);
+        if (administradores == null || administradores <= 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Asigna otro administrador antes de dar de baja o cambiar el rol del último administrador");
+        }
     }
 
     private Long familiaInterna(UUID familiaId) {
@@ -168,4 +222,6 @@ public class ServicioAdministracionPlataforma {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Zona horaria inválida");
         }
     }
+
+    private record MiembroActual(Long perfilInternoId, UUID usuarioId, String rol, boolean activo) { }
 }

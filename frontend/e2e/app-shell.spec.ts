@@ -6,7 +6,8 @@ async function prepararApi(page: Page) {
   const perfilHijo = { id: 'perfil-2', nombre: 'Alessio', tipo: 'DEPENDIENTE', color: '#b57b35', relacion: 'Hijo' }
   const tratamientos = Array.from({ length: 6 }, (_, indice) => ({
     id: `tratamiento-${indice}`, grupoId: `grupo-${indice}`, perfilId: perfil.id, persona: 'Mamá', medicamento: `Tratamiento ${indice + 1}`,
-    responsable: 'Mamá', horarios: ['08:00:00'], estado: 'ACTIVO', recetaId: indice === 0 ? 'receta-1' : undefined
+    responsablePerfilId: perfil.id, responsable: 'Mamá', horarios: ['08:00:00'], fechaInicio: '2026-07-23',
+    estado: 'ACTIVO', recetaId: indice === 0 ? 'receta-1' : undefined
   }))
   const medicamentos = Array.from({ length: 6 }, (_, indice) => ({
     id: `medicamento-${indice}`, loteId: `lote-${indice}`, nombre: `Medicamento ${indice + 1}`,
@@ -50,6 +51,14 @@ async function prepararApi(page: Page) {
       miembrosAdmin.push(miembro)
       return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(miembro) })
     }
+    if (/\/administracion\/familias\/[^/]+\/miembros\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') {
+      const perfilId = ruta.split('/').at(-1)
+      const datos = route.request().postDataJSON() as { permiso: string; activo: boolean }
+      const miembro = miembrosAdmin.find(item => item.perfilId === perfilId)
+      if (!miembro) return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
+      Object.assign(miembro, datos)
+      return responder(miembro)
+    }
     if (ruta.endsWith('/autenticacion/administracion/enlaces') && route.request().method() === 'GET') return responder({ enlaces: enlacesAdmin })
     if (ruta.endsWith('/autenticacion/administracion/usuarios') && route.request().method() === 'GET') return responder({ cuentas: [] })
     if (ruta.endsWith('/autenticacion/administracion/invitaciones') && route.request().method() === 'POST') {
@@ -80,6 +89,17 @@ async function prepararApi(page: Page) {
     if (ruta.endsWith('/objetos') && route.request().method() === 'POST') return responder({ id: 'objeto-2' })
     if (ruta.endsWith('/medicamentos') && route.request().method() === 'POST') return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'medicamento-nuevo', loteId: 'lote-nuevo' }) })
     if (ruta.endsWith('/tratamientos/grupos') && route.request().method() === 'POST') return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ grupoId: 'grupo-nuevo', ids: ['tratamiento-nuevo'] }) })
+    if (/\/tratamientos\/grupos\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') {
+      const grupoId = ruta.split('/').at(-1)
+      const datos = route.request().postDataJSON() as { nombre: string; nombreMedicamento?: string; dosis?: string; aplicacion?: string; indicacion?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string }
+      tratamientos.filter(item => item.grupoId === grupoId).forEach(item => Object.assign(item, {
+        medicamento: datos.nombre, nombreMedicamento: datos.nombreMedicamento, dosisIndicada: datos.dosis,
+        aplicacion: datos.aplicacion, indicacion: datos.indicacion, frecuencia: datos.frecuencia,
+        horarios: datos.horarios.map(hora => `${hora}:00`), intervaloHoras: datos.intervaloHoras,
+        fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin
+      }))
+      return route.fulfill({ status: 204, body: '' })
+    }
     if (/\/medicamentos\/lotes\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') return route.fulfill({ status: 204, body: '' })
     if (/\/objetos\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') return route.fulfill({ status: 204 })
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
@@ -136,6 +156,16 @@ test('administra miembros con invitación de un solo uso sin apilar capas', asyn
   await enlace.getByRole('button', { name: 'Cerrar', exact: true }).click()
   await expect(page.getByText('Ana Rivera', { exact: true })).toBeVisible()
   await expect(page.getByText('pendiente', { exact: true })).toBeVisible()
+  const tarjetaAna = page.locator('.admin-miembro').filter({ hasText: 'Ana Rivera' })
+  await tarjetaAna.getByRole('button', { name: 'Gestionar' }).click()
+  const gestion = page.getByRole('dialog', { name: 'Gestionar a Ana Rivera' })
+  await expect(gestion.getByText('Familia Herrera', { exact: true })).toBeVisible()
+  await gestion.getByLabel('Rol en esta familia').selectOption('ADULTO')
+  await gestion.getByRole('radio', { name: 'Dar de baja' }).check()
+  expect(await page.locator('dialog:modal').count()).toBe(1)
+  await gestion.getByRole('button', { name: 'Dar de baja' }).click()
+  await expect(gestion).toBeHidden()
+  await expect(tarjetaAna.getByText('Sin acceso')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 
@@ -203,6 +233,24 @@ test('Salud muestra una sola subsección y conserva la selección en la URL', as
   await expect(page.getByRole('heading', { name: 'Recetas' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Medicamentos' })).toHaveCount(0)
   await expect(page.getByText(/Espacio usado/)).toHaveCount(0)
+})
+
+test('permite corregir un tratamiento activo sin cambiar sus personas', async ({ page }) => {
+  await page.goto('/salud?seccion=tratamientos')
+  const tarjeta = page.locator('#tratamientos article.tarjeta').filter({ has: page.getByRole('heading', { name: 'Tratamiento 1' }) })
+  await tarjeta.getByLabel('Más acciones para Tratamiento 1').click()
+  await tarjeta.getByRole('button', { name: 'Editar tratamiento' }).click()
+
+  const dialogo = page.getByRole('dialog', { name: 'Editar tratamiento' })
+  await expect(dialogo.getByText(/tomas ya confirmadas conservarán su historial/)).toBeVisible()
+  await expect(dialogo.locator('.chips-personas input[value="perfil-1"]')).toBeDisabled()
+  await dialogo.getByLabel('Nombre corto del tratamiento').fill('Gotas corregidas')
+  await dialogo.getByLabel('Horario 1').fill('10:00')
+  await dialogo.getByRole('button', { name: 'Guardar cambios' }).click()
+
+  await expect(dialogo).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Gotas corregidas' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 
 test('abre el historial de Tomas como vista paginada y no dentro de Hoy', async ({ page }) => {

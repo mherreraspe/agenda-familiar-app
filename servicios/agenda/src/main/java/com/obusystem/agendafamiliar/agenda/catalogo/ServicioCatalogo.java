@@ -150,6 +150,57 @@ public class ServicioCatalogo {
     }
 
     @Transactional
+    public void actualizarTratamiento(UUID familiaId, UUID grupoId, String clave,
+            SolicitudesCatalogo.ActualizacionTratamiento solicitud, Jwt jwt) {
+        Familia familia = acceso.autorizar(familiaId, jwt);
+        validarClave(clave);
+        bloquear(familia.getId(), clave);
+        if (resultadoPrincipal(familia.getId(), clave, "ACTUALIZAR_TRATAMIENTO") != null) return;
+        validarRango(solicitud.fechaInicio(), solicitud.fechaFin());
+        List<LocalTime> horarios = horariosSolicitados(solicitud.horarios(), solicitud.intervaloHoras());
+        Long medicamento = solicitud.medicamentoId() == null ? null
+                : idInterno("medicamentos", familia.getId(), solicitud.medicamentoId(), "Medicamento inválido");
+        Long responsable = solicitud.responsablePerfilId() == null ? null
+                : idInterno("perfiles", familia.getId(), solicitud.responsablePerfilId(), "Responsable inválido");
+        Long alternativo = solicitud.responsableAlternativoPerfilId() == null ? null
+                : idInterno("perfiles", familia.getId(), solicitud.responsableAlternativoPerfilId(), "Responsable alternativo inválido");
+        List<TratamientoEditable> tratamientos = jdbc.query("SELECT id,id_publico,perfil_id FROM tratamientos WHERE familia_id=? AND grupo_publico_id=? AND estado='ACTIVO' FOR UPDATE",
+                (rs, fila) -> new TratamientoEditable(rs.getLong("id"), rs.getObject("id_publico", UUID.class),
+                        rs.getLong("perfil_id")), familia.getId(), grupoId);
+        if (tratamientos.isEmpty()) {
+            Boolean existe = jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM tratamientos WHERE familia_id=? AND grupo_publico_id=?)",
+                    Boolean.class, familia.getId(), grupoId);
+            if (Boolean.TRUE.equals(existe)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Un tratamiento cerrado ya no se puede editar");
+            }
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tratamiento no encontrado");
+        }
+        for (TratamientoEditable tratamiento : tratamientos) {
+            Long responsableFinal = responsable == null ? tratamiento.perfilId() : responsable;
+            jdbc.update("UPDATE tratamientos SET medicamento_id=?, nombre_libre=?, nombre_medicamento=?, aplicacion=?, responsable_perfil_id=?, responsable_alternativo_perfil_id=?, indicacion=?, dosis_indicada=?, frecuencia=?, fecha_inicio=?, fecha_fin=?, actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND id=? AND estado='ACTIVO'",
+                    medicamento, solicitud.nombre().trim(), limpiar(solicitud.nombreMedicamento()),
+                    limpiar(solicitud.aplicacion()), responsableFinal, alternativo, limpiar(solicitud.indicacion()),
+                    limpiar(solicitud.dosis()), limpiar(solicitud.frecuencia()), Date.valueOf(solicitud.fechaInicio()),
+                    solicitud.fechaFin() == null ? null : Date.valueOf(solicitud.fechaFin()), familia.getId(), tratamiento.id());
+            jdbc.update("DELETE FROM elementos_revision WHERE familia_id=? AND origen='OCURRENCIA' AND entidad_publica_id IN (SELECT id_publico FROM ocurrencias_tratamiento WHERE familia_id=? AND tratamiento_id=? AND estado='PENDIENTE' AND programada_en>=NOW())",
+                    familia.getId(), familia.getId(), tratamiento.id());
+            jdbc.update("DELETE FROM ocurrencias_tratamiento WHERE familia_id=? AND tratamiento_id=? AND estado='PENDIENTE' AND programada_en>=NOW()",
+                    familia.getId(), tratamiento.id());
+            jdbc.update("UPDATE horarios_tratamiento SET activo=FALSE, actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND tratamiento_id=? AND activo",
+                    familia.getId(), tratamiento.id());
+            for (LocalTime horario : horarios) {
+                jdbc.update("INSERT INTO horarios_tratamiento (id_publico,familia_id,tratamiento_id,hora_local,intervalo_horas) VALUES (?,?,?,?,?) ON CONFLICT (familia_id,tratamiento_id,hora_local) DO UPDATE SET activo=TRUE,intervalo_horas=EXCLUDED.intervalo_horas,actualizado_en=NOW(),version=horarios_tratamiento.version+1",
+                        UuidV7.nuevo(), familia.getId(), tratamiento.id(), Time.valueOf(horario), solicitud.intervaloHoras());
+            }
+            ocurrencias.materializarTratamientoDesdeAhora(familia, tratamiento.id());
+        }
+        guardarResultado(familia.getId(), clave, "ACTUALIZAR_TRATAMIENTO", grupoId,
+                tratamientos.stream().map(item -> item.idPublico().toString()).collect(java.util.stream.Collectors.joining(",")));
+        auditar(familia.getId(), jwt, "ACTUALIZAR", "TRATAMIENTO", grupoId,
+                "Tratamiento activo actualizado; las tomas resueltas se conservaron");
+    }
+
+    @Transactional
     public void actualizarEnvase(UUID familiaId, UUID loteId, String clave,
             SolicitudesCatalogo.ActualizacionEnvase solicitud, Jwt jwt) {
         Familia familia = acceso.autorizar(familiaId, jwt);
@@ -364,6 +415,8 @@ public class ServicioCatalogo {
     private <T> T valor(T recibido, T porDefecto) {
         return recibido == null ? porDefecto : recibido;
     }
+
+    private record TratamientoEditable(Long id, UUID idPublico, Long perfilId) { }
 
     private String limpiar(String valor) {
         return valor == null || valor.isBlank() ? null : valor.trim();

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -51,5 +52,14 @@ public class ControladorAdministracionPlataforma {
             @Valid @RequestBody SolicitudMiembroPlataforma solicitud,
             @AuthenticationPrincipal Jwt jwt) {
         return administracion.crearMiembro(familiaId, clave, solicitud, jwt);
+    }
+
+    @PatchMapping("/{familiaId}/miembros/{perfilId}")
+    RespuestaMiembrosPlataforma.MiembroAdministrado actualizarMiembro(
+            @PathVariable java.util.UUID familiaId,
+            @PathVariable java.util.UUID perfilId,
+            @Valid @RequestBody SolicitudActualizacionMiembroPlataforma solicitud,
+            @AuthenticationPrincipal Jwt jwt) {
+        return administracion.actualizarMiembro(familiaId, perfilId, solicitud, jwt);
     }
 }
