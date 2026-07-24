@@ -255,6 +255,21 @@ Integrado mediante el PR #42, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-cbadc5a-20260724T051336Z`.
 - [x] E2E HTTPS aprobado: servicios UP, migración V12 aplicada, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — gestión de miembros y corrección de tratamientos
+
+Integrado mediante el PR #44, desplegado y verificado en producción:
+
+- [x] Administración muestra con claridad la familia seleccionada y gestiona rol, baja y reactivación dentro de esa membresía, sin eliminar la cuenta ni el historial.
+- [x] El último administrador familiar activo no puede perder su rol o acceso; los cambios se serializan por familia para cubrir concurrencia.
+- [x] Los tratamientos activos admiten corrección de nombre, medicamento opcional, dosis, aplicación, indicación, frecuencia, horarios, fechas y responsables.
+- [x] La edición conserva tomas resueltas, sustituye solo ocurrencias futuras pendientes, mantiene idempotencia y publica invalidaciones selectivas de Hoy y Salud.
+- [x] La pertenencia a personas de un tratamiento no cambia durante la edición; para corregirla se finaliza el grupo y se registra otro.
+- [x] Mantenimiento Herrera Huertas: cuatro tratamientos y sus dependencias eliminados, cero ocurrencias huérfanas, auditoría registrada y respaldo `pre-borrado-tratamientos-20260724T071339Z.dump`.
+- [x] Verificación local: 45 pruebas frontend, build Vite y 11 pruebas backend; 90 escenarios responsive/axe y 6 verificaciones dirigidas en tres viewports.
+- [x] CI `30088911525` verde con PostgreSQL 18; PR #44 integrado como `17f1758`.
+- [x] Release `20260724T111747Z` saludable, V1–V12 validadas y E2E HTTPS real aprobado.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-17f1758-20260724T111746Z`.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -316,6 +331,7 @@ Integrado mediante el PR #42, desplegado y verificado en producción:
 - PR de recuperación administrativa con Compose: <https://github.com/mherreraspe/agenda-familiar-app/pull/39>; CI `30059403460` aprobado.
 - PR de resolución de familia activa: <https://github.com/mherreraspe/agenda-familiar-app/pull/40>; CI `30062673683` y `30062763663` aprobados, release `20260724T025339Z` verificado.
 - PR de Salud práctica y vigencia de envases: <https://github.com/mherreraspe/agenda-familiar-app/pull/42>; CI `30068576773` y `30068668429` aprobados, release `20260724T051336Z` verificado.
+- PR de gestión de miembros y corrección de tratamientos activos: <https://github.com/mherreraspe/agenda-familiar-app/pull/44>; CI `30088911525` aprobado, release `20260724T111747Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
@@ -371,6 +387,7 @@ Integrado mediante el PR #42, desplegado y verificado en producción:
 - [ ] Roles familiares completos y autorización por operación.
 - [x] Administración de plataforma: rol global, acceso exclusivo, listado y alta idempotente de familias.
 - [x] Administración de plataforma: miembros por invitación y recuperación de acceso de un solo uso.
+- [x] Administración de plataforma: cambio de rol y baja/reactivación de membresías, con protección concurrente del último administrador familiar.
 - [ ] Administración de plataforma: suspensión, cuota y métricas sin contenido médico.
 - [ ] Cambiar contraseña y retirar las credenciales provisionales antes de datos reales.
 - [ ] Migrar JWT HS256 compartido a firma asimétrica como indica el diseño técnico.
