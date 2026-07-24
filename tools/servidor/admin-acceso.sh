@@ -11,7 +11,7 @@ case "$correo" in
 esac
 
 cd "$raiz/current/infraestructura"
-docker compose exec -T postgres sh -c \
+docker compose -p agenda_familiar exec -T postgres sh -c \
   'PGPASSWORD="$AUTENTICACION_DB_PASSWORD" exec psql -h 127.0.0.1 -U autenticacion -d autenticacion -v ON_ERROR_STOP=1 "$@"' \
   sh --set="correo=$correo" --set="enlace_id=$enlace_id" --set="token_hash=$token_hash" <<'EOSQL'
 BEGIN;
