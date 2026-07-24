@@ -50,13 +50,13 @@ class MigracionesAutenticacionIT {
 
     @Test
     @Order(1)
-    void creaLosDosAdultosConCredenciales() {
+    void creaLosDosAdultosSinOtorgarAdministracionGlobal() {
         Integer cantidad = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM usuarios WHERE correo IN ('papa@familia.test', 'mama@familia.test')",
                 Integer.class);
         assertThat(cantidad).isEqualTo(2);
         assertThat(usuarios.findByCorreoIgnoreCase("papa@familia.test").orElseThrow().getRolPlataforma())
-                .isEqualTo("ADMINISTRADOR_PLATAFORMA");
+                .isEqualTo("USUARIO");
         Integer tablaSesiones = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'sesiones_refresh'",
                 Integer.class);
@@ -67,7 +67,7 @@ class MigracionesAutenticacionIT {
     @Order(2)
     void rotaYRevocaElRefreshTokenSinGuardarElSecreto() {
         var primera = sesiones.iniciar(new SolicitudInicioSesion("papa@familia.test", "ClaveTemporalSegura2026!"));
-        assertThat(primera.respuesta().rolPlataforma()).isEqualTo("ADMINISTRADOR_PLATAFORMA");
+        assertThat(primera.respuesta().rolPlataforma()).isEqualTo("USUARIO");
         var segunda = sesiones.renovar(primera.refreshToken(), primera.csrfToken(), primera.csrfToken());
 
         Boolean primeraRevocada = jdbc.queryForObject(
