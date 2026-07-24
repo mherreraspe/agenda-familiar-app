@@ -78,6 +78,20 @@ describe('AppShell', () => {
     wrapper.unmount()
   })
 
+  it('permite cambiar de familia solo cuando la cuenta tiene varias', async () => {
+    const familias = [{ id: 'familia-1', nombre: 'Familia Herrera' }, { id: 'familia-2', nombre: 'Familia Huertas' }]
+    const { wrapper } = await montar('/hoy', 'Familia Herrera', { familias, familiaActivaId: 'familia-1' })
+    await wrapper.get('.menu-desplegable--avatar > button').trigger('click')
+
+    expect(wrapper.get('button[aria-current="true"]').text()).toContain('Familia Herrera')
+    const alternativa = wrapper.findAll('.menu-desplegable--avatar .menu-desplegable__panel button')
+      .find(boton => boton.text().includes('Familia Huertas'))!
+    await alternativa.trigger('click')
+
+    expect(wrapper.emitted('cambiarFamilia')?.[0]).toEqual(['familia-2'])
+    wrapper.unmount()
+  })
+
   it('mantiene un solo menú de cabecera abierto', async () => {
     const { wrapper } = await montar('/salud')
     const menus = wrapper.findAll('.menu-desplegable')

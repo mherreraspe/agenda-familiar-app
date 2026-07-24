@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<{
   tipoAnadirDirecto?: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto'
   mostrarAnadir?: boolean
   administradorPlataforma?: boolean
+  familias?: Array<{ id: string; nombre: string }>
+  familiaActivaId?: string
 }>(), { mostrarAnadir: true, administradorPlataforma: false })
 
 const familiaVisible = computed(() => {
@@ -23,6 +25,7 @@ const familiaVisible = computed(() => {
 const emit = defineEmits<{
   anadir: [tipo: 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto']
   salir: []
+  cambiarFamilia: [familiaId: string]
 }>()
 
 const menuAnadir = ref<HTMLElement | null>(null)
@@ -106,6 +109,19 @@ function activarAnadir() {
             <button type="button" class="avatar" aria-label="Abrir menú de familia" aria-controls="menu-familia" :aria-expanded="menuAbierto === 'avatar'" @click="alternarMenu('avatar')"><IconoApp nombre="usuario" /></button>
             <button v-if="menuAbierto === 'avatar'" type="button" class="menu-desplegable__velo" aria-label="Cerrar menú" @click="cerrarMenus"></button>
             <div v-if="menuAbierto === 'avatar'" id="menu-familia" class="menu-desplegable__panel" aria-label="Menú de familia">
+              <template v-if="familias && familias.length > 1">
+                <p class="menu-desplegable__titulo">Familia activa</p>
+                <button
+                  v-for="opcion in familias"
+                  :key="opcion.id"
+                  type="button"
+                  :aria-current="opcion.id === familiaActivaId ? 'true' : undefined"
+                  @click="cerrarMenus(); emit('cambiarFamilia', opcion.id)"
+                >
+                  {{ opcion.nombre }}<span v-if="opcion.id === familiaActivaId" aria-hidden="true"> · Actual</span>
+                </button>
+                <span class="menu-desplegable__separador" aria-hidden="true"></span>
+              </template>
               <RouterLink :to="{ name: 'familia' }" @click="cerrarMenus">Familia y permisos</RouterLink>
               <RouterLink :to="{ name: 'actividad' }" @click="cerrarMenus">Actividad</RouterLink>
               <RouterLink v-if="administradorPlataforma" :to="{ name: 'admin' }" @click="cerrarMenus">Administración</RouterLink>

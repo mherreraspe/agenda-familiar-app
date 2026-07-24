@@ -1,5 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { consultarHoy, crearTarea, iniciarSesion, type RespuestaHoy } from './api'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { consultarFamiliasUsuario, consultarHoy, crearTarea, establecerFamiliaActiva, iniciarSesion, limpiarFamiliaActiva, type RespuestaHoy } from './api'
+
+const FAMILIA = '019f91c5-148b-779b-9ce7-743d265dc767'
 
 const respuestaHoy: RespuestaHoy = {
   familiaId: 'familia', familia: 'Familia', zonaHoraria: 'America/Lima', perfiles: [], tareas: []
@@ -12,7 +14,10 @@ function fijarConexion(enLinea: boolean) {
 afterEach(() => {
   vi.unstubAllGlobals()
   fijarConexion(true)
+  limpiarFamiliaActiva()
 })
+
+beforeEach(() => establecerFamiliaActiva(FAMILIA))
 
 describe('API en modo sin conexión', () => {
   it('bloquea escrituras antes de llamar a la red', async () => {
@@ -35,7 +40,17 @@ describe('API en modo sin conexión', () => {
 
     await iniciarSesion('a@familia.test', 'clave-segura')
     expect(await consultarHoy()).toEqual(respuestaHoy)
+    expect(fetch.mock.calls[1]?.[0]).toBe(`/api/v1/familias/${FAMILIA}/hoy`)
     fijarConexion(false)
     expect(await consultarHoy()).toEqual(respuestaHoy)
+  })
+
+  it('consulta las familias accesibles antes de usar una familia activa', async () => {
+    const familias = { familias: [{ id: FAMILIA, nombre: 'Herrera Huertas', zonaHoraria: 'America/Lima', rol: 'ADULTO' }] }
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify(familias), { status: 200 }))
+    vi.stubGlobal('fetch', fetch)
+
+    expect(await consultarFamiliasUsuario()).toEqual(familias)
+    expect(fetch.mock.calls[0]?.[0]).toBe('/api/v1/familias')
   })
 })
