@@ -223,6 +223,20 @@ onBeforeUnmount(() => {
     <p v-if="errores.inicioEn" id="error-evento-inicio" class="error-campo">{{ errores.inicioEn }}</p>
     <small id="ayuda-zona-horaria">Zona horaria familiar: {{ zonaHoraria }}</small>
 
+    <label for="evento-tipo">Tipo o categoría</label>
+    <select id="evento-tipo" v-model="borrador.tipo">
+      <option value="">Evento familiar</option>
+      <option value="CITA">Cita</option>
+      <option value="SALIDA">Salida o visita</option>
+      <option value="SALUD">Salud</option>
+      <option value="ESCUELA">Escuela</option>
+      <option value="TRAMITE">Trámite</option>
+      <option value="VIAJE">Viaje</option>
+      <option value="CUMPLEANOS">Cumpleaños</option>
+      <option value="CASA">Casa</option>
+      <option value="OTRO">Otro</option>
+    </select>
+
     <label for="evento-perfil">Persona</label>
     <select id="evento-perfil" v-model="borrador.perfilId">
       <option value="">Toda la familia / sin asignar</option>
@@ -242,14 +256,6 @@ onBeforeUnmount(() => {
     <details>
       <summary>Más opciones</summary>
       <div class="detalles-progresivos">
-        <label for="evento-tipo">Categoría opcional</label>
-        <select id="evento-tipo" v-model="borrador.tipo">
-          <option value="">Sin categoría</option>
-          <option value="SALUD">Salud</option><option value="ESCUELA">Escuela</option>
-          <option value="TRAMITE">Trámite</option><option value="VIAJE">Viaje</option>
-          <option value="CUMPLEANOS">Cumpleaños</option><option value="CASA">Casa</option><option value="OTRO">Otro</option>
-        </select>
-
         <label for="evento-lugar">Lugar opcional</label>
         <input
           id="evento-lugar"

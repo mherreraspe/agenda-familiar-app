@@ -184,6 +184,16 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .tarjeta--proximo { padding-left: 10px; border-left: 3px solid var(--ambar); }
 .tarjeta time { min-width: 58px; color: #63706b; font-size: .82rem; font-weight: 800; }
 .tarjeta__contenido { flex: 1; min-width: 0; }
+.tipo-entrada { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 4px; color: #53635e; font-size: .68rem; font-weight: 850; letter-spacing: .035em; text-transform: uppercase; }
+.tipo-entrada > span { display: inline-grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; color: white; background: #53635e; font-size: .66rem; line-height: 1; }
+.tipo-entrada--tarea { color: var(--verde); }
+.tipo-entrada--tarea > span { background: var(--verde); }
+.tipo-entrada--evento { color: #805d1d; }
+.tipo-entrada--evento > span { background: #a97212; }
+.tipo-entrada--cita { color: #7c4238; }
+.tipo-entrada--cita > span { background: #a95142; }
+.tipo-entrada--salida { color: #365d72; }
+.tipo-entrada--salida > span { background: #47768e; }
 .tarjeta__encabezado { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .tarjeta h3, .tarjeta p { margin: 0; }
 .tarjeta h3 { font-size: 1rem; }

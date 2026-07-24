@@ -51,14 +51,24 @@ describe('AppShell', () => {
     await wrapper.get('.boton-anadir').trigger('click')
     await wrapper.get('.menu-desplegable__panel button').trigger('click')
     expect(wrapper.emitted('anadir')?.[0]).toEqual(['evento'])
+    expect(wrapper.text()).toContain('Tarea')
+    expect(wrapper.text()).not.toContain('Tarea o recordatorio')
     wrapper.unmount()
   })
 
   it('ejecuta directamente el alta contextual sin abrir el menú global', async () => {
-    const { wrapper } = await montar('/agenda', 'Familia Herrera', { etiquetaAnadir: 'Evento', tipoAnadirDirecto: 'evento' })
+    const { wrapper } = await montar('/objetos', 'Familia Herrera', { etiquetaAnadir: 'Objeto', tipoAnadirDirecto: 'objeto' })
     await wrapper.get('.boton-anadir').trigger('click')
-    expect(wrapper.emitted('anadir')?.[0]).toEqual(['evento'])
+    expect(wrapper.emitted('anadir')?.[0]).toEqual(['objeto'])
     expect(wrapper.find('.menu-desplegable__panel').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('limita el alta contextual de Agenda a tareas y eventos', async () => {
+    const { wrapper } = await montar('/agenda', 'Familia Herrera', { tiposAnadir: ['tarea', 'evento'] })
+    await wrapper.get('.boton-anadir').trigger('click')
+    expect(wrapper.findAll('.menu-desplegable__panel button').map(boton => boton.text()))
+      .toEqual(['Tarea', 'Evento, cita o salida'])
     wrapper.unmount()
   })
 

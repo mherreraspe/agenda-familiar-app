@@ -25,6 +25,7 @@ function accionSecundaria(accion: string) {
   <article class="tarjeta" :class="`tarjeta--${tono ?? 'normal'}`">
     <time>{{ hora }}</time>
     <div class="tarjeta__contenido">
+      <span class="tipo-entrada tipo-entrada--tarea"><span aria-hidden="true">✓</span> Tarea</span>
       <h3>{{ titulo }}</h3>
       <p>{{ detalle }}</p>
       <small v-if="recurrente">Recurrente</small>

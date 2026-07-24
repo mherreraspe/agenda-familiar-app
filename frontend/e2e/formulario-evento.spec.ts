@@ -81,7 +81,8 @@ test('Escape cierra y limpia la query cuando el borrador está limpio', async ({
 test('Atrás y Escape piden confirmación si el borrador cambió', async ({ page }) => {
   await prepararApi(page)
   await page.goto('/agenda')
-  await page.getByRole('button', { name: 'Evento', exact: true }).click()
+  await page.getByRole('button', { name: 'Añadir', exact: true }).click()
+  await page.getByRole('button', { name: 'Evento, cita o salida', exact: true }).click()
   await page.getByLabel('Título').fill('Notaría')
 
   await page.goBack({ waitUntil: 'commit' }).catch(() => undefined)
