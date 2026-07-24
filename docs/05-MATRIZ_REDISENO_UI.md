@@ -17,6 +17,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Reprogramar toma | Salud / Más | — | Formulario | `cambiarEstadoOcurrencia` | E2E |
 | Cerrar revisión | Hoy / Por resolver | Cerrar | — | `cerrarElementoRevision` | E2E |
 | Crear tratamiento para una o varias personas | Salud / Tratamientos | Guardar | Receta opcional | `crearTratamiento` (grupo idempotente) | IT / E2E |
+| Editar tratamiento activo | Salud / Tratamientos / Más | Guardar cambios | Finalizar y crear otro si cambian las personas | `actualizarTratamiento` (grupo idempotente) | IT / E2E |
 | Cerrar tratamiento | Salud / Detalle | Finalizar | — | `cerrarTratamiento` | E2E |
 | Ver receta | Salud / Detalle | Ver | — | `descargarReceta` | E2E |
 | Subir receta | Salud / Detalle | Añadir | — | `subirReceta` | E2E |
@@ -38,6 +39,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Consultar durante un corte | Hoy / Agenda / Salud / Objetos | Lectura ya cargada | Aviso sin conexión | Caché en memoria por sujeto | Vitest / E2E |
 | Administrar familias | Administración / Familias | Crear familia | Error y reintento | `consultarFamiliasPlataforma`, `crearFamiliaPlataforma` | IT / E2E |
 | Invitar miembro | Administración / Familia | Generar invitación | Revocar o reenviar | `crearMiembroPlataforma`, `crearInvitacionPlataforma` | IT / E2E |
+| Gestionar membresía | Administración / Familia / Miembro | Guardar rol o acceso | Dar de baja / reactivar | `actualizarMiembroPlataforma` | IT / E2E |
 | Restablecer acceso | Administración / Miembro | Generar enlace | Generar uno nuevo | `crearRestablecimientoPlataforma`, `consumirEnlaceAcceso` | IT / E2E |
 
 ## Estado por PR
@@ -56,6 +58,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Separación administrativa — PR #38: la cuenta global deriva a `/admin` y queda fuera de `familia_test`; PR #39 corrige la recuperación operativa con el proyecto Compose real.
 - Familia activa — PR #40 desplegado en `20260724T025339Z`: membresías resueltas desde el JWT bajo RLS, sin UUID fijo; selección automática o cambio en el menú, con limpieza de datos y SSE; 78 escenarios Playwright/axe completados.
 - Salud práctica — PR #42 desplegado en `20260724T051336Z`: tratamiento grupal con horarios guiados y receta compartida, Hoy/Por resolver separados, envases independientes y vigencia por vencimiento o apertura; V12/RLS/índices y 87 escenarios Playwright/axe verdes.
+- Miembros y tratamientos — PR #44 desplegado en `20260724T111747Z`: familia administrada visible, cambio de rol y baja/reactivación con protección del último administrador; edición de tratamientos activos conservando historial y sustituyendo solo pendientes futuros; CI PostgreSQL 18 y E2E HTTPS verdes.
 - PR 4 completado mediante #30. El siguiente bloque es Web Push privado, con avisos genéricos y detalle únicamente dentro de la PWA autenticada.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.

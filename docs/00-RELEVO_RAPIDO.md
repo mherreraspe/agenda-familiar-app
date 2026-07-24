@@ -5,23 +5,24 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `cbadc5a70d5ac546f519a2fbf5bb8e2f41308e9a`.
-- Release activo: `20260724T051336Z`.
+- Commit desplegado: `17f175824c16305df5aa2d41592e5776424f145f`.
+- Release activo: `20260724T111747Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
 - Migraciones: autenticación V1–V4 y agenda V1–V12 aplicadas correctamente.
-- Último bloque: Salud práctica, tratamientos agrupados y vigencia independiente de envases.
-- E2E HTTPS aprobado; 87 escenarios Playwright/axe completados en 320×700, 390×844 y 1280×900.
+- Último bloque: gestión de miembros familiares y corrección de tratamientos activos.
+- E2E HTTPS aprobado; 90 escenarios Playwright/axe completados en 320×700, 390×844 y 1280×900, más 6 verificaciones dirigidas del último cambio.
 
 ## Último bloque completado
 
-- PR #42: un tratamiento admite varias personas, horas explícitas o intervalo, dosis/aplicación opcionales y una receta cifrada compartida por el grupo.
-- Botiquín modela cada envase por separado: sin abrir/abierto, fecha de apertura, duración posterior, avisos, agotado y descartado.
-- La vigencia usa la fecha más temprana entre vencimiento impreso y límite tras abrir; consultas, escrituras, idempotencia e índices permanecen acotados por familia.
-- Hoy muestra solo tareas y tomas del día; `Por resolver` es una vista separada e incorpora avisos de Botiquín sin sobrecargar Hoy.
+- PR #44: Administración permite cambiar el rol familiar y dar de baja/reactivar una membresía sin borrar la cuenta ni su historial.
+- El último administrador activo está protegido incluso ante cambios concurrentes; la familia elegida se muestra explícitamente y los diálogos no se apilan.
+- Un tratamiento puede corregirse mientras está activo; conserva tomas resueltas y reemplaza únicamente horarios y ocurrencias futuras pendientes.
+- Se eliminaron por mantenimiento los cuatro tratamientos de Herrera Huertas, sin archivos asociados ni ocurrencias huérfanas; respaldo manual disponible.
 - Verificación local: 45 pruebas frontend, build Vite y 11 pruebas backend aprobadas.
-- CI de PR `30068576773` y CI de `main` `30068668429`: frontend y backend/PostgreSQL 18 verdes.
-- Release `20260724T051336Z` saludable; autenticación V1–V4 y agenda V1–V12 validadas.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-cbadc5a-20260724T051336Z`.
+- CI de PR `30088911525`: frontend y backend/PostgreSQL 18 verdes.
+- Release `20260724T111747Z` saludable; autenticación V1–V4 y agenda V1–V12 validadas.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-17f1758-20260724T111746Z`.
+- Respaldo previo al borrado solicitado: `/srv/agenda-familiar/backups/manual/pre-borrado-tratamientos-20260724T071339Z.dump`.
 - E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
 
 ## Siguiente bloque funcional
