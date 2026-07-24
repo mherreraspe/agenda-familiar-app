@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../app/AppShell.vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
 import MenuMas from '../components/listas/MenuMas.vue'
@@ -56,10 +56,11 @@ type TipoAlta = 'evento' | 'tarea' | 'tratamiento' | 'medicamento' | 'objeto'
 
 const props = withDefaults(defineProps<{ seccion?: SeccionPrincipal }>(), { seccion: 'hoy' })
 const route = useRoute()
+const router = useRouter()
 const interfaz = useInterfazStore()
 const { filtroPerfil } = storeToRefs(interfaz)
 
-const correo = ref('papa@familia.test')
+const correo = ref('')
 const clave = ref('')
 const cargando = ref(false)
 const error = ref('')
@@ -224,6 +225,10 @@ onMounted(async () => {
     const sesion = await renovarSesion()
     administradorPlataforma.value = sesion.rolPlataforma === 'ADMINISTRADOR_PLATAFORMA'
     sesionActiva.value = true
+    if (administradorPlataforma.value) {
+      await router.replace({ name: 'admin' })
+      return
+    }
     await cargarSeccion(props.seccion)
     iniciarSincronizacion()
   } catch {
@@ -341,6 +346,11 @@ async function entrar() {
     const sesion = await iniciarSesion(correo.value, clave.value)
     administradorPlataforma.value = sesion.rolPlataforma === 'ADMINISTRADOR_PLATAFORMA'
     sesionActiva.value = true
+    if (administradorPlataforma.value) {
+      clave.value = ''
+      await router.replace({ name: 'admin' })
+      return
+    }
     await cargarSeccion(props.seccion, true)
     iniciarSincronizacion()
     clave.value = ''
@@ -791,8 +801,8 @@ async function salir() {
     <section class="panel-acceso">
       <img src="/icono.svg" alt="" width="72" height="72" />
       <p class="sobretitulo">OBU System</p>
-      <h1>Agenda Familiar</h1>
-      <p>Ingresa para ver únicamente la información de tu familia.</p>
+      <h1>Ingresa a OBU System</h1>
+      <p>Te llevaremos automáticamente al espacio que corresponde a tu cuenta.</p>
       <form @submit.prevent="entrar">
         <label>Correo<input v-model.trim="correo" type="email" autocomplete="username" required /></label>
         <label>Clave<input v-model="clave" type="password" autocomplete="current-password" minlength="12" required /></label>

@@ -31,6 +31,7 @@ import com.obusystem.agendafamiliar.autenticacion.usuario.Usuario;
 @Service
 public class ServicioEnlacesAcceso {
     private static final String ROL_ADMIN = "ADMINISTRADOR_PLATAFORMA";
+    private static final UUID PAPA_FAMILIA_TEST = UUID.fromString("0197f100-0000-7000-8000-000000000101");
     private static final Base64.Encoder BASE64_URL = Base64.getUrlEncoder().withoutPadding();
     private final JdbcTemplate jdbc;
     private final RepositorioUsuarios usuarios;
@@ -129,10 +130,14 @@ public class ServicioEnlacesAcceso {
         } else {
             Usuario usuario = usuarios.findByIdPublico(enlace.usuarioId())
                     .orElseThrow(() -> enlaceInvalido());
-            usuario.actualizarClave(claves.encode(solicitud.clave()));
+            usuario.activarConClave(claves.encode(solicitud.clave()));
             usuarios.saveAndFlush(usuario);
             jdbc.update("UPDATE sesiones_refresh SET revocado_en=COALESCE(revocado_en, NOW()) WHERE usuario_id=?",
                     usuario.getId());
+            if (ROL_ADMIN.equals(usuario.getRolPlataforma()) && !PAPA_FAMILIA_TEST.equals(usuario.getIdPublico())) {
+                jdbc.update("UPDATE usuarios SET rol_plataforma='USUARIO', actualizado_en=NOW(), version=version+1 WHERE id_publico=? AND rol_plataforma=?",
+                        PAPA_FAMILIA_TEST, ROL_ADMIN);
+            }
         }
         jdbc.update("UPDATE enlaces_acceso SET consumido_en=NOW() WHERE id=?", enlace.id());
         auditar(enlace.usuarioId(), "CONSUMIR", enlace.id(), "Enlace de acceso utilizado");

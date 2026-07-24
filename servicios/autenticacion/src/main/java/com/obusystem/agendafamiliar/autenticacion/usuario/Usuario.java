@@ -60,6 +60,12 @@ public class Usuario {
         this.actualizadoEn = Instant.now();
     }
 
+    public void activarConClave(String nuevaClaveHash) {
+        this.claveHash = nuevaClaveHash;
+        this.estado = "ACTIVO";
+        this.actualizadoEn = Instant.now();
+    }
+
     public void hacerAdministradorPlataforma() {
         this.rolPlataforma = "ADMINISTRADOR_PLATAFORMA";
         this.actualizadoEn = Instant.now();

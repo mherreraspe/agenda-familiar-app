@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, reactive, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import {
   cerrarSesion, consultarCuentasPlataforma, consultarEnlacesPlataforma, consultarFamiliasPlataforma,
   consultarMiembrosPlataforma, crearFamiliaPlataforma, crearInvitacionPlataforma,
@@ -9,7 +9,8 @@ import {
   type EnlaceAccesoGenerado, type FamiliaAdministrada, type MiembroPlataforma
 } from '../api'
 
-const correo = ref('papa@familia.test')
+const router = useRouter()
+const correo = ref('')
 const clave = ref('')
 const restaurando = ref(true)
 const sesionActiva = ref(false)
@@ -37,7 +38,11 @@ onMounted(async () => {
     const sesion = await renovarSesion()
     sesionActiva.value = true
     autorizado.value = sesion.rolPlataforma === 'ADMINISTRADOR_PLATAFORMA'
-    if (autorizado.value) await cargarFamilias()
+    if (!autorizado.value) {
+      await router.replace({ name: 'hoy' })
+      return
+    }
+    await cargarFamilias()
   } catch {
     sesionActiva.value = false
   } finally {
@@ -53,7 +58,11 @@ async function entrar() {
     sesionActiva.value = true
     autorizado.value = sesion.rolPlataforma === 'ADMINISTRADOR_PLATAFORMA'
     clave.value = ''
-    if (autorizado.value) await cargarFamilias()
+    if (!autorizado.value) {
+      await router.replace({ name: 'hoy' })
+      return
+    }
+    await cargarFamilias()
   } catch (causa) {
     error.value = mensaje(causa, 'No se pudo iniciar sesión.')
   } finally {

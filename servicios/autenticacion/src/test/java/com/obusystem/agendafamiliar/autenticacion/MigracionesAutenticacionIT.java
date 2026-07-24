@@ -92,10 +92,12 @@ class MigracionesAutenticacionIT {
         var papa = usuarios.findByCorreoIgnoreCase("papa@familia.test").orElseThrow();
         papa.actualizarClave(claves.encode("ClaveAnteriorQueDebeCambiar2026!"));
         usuarios.saveAndFlush(papa);
+        jdbc.update("UPDATE usuarios SET rol_plataforma='USUARIO' WHERE id_publico=?", papa.getIdPublico());
 
         inicializador.run(null);
 
         var actualizado = usuarios.findByCorreoIgnoreCase("papa@familia.test").orElseThrow();
         assertThat(claves.matches("ClaveTemporalSegura2026!", actualizado.getClaveHash())).isTrue();
+        assertThat(actualizado.getRolPlataforma()).isEqualTo("USUARIO");
     }
 }

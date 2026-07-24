@@ -87,6 +87,29 @@ class EnlacesAccesoIT {
     }
 
     @Test
+    void recuperacionActivaAdministradorIndependienteYRetiraRolDePrueba() {
+        UUID usuarioId = UUID.randomUUID();
+        Usuario administradorReal = usuarios.saveAndFlush(new Usuario(usuarioId, "propietario@example.com",
+                claves.encode("ClaveInutilizable2026!")));
+        jdbc.update("UPDATE usuarios SET estado='PENDIENTE', rol_plataforma='ADMINISTRADOR_PLATAFORMA' WHERE id=?",
+                administradorReal.getId());
+        jdbc.update("UPDATE usuarios SET rol_plataforma='ADMINISTRADOR_PLATAFORMA' WHERE id_publico=?",
+                UUID.fromString("0197f100-0000-7000-8000-000000000101"));
+        var generado = enlaces.restablecer(usuarioId, "activar-admin-real-1", jwt(true));
+
+        enlaces.consumir(new SolicitudConsumirEnlace(token(generado.enlace()), "ClavePropietario2026!"));
+
+        assertThat(jdbc.queryForObject("SELECT estado FROM usuarios WHERE id_publico=?", String.class, usuarioId))
+                .isEqualTo("ACTIVO");
+        assertThat(jdbc.queryForObject("SELECT rol_plataforma FROM usuarios WHERE id_publico=?", String.class, usuarioId))
+                .isEqualTo("ADMINISTRADOR_PLATAFORMA");
+        assertThat(jdbc.queryForObject("SELECT rol_plataforma FROM usuarios WHERE id_publico=?", String.class,
+                UUID.fromString("0197f100-0000-7000-8000-000000000101"))).isEqualTo("USUARIO");
+        assertThat(sesiones.iniciar(new SolicitudInicioSesion("propietario@example.com", "ClavePropietario2026!")).respuesta()
+                .rolPlataforma()).isEqualTo("ADMINISTRADOR_PLATAFORMA");
+    }
+
+    @Test
     void rechazaAdministradorFalsoYEnlaceVencido() {
         var solicitud = new SolicitudInvitacion(UUID.randomUUID(), UUID.randomUUID(), "Familia", "vencido@example.com");
         assertThatThrownBy(() -> enlaces.invitar("sin-permiso", solicitud, jwt(false)))
