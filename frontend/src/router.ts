@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import PantallaHoy from './views/PantallaHoy.vue'
 import PantallaAdmin from './views/PantallaAdmin.vue'
+import PantallaActivar from './views/PantallaActivar.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -13,6 +14,7 @@ export const router = createRouter({
     { path: '/ajustes/familia', name: 'familia', component: PantallaHoy, props: { seccion: 'familia' } },
     { path: '/actividad', name: 'actividad', component: PantallaHoy, props: { seccion: 'actividad' } },
     { path: '/admin', name: 'admin', component: PantallaAdmin },
+    { path: '/activar', name: 'activar', component: PantallaActivar },
     { path: '/calendario', redirect: to => ({ name: 'agenda', query: to.query }) },
     { path: '/revisar', redirect: to => ({ name: 'hoy', query: { ...to.query, filtro: 'atencion' } }) },
     { path: '/botiquin', redirect: to => ({ name: 'salud', query: { ...to.query, seccion: 'botiquin' } }) },

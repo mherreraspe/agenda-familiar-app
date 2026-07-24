@@ -21,7 +21,7 @@ public class ManejadorErroresAutenticacion {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail solicitudInvalida() {
-        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Revisa el correo y la clave");
+        ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Revisa los datos enviados");
         problema.setTitle("Solicitud inválida");
         return problema;
     }

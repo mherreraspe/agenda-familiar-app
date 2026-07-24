@@ -114,6 +114,11 @@ export interface FamiliaAdministrada {
 }
 
 export interface RespuestaFamiliasPlataforma { familias: FamiliaAdministrada[] }
+export interface MiembroPlataforma { perfilId: string; usuarioId: string; nombre: string; permiso: 'ADULTO' | 'ADMINISTRADOR_FAMILIAR'; activo: boolean }
+export interface EnlaceAccesoAdministrado { id: string; tipo: 'INVITACION' | 'RESTABLECIMIENTO'; usuarioId: string; correo: string; estado: 'PENDIENTE' | 'USADO' | 'REVOCADO' | 'VENCIDO'; expiraEn: string; creadoEn: string }
+export interface EnlaceAccesoGenerado { id: string; tipo: 'INVITACION' | 'RESTABLECIMIENTO'; usuarioId: string; enlace: string; expiraEn: string }
+export interface CuentaAdministrada { usuarioId: string; correo: string; estado: string }
+export interface EnlaceAccesoPublico { tipo: 'INVITACION' | 'RESTABLECIMIENTO'; correo: string; familia?: string; expiraEn: string }
 
 function leerCookie(nombre: string) {
   const prefijo = `${encodeURIComponent(nombre)}=`
@@ -235,6 +240,54 @@ export function consultarFamiliasPlataforma() {
 export function crearFamiliaPlataforma(datos: { nombre: string; zonaHoraria: string }) {
   return solicitud<FamiliaAdministrada>('/api/v1/administracion/familias', {
     method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
+}
+
+export function consultarMiembrosPlataforma(familiaId: string) {
+  return solicitud<{ miembros: MiembroPlataforma[] }>(`/api/v1/administracion/familias/${familiaId}/miembros`)
+}
+
+export function crearMiembroPlataforma(familiaId: string, datos: { usuarioId: string; nombre: string; permiso: MiembroPlataforma['permiso'] }) {
+  return solicitud<MiembroPlataforma>(`/api/v1/administracion/familias/${familiaId}/miembros`, {
+    method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
+}
+
+export function consultarEnlacesPlataforma(familiaId: string) {
+  return solicitud<{ enlaces: EnlaceAccesoAdministrado[] }>(`/api/v1/autenticacion/administracion/enlaces?familiaId=${encodeURIComponent(familiaId)}`)
+}
+
+export function consultarCuentasPlataforma(usuarioIds: string[]) {
+  if (!usuarioIds.length) return Promise.resolve({ cuentas: [] as CuentaAdministrada[] })
+  const consulta = usuarioIds.map(id => `ids=${encodeURIComponent(id)}`).join('&')
+  return solicitud<{ cuentas: CuentaAdministrada[] }>(`/api/v1/autenticacion/administracion/usuarios?${consulta}`)
+}
+
+export function crearInvitacionPlataforma(datos: { usuarioId: string; familiaId: string; familiaNombre: string; correo: string }) {
+  return solicitud<EnlaceAccesoGenerado>('/api/v1/autenticacion/administracion/invitaciones', {
+    method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
+}
+
+export function crearRestablecimientoPlataforma(usuarioId: string) {
+  return solicitud<EnlaceAccesoGenerado>(`/api/v1/autenticacion/administracion/usuarios/${usuarioId}/restablecimientos`, {
+    method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }
+  })
+}
+
+export function revocarEnlacePlataforma(enlaceId: string) {
+  return solicitud<void>(`/api/v1/autenticacion/administracion/enlaces/${enlaceId}`, { method: 'DELETE' })
+}
+
+export function consultarEnlaceAcceso(token: string) {
+  return solicitud<EnlaceAccesoPublico>('/api/v1/autenticacion/enlaces/consultar', {
+    method: 'POST', body: JSON.stringify({ token })
+  })
+}
+
+export function consumirEnlaceAcceso(token: string, clave: string) {
+  return solicitud<void>('/api/v1/autenticacion/enlaces/consumir', {
+    method: 'POST', body: JSON.stringify({ token, clave })
   })
 }
 

@@ -43,6 +43,7 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .boton-principal { width: 100%; padding: 13px 18px; border: 0; border-radius: 10px; color: white; background: var(--verde); font-weight: 800; }
 .boton-principal:disabled { cursor: not-allowed; opacity: .65; }
 .error { padding: 11px 14px; border-radius: 11px; color: #7d321f; background: #f7dfd7; }
+.panel-acceso > p.error { color: #7d321f; }
 
 .aplicacion {
   width: min(100%, 760px);
@@ -253,12 +254,28 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .admin-registro__titulo h2 { margin: 3px 0 0; font: 700 1.55rem var(--fuente-display); }
 .admin-registro__titulo a { min-height: 44px; color: var(--verde); font-weight: 800; }
 .admin-familias { display: grid; }
-.admin-familia { display: grid; min-height: 86px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 15px 4px; border-bottom: 1px solid var(--linea); }
+.admin-familia { display: grid; width: 100%; min-height: 86px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0; color: inherit; background: transparent; text-align: left; }
+.admin-familia:hover, .admin-familia--activa { background: #f1f6f3; }
 .admin-familia__marca { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; color: #173d34; background: #d8e8e1; font: 800 1rem var(--fuente-display); }
-.admin-familia h3, .admin-familia p { margin: 0; }
-.admin-familia h3 { font-size: 1rem; }
-.admin-familia p { margin-top: 3px; color: var(--tinta-suave); font-size: .84rem; }
+.admin-familia__datos { display: grid; gap: 3px; min-width: 0; }
+.admin-familia__datos strong { font-size: 1rem; }
+.admin-familia__datos > span { color: var(--tinta-suave); font-size: .84rem; }
 .admin-familia small { display: block; margin-top: 5px; color: var(--tinta-suave); }
+.admin-miembros { scroll-margin-top: 20px; margin-top: 28px; padding-top: 24px; border-top: 2px solid #d6e4de; }
+.admin-miembros__titulo { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.admin-miembros__titulo h2 { margin: 3px 0 0; font: 700 1.55rem var(--fuente-display); }
+.admin-miembros__titulo .boton-principal { width: auto; }
+.admin-miembros__lista { display: grid; margin-top: 12px; }
+.admin-miembro { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 16px 4px; border-bottom: 1px solid var(--linea); }
+.admin-miembro h3, .admin-miembro p { margin: 0; }
+.admin-miembro p, .admin-miembro small { color: var(--tinta-suave); }
+.admin-miembro__acciones { display: flex; justify-content: flex-end; }
+.admin-miembro__acciones .boton-secundario { width: auto; white-space: nowrap; }
+.estado--activo { color: #245b47; background: #dcece4; }
+.dialogo--enlace { width: min(92vw, 620px); }
+.dialogo--enlace > p { margin: 8px 0 14px; }
+.dialogo--enlace input[readonly] { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .82rem; }
+.panel-activar strong { color: var(--verde); }
 .ayuda-admin { margin: 0; padding: 12px; border-radius: 10px; color: var(--tinta-suave); background: var(--niebla); font-size: .84rem; }
 .dialogo details { padding: 12px; border: 1px solid #ded9ce; border-radius: 12px; }
 .dialogo summary { cursor: pointer; color: #315b4c; font-weight: 800; }
@@ -329,6 +346,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .admin-registro__titulo a { max-width: 110px; text-align: right; }
   .admin-familia { grid-template-columns: auto minmax(0, 1fr); }
   .admin-familia .estado { grid-column: 2; justify-self: start; }
+  .admin-miembros__titulo { align-items: stretch; flex-direction: column; }
+  .admin-miembros__titulo .boton-principal { width: 100%; }
+  .admin-miembro { grid-template-columns: minmax(0, 1fr) auto; }
+  .admin-miembro__acciones { grid-column: 1 / -1; }
+  .admin-miembro__acciones .boton-secundario { width: 100%; }
   .formulario-adaptativo { inset: 0; width: 100%; height: 100dvh; max-height: none; transform: none; border-radius: 0; }
   .formulario-adaptativo__estructura { height: 100dvh; }
   .formulario-adaptativo__cabecera, .formulario-adaptativo__contenido { padding-inline: 16px; }

@@ -21,6 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.obusystem.agendafamiliar.agenda.administracion.ServicioAdministracionPlataforma;
 import com.obusystem.agendafamiliar.agenda.administracion.SolicitudFamiliaPlataforma;
+import com.obusystem.agendafamiliar.agenda.administracion.SolicitudMiembroPlataforma;
 
 @Testcontainers
 @SpringBootTest
@@ -56,6 +57,41 @@ class AdministracionPlataformaIT {
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(error -> ((ResponseStatusException) error).getStatusCode())
                 .isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void creaMiembroAdultoIdempotenteYAisladoPorFamilia() {
+        Jwt administrador = jwt(true);
+        var familia = administracion.crear("familia-miembros-1",
+                new SolicitudFamiliaPlataforma("Familia Miembros", "America/Lima"), administrador);
+        UUID usuarioId = UUID.randomUUID();
+        var solicitud = new SolicitudMiembroPlataforma(usuarioId, "Ana Rivera", "ADMINISTRADOR_FAMILIAR");
+        var primero = administracion.crearMiembro(familia.id(), "miembro-ana-1", solicitud, administrador);
+        var repetido = administracion.crearMiembro(familia.id(), "miembro-ana-1", solicitud, administrador);
+
+        assertThat(repetido.perfilId()).isEqualTo(primero.perfilId());
+        assertThat(administracion.consultarMiembros(familia.id(), administrador).miembros())
+                .extracting("usuarioId").containsExactly(usuarioId);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_plataforma WHERE entidad='MIEMBRO' AND entidad_publica_id=?",
+                Integer.class, primero.perfilId())).isEqualTo(1);
+        assertThatThrownBy(() -> administracion.consultarMiembros(familia.id(), jwt(false)))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThatThrownBy(() -> administracion.consultarMiembros(UUID.randomUUID(), administrador))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void exigeAdministradorFamiliarComoPrimerMiembro() {
+        Jwt administrador = jwt(true);
+        var familia = administracion.crear("familia-primer-admin-1",
+                new SolicitudFamiliaPlataforma("Familia Primer Admin", "America/Lima"), administrador);
+
+        assertThatThrownBy(() -> administracion.crearMiembro(familia.id(), "miembro-adulto-primero-1",
+                new SolicitudMiembroPlataforma(UUID.randomUUID(), "Persona adulta", "ADULTO"), administrador))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     private Jwt jwt(boolean administrador) {
