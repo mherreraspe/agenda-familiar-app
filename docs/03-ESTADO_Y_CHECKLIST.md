@@ -206,6 +206,22 @@ Integrado mediante el PR #34, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-c155e00-20260723T233543Z`.
 - [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — miembros, invitaciones y recuperación de acceso
+
+Integrado mediante el PR #36, desplegado y verificado en producción:
+
+- [x] `/admin` lista miembros vinculados y permite crear adultos con rol familiar explícito; el primer miembro debe ser administrador familiar.
+- [x] Invitaciones de un solo uso válidas durante 48 horas, revocables e idempotentes; el invitado define su contraseña en `/activar`.
+- [x] Restablecimientos de un solo uso válidos durante 30 minutos y revocación de todas las sesiones refresh al cambiar la contraseña.
+- [x] La base conserva solo SHA-256 del token; el token viaja en el fragmento del enlace y se retira inmediatamente de la dirección visible.
+- [x] Auditoría segura de creación, consumo y revocación, sin tokens, contraseñas ni contenido médico.
+- [x] Pruebas PostgreSQL 18 de autorización global, expiración, revocación, reuso y consumo concurrente único.
+- [x] Verificación local: 43 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
+- [x] CI de PR `30056539025` y CI de `main` `30056643411` verdes; 72 escenarios Playwright/axe en tres viewports.
+- [x] PR #36 integrado como `d73b8c6`; release `20260724T003756Z` saludable, autenticación V1–V4 y Agenda V1–V11 validadas.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-d73b8c6-20260724T003756Z`.
+- [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -262,6 +278,7 @@ Integrado mediante el PR #34, desplegado y verificado en producción:
 - PR de Objetos como dominio familiar real: <https://github.com/mherreraspe/agenda-familiar-app/pull/30>; CI `30042503806` aprobado y release `20260723T203410Z` verificado.
 - PR de formularios modales y capas exclusivas: <https://github.com/mherreraspe/agenda-familiar-app/pull/32>; CI `30046463114` aprobado y release `20260723T213222Z` verificado.
 - PR de administración global y alta de familias: <https://github.com/mherreraspe/agenda-familiar-app/pull/34>; CI `30053417092` y `30053507456` aprobados, release `20260723T233543Z` verificado.
+- PR de miembros, invitaciones y recuperación de acceso: <https://github.com/mherreraspe/agenda-familiar-app/pull/36>; CI `30056539025` y `30056643411` aprobados, release `20260724T003756Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
@@ -316,7 +333,8 @@ Integrado mediante el PR #34, desplegado y verificado en producción:
 - [ ] Pantalla de sesiones activas y revocación individual.
 - [ ] Roles familiares completos y autorización por operación.
 - [x] Administración de plataforma: rol global, acceso exclusivo, listado y alta idempotente de familias.
-- [ ] Administración de plataforma: miembros por invitación, suspensión, cuota y métricas sin contenido médico.
+- [x] Administración de plataforma: miembros por invitación y recuperación de acceso de un solo uso.
+- [ ] Administración de plataforma: suspensión, cuota y métricas sin contenido médico.
 - [ ] Cambiar contraseña y retirar las credenciales provisionales antes de datos reales.
 - [ ] Migrar JWT HS256 compartido a firma asimétrica como indica el diseño técnico.
 
@@ -333,13 +351,13 @@ Integrado mediante el PR #34, desplegado y verificado en producción:
 
 ## Próximo bloque recomendado
 
-Completar el ingreso de familias con miembros e invitaciones seguras:
+Añadir Web Push privado sin convertir la notificación en una fuga de datos:
 
-1. Crear invitaciones de un solo uso con token aleatorio, hash persistido, vencimiento corto y revocación.
-2. Permitir al invitado definir su contraseña desde el enlace sin que el administrador la conozca.
-3. Permitir al administrador iniciar un restablecimiento por enlace y revocar sesiones al completarlo.
-4. Auditar el ciclo de vida sin registrar tokens, contraseñas ni contenido familiar.
-5. Probar aislamiento, enumeración, reuso, concurrencia, expiración, CSRF e IDOR.
+1. Solicitar permiso solo tras una acción explícita y registrar cada suscripción para el usuario y dispositivo autenticados.
+2. Mostrar en la pantalla bloqueada solo un aviso genérico, sin nombres, medicamentos ni contenido familiar; el detalle se consulta dentro de la PWA autenticada.
+3. Permitir revocar dispositivos, depurar endpoints inválidos y evitar entregas duplicadas.
+4. Mantener Hoy como bandeja operativa y usar Push únicamente como aviso de cambios relevantes.
+5. Probar aislamiento familiar, permiso denegado, renovación de suscripción, dispositivo revocado y concurrencia.
 
 ## Continuidad operativa
 
