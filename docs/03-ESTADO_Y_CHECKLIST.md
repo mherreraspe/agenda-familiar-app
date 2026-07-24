@@ -270,6 +270,21 @@ Integrado mediante el PR #44, desplegado y verificado en producción:
 - [x] Release `20260724T111747Z` saludable, V1–V12 validadas y E2E HTTPS real aprobado.
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-17f1758-20260724T111746Z`.
 
+## Bloque completado — tareas, eventos, citas y salidas en Agenda
+
+Integrado mediante el PR #46, desplegado y verificado en producción:
+
+- [x] Agenda permite crear tareas y eventos desde un menú contextual limitado a esos dos dominios.
+- [x] Las tareas se identifican con texto y símbolo, conservan responsable, vencimiento y acción `Hecho`.
+- [x] Los eventos se identifican sin acción de completar; `CITA` y `SALIDA` reutilizan el campo de tipo existente.
+- [x] El formulario mantiene visible `Tipo o categoría`, con opciones para evento familiar, cita, salida o visita y categorías existentes.
+- [x] Se retiró el término `recordatorio` hasta disponer de una notificación real.
+- [x] Verificación local: 47 pruebas frontend, build Vite y 11 pruebas backend.
+- [x] Playwright/axe: 93 escenarios verdes en 320×700, 390×844 y 1280×900.
+- [x] CI de PR `30092897920` y CI de `main` `30093885014` verdes; PR #46 integrado como `23e65f7`.
+- [x] Release `20260724T123957Z` saludable, V1–V12 validadas y E2E HTTPS real aprobado.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-23e65f7-20260724T123957Z`.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -332,6 +347,7 @@ Integrado mediante el PR #44, desplegado y verificado en producción:
 - PR de resolución de familia activa: <https://github.com/mherreraspe/agenda-familiar-app/pull/40>; CI `30062673683` y `30062763663` aprobados, release `20260724T025339Z` verificado.
 - PR de Salud práctica y vigencia de envases: <https://github.com/mherreraspe/agenda-familiar-app/pull/42>; CI `30068576773` y `30068668429` aprobados, release `20260724T051336Z` verificado.
 - PR de gestión de miembros y corrección de tratamientos activos: <https://github.com/mherreraspe/agenda-familiar-app/pull/44>; CI `30088911525` aprobado, release `20260724T111747Z` verificado.
+- PR de diferenciación de tareas, eventos, citas y salidas: <https://github.com/mherreraspe/agenda-familiar-app/pull/46>; CI `30092897920` y `30093885014` aprobados, release `20260724T123957Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
