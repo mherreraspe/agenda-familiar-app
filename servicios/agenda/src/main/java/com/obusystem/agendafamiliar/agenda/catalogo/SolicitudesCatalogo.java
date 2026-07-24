@@ -55,6 +55,16 @@ public final class SolicitudesCatalogo {
             @Min(1) @Max(168) Integer intervaloHoras, LocalDate fechaInicio, LocalDate fechaFin,
             UUID responsablePerfilId, UUID responsableAlternativoPerfilId) { }
 
+    public record ActualizacionTratamiento(UUID medicamentoId,
+            @NotBlank @Size(max = 180) String nombre,
+            @Size(max = 180) String nombreMedicamento, @Size(max = 300) String dosis,
+            @Size(max = 300) String aplicacion, @Size(max = 1000) String indicacion,
+            @Size(max = 300) String frecuencia,
+            @NotNull @Size(min = 1, max = 8) List<@NotNull LocalTime> horarios,
+            @Min(1) @Max(168) Integer intervaloHoras,
+            @NotNull LocalDate fechaInicio, LocalDate fechaFin,
+            UUID responsablePerfilId, UUID responsableAlternativoPerfilId) { }
+
     public record ActualizacionEnvase(
             @NotNull @Pattern(regexp = "SIN_ABRIR|ABIERTO") String estadoEnvase,
             LocalDate abiertoEn, @Min(1) @Max(3650) Integer duracionAbiertoDias,

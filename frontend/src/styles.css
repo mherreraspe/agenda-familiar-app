@@ -259,22 +259,36 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .admin-familias { display: grid; }
 .admin-familia { display: grid; width: 100%; min-height: 86px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--linea); border-radius: 0; color: inherit; background: transparent; text-align: left; }
 .admin-familia:hover, .admin-familia--activa { background: #f1f6f3; }
+.admin-familia--activa { box-shadow: inset 4px 0 #315b4c; }
 .admin-familia__marca { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; color: #173d34; background: #d8e8e1; font: 800 1rem var(--fuente-display); }
 .admin-familia__datos { display: grid; gap: 3px; min-width: 0; }
 .admin-familia__datos strong { font-size: 1rem; }
 .admin-familia__datos > span { color: var(--tinta-suave); font-size: .84rem; }
 .admin-familia small { display: block; margin-top: 5px; color: var(--tinta-suave); }
 .admin-miembros { scroll-margin-top: 20px; margin-top: 28px; padding-top: 24px; border-top: 2px solid #d6e4de; }
+.admin-contexto-familia { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding: 14px 16px; border: 1px solid #c9ddd4; border-radius: 14px; background: #edf6f2; }
+.admin-contexto-familia div { display: grid; gap: 1px; }
+.admin-contexto-familia small { color: var(--tinta-suave); }
+.admin-contexto-familia strong { font: 750 1.08rem var(--fuente-display); }
 .admin-miembros__titulo { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
 .admin-miembros__titulo h2 { margin: 3px 0 0; font: 700 1.55rem var(--fuente-display); }
+.admin-miembros__titulo p { margin: 5px 0 0; color: var(--tinta-suave); }
 .admin-miembros__titulo .boton-principal { width: auto; }
 .admin-miembros__lista { display: grid; margin-top: 12px; }
 .admin-miembro { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; padding: 16px 4px; border-bottom: 1px solid var(--linea); }
 .admin-miembro h3, .admin-miembro p { margin: 0; }
 .admin-miembro p, .admin-miembro small { color: var(--tinta-suave); }
-.admin-miembro__acciones { display: flex; justify-content: flex-end; }
+.admin-miembro__acciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .admin-miembro__acciones .boton-secundario { width: auto; white-space: nowrap; }
 .estado--activo { color: #245b47; background: #dcece4; }
+.estado--baja { color: #74372f; background: #f6ded9; }
+.dialogo--formulario:has(> .dialogo__familia) { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.dialogo__familia { margin: 0; padding: 10px 24px; color: #315b4c; background: #edf6f2; }
+.admin-estado-acceso { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; padding: 0; border: 0; }
+.admin-estado-acceso legend { grid-column: 1 / -1; margin-bottom: 7px; font-weight: 800; }
+.admin-estado-acceso label { display: flex; min-height: 48px; align-items: center; gap: 9px; padding: 11px 13px; border: 1px solid #ccd8d3; border-radius: 12px; background: #f7faf8; }
+.admin-estado-acceso input { width: 20px; height: 20px; margin: 0; accent-color: #315b4c; }
+.aviso-baja { margin: 0; padding: 12px; border-left: 4px solid #a34b3d; border-radius: 8px; color: #71382f; background: #fae9e5; }
 .dialogo--enlace { width: min(92vw, 620px); }
 .dialogo--enlace > p { margin: 8px 0 14px; }
 .dialogo--enlace input[readonly] { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .82rem; }
@@ -366,7 +380,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .admin-miembros__titulo .boton-principal { width: 100%; }
   .admin-miembro { grid-template-columns: minmax(0, 1fr) auto; }
   .admin-miembro__acciones { grid-column: 1 / -1; }
-  .admin-miembro__acciones .boton-secundario { width: 100%; }
+  .admin-miembro__acciones .boton-secundario { flex: 1 1 145px; width: auto; }
+  .admin-estado-acceso { grid-template-columns: 1fr; }
   .formulario-adaptativo { inset: 0; width: 100%; height: 100dvh; max-height: none; transform: none; border-radius: 0; }
   .formulario-adaptativo__estructura { height: 100dvh; }
   .formulario-adaptativo__cabecera, .formulario-adaptativo__contenido { padding-inline: 16px; }

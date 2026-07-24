@@ -43,7 +43,12 @@ public class ServicioOcurrencias {
 
     @Transactional
     public void materializarTratamiento(Familia familia, Long tratamientoId) {
-        materializar(familia, tratamientoId);
+        materializar(familia, tratamientoId, null);
+    }
+
+    @Transactional
+    public void materializarTratamientoDesdeAhora(Familia familia, Long tratamientoId) {
+        materializar(familia, tratamientoId, Instant.now());
     }
 
     @Transactional
@@ -183,10 +188,10 @@ public class ServicioOcurrencias {
     }
 
     private void materializar(Familia familia) {
-        materializar(familia, null);
+        materializar(familia, null, null);
     }
 
-    private void materializar(Familia familia, Long tratamientoId) {
+    private void materializar(Familia familia, Long tratamientoId, Instant noAntesDe) {
         String sql = "SELECT t.id tratamiento_id, t.fecha_inicio, t.fecha_fin, h.id horario_id, h.hora_local, h.intervalo_horas "
                 + "FROM tratamientos t JOIN horarios_tratamiento h ON h.tratamiento_id=t.id AND h.activo "
                 + "WHERE t.familia_id=? AND t.estado='ACTIVO'" + (tratamientoId == null ? "" : " AND t.id=?");
@@ -211,6 +216,7 @@ public class ServicioOcurrencias {
                 Instant finExclusivo = hasta.plusDays(1).atStartOfDay(zona).toInstant();
                 for (Instant instante = base.plusSeconds(saltos * intervaloSegundos);
                         instante.isBefore(finExclusivo); instante = instante.plusSeconds(intervaloSegundos)) {
+                    if (noAntesDe != null && instante.isBefore(noAntesDe)) continue;
                     jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, horario_id, programada_en) VALUES (?, ?, ?, ?, ?) ON CONFLICT (familia_id, tratamiento_id, programada_en) DO NOTHING",
                             UuidV7.nuevo(), familia.getId(), horario.tratamientoId(), horario.horarioId(), Timestamp.from(instante));
                 }
@@ -218,6 +224,7 @@ public class ServicioOcurrencias {
             }
             for (LocalDate fecha = desde; !fecha.isAfter(hasta); fecha = fecha.plusDays(1)) {
                 Instant instante = fecha.atTime(horario.hora()).atZone(zona).toInstant();
+                if (noAntesDe != null && instante.isBefore(noAntesDe)) continue;
                 jdbc.update("INSERT INTO ocurrencias_tratamiento (id_publico, familia_id, tratamiento_id, horario_id, programada_en) VALUES (?, ?, ?, ?, ?) ON CONFLICT (familia_id, tratamiento_id, programada_en) DO NOTHING",
                         UuidV7.nuevo(), familia.getId(), horario.tratamientoId(), horario.horarioId(), Timestamp.from(instante));
             }

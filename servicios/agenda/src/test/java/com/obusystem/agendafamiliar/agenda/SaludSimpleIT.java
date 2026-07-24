@@ -1,6 +1,7 @@
 package com.obusystem.agendafamiliar.agenda;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,8 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -63,6 +66,49 @@ class SaludSimpleIT {
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, familiaId.toString());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id WHERE t.familia_id=? AND t.grupo_publico_id=?",
                 Integer.class, familiaId, primero.grupoId())).isEqualTo(6);
+    }
+
+    @Test
+    @Transactional
+    void editaElGrupoActivoConservaTomasResueltasYRegeneraSoloPendientesFuturas() {
+        var creado = catalogo.crearTratamientos(FAMILIA, "tratamiento-para-editar",
+                new SolicitudesCatalogo.TratamientoMultiple(List.of(PAPA, HIJO), null,
+                        "Gotas", null, "1 gota", null, null, null,
+                        List.of(LocalTime.of(8, 0), LocalTime.of(20, 0)), null,
+                        LocalDate.now(), LocalDate.now().plusDays(2), null, null), jwt());
+        Long familiaId = jdbc.queryForObject("SELECT id FROM familias WHERE id_publico=?", Long.class, FAMILIA);
+        jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, familiaId.toString());
+        UUID ocurrenciaResuelta = jdbc.queryForObject("SELECT o.id_publico FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id WHERE t.familia_id=? AND t.grupo_publico_id=? ORDER BY o.programada_en LIMIT 1",
+                UUID.class, familiaId, creado.grupoId());
+        jdbc.update("UPDATE ocurrencias_tratamiento SET estado='TOMADA', resuelta_en=NOW() WHERE familia_id=? AND id_publico=?",
+                familiaId, ocurrenciaResuelta);
+
+        var actualizacion = new SolicitudesCatalogo.ActualizacionTratamiento(null, "Gotas corregidas",
+                "Lágrimas", "2 gotas", "Ambos ojos", "Agitar antes", null,
+                List.of(LocalTime.of(10, 0), LocalTime.of(18, 0)), null,
+                LocalDate.now(), LocalDate.now().plusDays(3), null, null);
+        catalogo.actualizarTratamiento(FAMILIA, creado.grupoId(), "editar-tratamiento-1", actualizacion, jwt());
+        catalogo.actualizarTratamiento(FAMILIA, creado.grupoId(), "editar-tratamiento-1", actualizacion, jwt());
+
+        assertThat(catalogo.consultar(FAMILIA, jwt()).tratamientos().stream()
+                .filter(item -> item.grupoId().equals(creado.grupoId())).toList())
+                .hasSize(2).allSatisfy(item -> {
+                    assertThat(item.medicamento()).isEqualTo("Gotas corregidas");
+                    assertThat(item.dosisIndicada()).isEqualTo("2 gotas");
+                    assertThat(item.horarios()).containsExactly(LocalTime.of(10, 0), LocalTime.of(18, 0));
+                });
+        assertThat(jdbc.queryForObject("SELECT estado FROM ocurrencias_tratamiento WHERE familia_id=? AND id_publico=?",
+                String.class, familiaId, ocurrenciaResuelta)).isEqualTo("TOMADA");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ocurrencias_tratamiento o JOIN tratamientos t ON t.id=o.tratamiento_id JOIN horarios_tratamiento h ON h.id=o.horario_id WHERE t.familia_id=? AND t.grupo_publico_id=? AND o.estado='PENDIENTE' AND o.programada_en>=NOW() AND NOT h.activo",
+                Integer.class, familiaId, creado.grupoId())).isZero();
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM auditoria WHERE familia_id=? AND entidad='TRATAMIENTO' AND entidad_publica_id=? AND operacion='ACTUALIZAR'",
+                Integer.class, familiaId, creado.grupoId())).isEqualTo(1);
+
+        jdbc.update("UPDATE tratamientos SET estado='CERRADO' WHERE familia_id=? AND grupo_publico_id=?", familiaId, creado.grupoId());
+        assertThatThrownBy(() -> catalogo.actualizarTratamiento(FAMILIA, creado.grupoId(),
+                "editar-tratamiento-cerrado", actualizacion, jwt()))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(error -> ((ResponseStatusException) error).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
     @Test

@@ -276,6 +276,13 @@ export function crearMiembroPlataforma(familiaId: string, datos: { usuarioId: st
   })
 }
 
+export function actualizarMiembroPlataforma(familiaId: string, perfilId: string,
+  datos: { permiso: MiembroPlataforma['permiso']; activo: boolean }) {
+  return solicitud<MiembroPlataforma>(`/api/v1/administracion/familias/${familiaId}/miembros/${perfilId}`, {
+    method: 'PATCH', body: JSON.stringify(datos)
+  })
+}
+
 export function consultarEnlacesPlataforma(familiaId: string) {
   return solicitud<{ enlaces: EnlaceAccesoAdministrado[] }>(`/api/v1/autenticacion/administracion/enlaces?familiaId=${encodeURIComponent(familiaId)}`)
 }
@@ -401,6 +408,12 @@ export function crearMedicamento(datos: { nombre: string; presentacion: string; 
 export function crearTratamiento(datos: { perfilIds: string[]; medicamentoId?: string; nombre: string; nombreMedicamento?: string; dosis?: string; aplicacion?: string; indicacion?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
   return solicitud<{ grupoId: string; ids: string[] }>(`/api/v1/familias/${familiaActiva()}/tratamientos/grupos`, {
     method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
+}
+
+export function actualizarTratamiento(grupoId: string, datos: { medicamentoId?: string; nombre: string; nombreMedicamento?: string; dosis?: string; aplicacion?: string; indicacion?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/tratamientos/grupos/${grupoId}`, {
+    method: 'PATCH', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
   })
 }
 

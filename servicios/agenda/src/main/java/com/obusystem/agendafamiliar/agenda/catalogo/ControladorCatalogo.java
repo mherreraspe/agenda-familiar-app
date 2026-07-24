@@ -68,6 +68,16 @@ public class ControladorCatalogo {
         return resultado;
     }
 
+    @PatchMapping("/tratamientos/grupos/{grupoId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void actualizarTratamiento(@PathVariable UUID familiaId, @PathVariable UUID grupoId,
+            @RequestHeader("Idempotency-Key") String clave,
+            @Valid @RequestBody SolicitudesCatalogo.ActualizacionTratamiento solicitud,
+            @AuthenticationPrincipal Jwt jwt) {
+        catalogo.actualizarTratamiento(familiaId, grupoId, clave, solicitud, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
+    }
+
     @PatchMapping("/medicamentos/lotes/{loteId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     void actualizarEnvase(@PathVariable UUID familiaId, @PathVariable UUID loteId,
