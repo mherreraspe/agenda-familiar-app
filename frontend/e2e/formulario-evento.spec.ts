@@ -12,6 +12,7 @@ async function prepararApi(page: Page, opciones: { errorEvento?: boolean } = {})
 
     if (ruta.endsWith('/autenticacion/renovar')) return json({ accessToken: 'token-e2e', expiraEn: '2099-01-01T00:00:00Z', usuarioId: 'usuario-1', correo: 'mama@familia.test' })
     if (ruta === '/api/v1/familias') return json({ familias: [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', rol: 'ADMINISTRADOR_FAMILIAR' }] })
+    if (ruta.endsWith('/notificaciones')) return json({ avisos: [], sinLeer: 0, preferencias: { tareas: true, eventos: true, salud: true, botiquin: true, silencioDesde: '22:00', silencioHasta: '07:00' }, dispositivos: [], pushDisponible: false, clavePublica: '' })
     if (ruta.endsWith('/hoy')) return json({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil], tareas: [] })
     if (ruta.endsWith('/catalogo')) return json({ medicamentos: [], tratamientos: [], eventos: [], lugares: [] })
     if (ruta.endsWith('/ocurrencias')) return json({ ocurrencias: [], revisar: [] })

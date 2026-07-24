@@ -121,6 +121,11 @@ export interface EnlaceAccesoAdministrado { id: string; tipo: 'INVITACION' | 'RE
 export interface EnlaceAccesoGenerado { id: string; tipo: 'INVITACION' | 'RESTABLECIMIENTO'; usuarioId: string; enlace: string; expiraEn: string }
 export interface CuentaAdministrada { usuarioId: string; correo: string; estado: string }
 export interface EnlaceAccesoPublico { tipo: 'INVITACION' | 'RESTABLECIMIENTO'; correo: string; familia?: string; expiraEn: string }
+export type TipoNotificacion = 'TAREA' | 'EVENTO' | 'SALUD' | 'BOTIQUIN' | 'FAMILIA' | 'SISTEMA'
+export interface AvisoFamiliar { id: string; tipo: TipoNotificacion; titulo: string; detalle?: string; destino: string; creadaEn: string; leidaEn?: string }
+export interface PreferenciasNotificacion { tareas: boolean; eventos: boolean; salud: boolean; botiquin: boolean; silencioDesde: string; silencioHasta: string }
+export interface DispositivoNotificacion { id: string; nombre: string; activo: boolean; creadoEn: string; ultimoExitoEn?: string }
+export interface RespuestaNotificaciones { avisos: AvisoFamiliar[]; sinLeer: number; preferencias: PreferenciasNotificacion; dispositivos: DispositivoNotificacion[]; pushDisponible: boolean; clavePublica: string }
 
 function leerCookie(nombre: string) {
   const prefijo = `${encodeURIComponent(nombre)}=`
@@ -250,6 +255,37 @@ export async function abrirFlujoEventos(ultimoEventoId: string, signal: AbortSig
 
 export function consultarHoy() {
   return solicitud<RespuestaHoy>(`/api/v1/familias/${familiaActiva()}/hoy`)
+}
+
+export function consultarNotificaciones() {
+  const ruta = `/api/v1/familias/${familiaActiva()}/notificaciones`
+  const sujeto = sujetoSesion()
+  if (sujeto) cacheLectura.delete(`${sujeto}:${ruta}`)
+  return solicitud<RespuestaNotificaciones>(ruta)
+}
+
+export function marcarNotificacionLeida(notificacionId: string) {
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/notificaciones/${notificacionId}/leida`, { method: 'PATCH' })
+}
+
+export function marcarTodasNotificacionesLeidas() {
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/notificaciones/leer-todas`, { method: 'POST' })
+}
+
+export function guardarPreferenciasNotificacion(datos: PreferenciasNotificacion) {
+  return solicitud<PreferenciasNotificacion>(`/api/v1/familias/${familiaActiva()}/notificaciones/preferencias`, {
+    method: 'PUT', body: JSON.stringify(datos)
+  })
+}
+
+export function registrarDispositivoNotificacion(datos: { endpoint: string; claveP256dh: string; claveAuth: string; dispositivo: string }) {
+  return solicitud<DispositivoNotificacion>(`/api/v1/familias/${familiaActiva()}/notificaciones/suscripciones`, {
+    method: 'POST', body: JSON.stringify(datos)
+  })
+}
+
+export function revocarDispositivoNotificacion(dispositivoId: string) {
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/notificaciones/suscripciones/${dispositivoId}`, { method: 'DELETE' })
 }
 
 export function consultarFamiliasUsuario() {
@@ -383,11 +419,11 @@ export function actuarAgenda(entidad: 'tareas' | 'eventos', id: string, accion: 
   })
 }
 
-export function crearTarea(datos: { titulo: string; descripcion: string; perfilId: string; fechaLimite: string; recurrencia?: RecurrenciaSolicitud }) {
+export function crearTarea(datos: { titulo: string; descripcion: string; perfilId: string; fechaLimite: string; avisar: boolean; recurrencia?: RecurrenciaSolicitud }) {
   return solicitud<TareaResumen>(`/api/v1/familias/${familiaActiva()}/tareas`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
-export function crearEvento(datos: { perfilId?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; recurrencia?: RecurrenciaSolicitud }) {
+export function crearEvento(datos: { perfilId?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; avisar24h: boolean; avisar1h: boolean; recurrencia?: RecurrenciaSolicitud }) {
   return solicitud<{ id: string }>(`/api/v1/familias/${familiaActiva()}/eventos`, { method: 'POST', body: JSON.stringify(datos) })
 }
 

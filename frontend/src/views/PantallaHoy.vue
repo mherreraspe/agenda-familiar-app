@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppShell from '../app/AppShell.vue'
 import TarjetaPendiente from '../components/TarjetaPendiente.vue'
+import CentroNotificaciones from '../components/CentroNotificaciones.vue'
 import MenuMas from '../components/listas/MenuMas.vue'
 import FormularioEvento from '../features/eventos/FormularioEvento.vue'
 import { useFormularioRuta } from '../composables/useFormularioRuta'
@@ -97,7 +98,7 @@ const dialogoFormulario = ref<HTMLDialogElement | null>(null)
 const dialogoReceta = ref<HTMLDialogElement | null>(null)
 let activadorFormulario: HTMLElement | null = null
 let activadorReceta: HTMLElement | null = null
-const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
+const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', avisar: true, repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
 const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '', estadoEnvase: 'SIN_ABRIR' as 'SIN_ABRIR' | 'ABIERTO', abiertoEn: '', duracionAbiertoDias: '', avisarVencimiento: true, anticipacionVencimientoDias: 7, avisarApertura: true, anticipacionAperturaDias: 3 })
 const nuevoTratamiento = reactive({ perfilIds: [] as string[], medicamentoId: '', nombre: '', nombreMedicamento: '', dosis: '', aplicacion: '', indicacion: '', frecuencia: '', modoHorario: 'HORAS' as 'HORAS' | 'INTERVALO', horarios: ['08:00'] as string[], intervaloHoras: 8, fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
 const grupoTratamientoEditadoId = ref<string | null>(null)
@@ -110,6 +111,8 @@ const recetaVisible = ref<{ id: string; url: string } | null>(null)
 const perfilEditadoId = ref<string | null>(null)
 const nuevoPerfil = reactive({ nombre: '', tipo: 'DEPENDIENTE' as 'ADULTO' | 'DEPENDIENTE', color: '#315b4c', relacion: '', usuarioId: '', permiso: 'ADULTO' as 'ADMINISTRADOR_FAMILIAR' | 'ADULTO', activo: true })
 const formularioEvento = ref<InstanceType<typeof FormularioEvento> | null>(null)
+const centroNotificaciones = ref<InstanceType<typeof CentroNotificaciones> | null>(null)
+const cantidadNotificaciones = ref(0)
 const {
   abierto: eventoAbierto,
   modificado: modificadoEvento,
@@ -548,11 +551,13 @@ async function guardarTarea() {
     await crearTarea({
       titulo: nuevaTarea.titulo, descripcion: nuevaTarea.descripcion, perfilId: nuevaTarea.perfilId,
       fechaLimite: new Date(nuevaTarea.fechaLimite).toISOString(),
+      avisar: nuevaTarea.avisar,
       recurrencia: nuevaTarea.repetir ? { frecuencia: nuevaTarea.frecuencia as 'DIARIA' | 'SEMANAL' | 'MENSUAL', intervalo: nuevaTarea.intervalo, hasta: new Date(nuevaTarea.hasta).toISOString() } : undefined
     })
     nuevaTarea.titulo = ''
     nuevaTarea.descripcion = ''
     nuevaTarea.fechaLimite = ''
+    nuevaTarea.avisar = true
     nuevaTarea.repetir = false
     nuevaTarea.hasta = ''
     formulario.value = null
@@ -972,6 +977,7 @@ async function salir() {
       :subtitulo="subtituloPantalla"
       :familia="datos?.familia"
       :cantidad-atencion="cantidadRevision"
+      :cantidad-notificaciones="cantidadNotificaciones"
       :etiqueta-anadir="etiquetaAnadirCabecera"
       :tipo-anadir-directo="tipoAnadirCabecera"
       :tipos-anadir="tiposAnadirCabecera"
@@ -981,6 +987,7 @@ async function salir() {
       :familia-activa-id="familiaActivaId"
       @anadir="abrirAlta"
       @cambiar-familia="cambiarFamilia"
+      @notificaciones="centroNotificaciones?.abrir()"
       @salir="salir"
     >
       <p v-if="!enLinea" class="aviso-conexion" role="status">
@@ -1247,6 +1254,12 @@ async function salir() {
       </template>
     </AppShell>
 
+    <CentroNotificaciones
+      ref="centroNotificaciones"
+      :familia-id="familiaActivaId"
+      @contador="cantidadNotificaciones = $event"
+    />
+
     <FormularioEvento
       v-if="datos"
       ref="formularioEvento"
@@ -1269,6 +1282,7 @@ async function salir() {
           </select>
         </label>
         <label>Fecha y hora<input v-model="nuevaTarea.fechaLimite" type="datetime-local" required /></label>
+        <label class="opcion-linea"><input v-model="nuevaTarea.avisar" type="checkbox" /> Avisarme al vencer</label>
         <label>Detalle<textarea v-model.trim="nuevaTarea.descripcion" maxlength="1000" rows="3" /></label>
         <label class="opcion-linea"><input v-model="nuevaTarea.repetir" type="checkbox" /> Repetir tarea</label>
         <div v-if="nuevaTarea.repetir" class="campos-dobles">

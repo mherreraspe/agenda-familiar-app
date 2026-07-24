@@ -49,7 +49,7 @@ public class ServicioAccionesAgenda {
             int cambio = jdbc.update("UPDATE tareas SET estado='REPROGRAMADA', actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND id_publico=? AND estado='PENDIENTE'",
                     familiaId, id);
             exigirPendiente(cambio);
-            jdbc.update("INSERT INTO tareas (id_publico, familia_id, perfil_id, titulo, descripcion, fecha_limite, estado, recurrencia_id, tarea_origen_id) SELECT ?, familia_id, perfil_id, titulo, descripcion, ?, 'PENDIENTE', recurrencia_id, id FROM tareas WHERE id=? AND familia_id=?",
+            jdbc.update("INSERT INTO tareas (id_publico, familia_id, perfil_id, titulo, descripcion, fecha_limite, estado, recurrencia_id, tarea_origen_id, avisar) SELECT ?, familia_id, perfil_id, titulo, descripcion, ?, 'PENDIENTE', recurrencia_id, id, avisar FROM tareas WHERE id=? AND familia_id=?",
                     nueva, Timestamp.from(solicitud.fechaNueva()), fila.id(), familiaId);
             finalizar(familiaId, clave, fila.fecha(), solicitud.fechaNueva(), nueva);
             auditar(familiaId, actor, "REPROGRAMAR", "TAREA", id, "Tarea reprogramada conservando la instancia anterior");
@@ -73,7 +73,7 @@ public class ServicioAccionesAgenda {
             int cambio = jdbc.update("UPDATE eventos SET estado='REPROGRAMADO', actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND id_publico=? AND estado='PROGRAMADO'",
                     familiaId, id);
             exigirPendiente(cambio);
-            jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, inicio_en, fin_en, estado, lugar_guardado_id, recurrencia_id, evento_origen_id) SELECT ?, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, ?, CASE WHEN fin_en IS NULL THEN NULL ELSE ? + (fin_en - inicio_en) END, 'PROGRAMADO', lugar_guardado_id, recurrencia_id, id FROM eventos WHERE id=? AND familia_id=?",
+            jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, inicio_en, fin_en, estado, lugar_guardado_id, recurrencia_id, evento_origen_id, avisar_24h, avisar_1h) SELECT ?, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, ?, CASE WHEN fin_en IS NULL THEN NULL ELSE ? + (fin_en - inicio_en) END, 'PROGRAMADO', lugar_guardado_id, recurrencia_id, id, avisar_24h, avisar_1h FROM eventos WHERE id=? AND familia_id=?",
                     nuevo, Timestamp.from(solicitud.fechaNueva()), Timestamp.from(solicitud.fechaNueva()), fila.id(), familiaId);
             finalizar(familiaId, clave, fila.fecha(), solicitud.fechaNueva(), nuevo);
             auditar(familiaId, actor, "REPROGRAMAR", "EVENTO", id, "Evento reprogramado conservando la instancia anterior");

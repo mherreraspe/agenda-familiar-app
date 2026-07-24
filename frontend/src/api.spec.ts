@@ -25,7 +25,7 @@ describe('API en modo sin conexión', () => {
     const fetch = vi.fn()
     vi.stubGlobal('fetch', fetch)
 
-    await expect(crearTarea({ titulo: 'Tarea', descripcion: '', perfilId: 'perfil', fechaLimite: new Date().toISOString() }))
+    await expect(crearTarea({ titulo: 'Tarea', descripcion: '', perfilId: 'perfil', fechaLimite: new Date().toISOString(), avisar: true }))
       .rejects.toThrow('Los cambios solo se pueden guardar')
     expect(fetch).not.toHaveBeenCalled()
   })

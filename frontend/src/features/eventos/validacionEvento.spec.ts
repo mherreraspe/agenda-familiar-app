@@ -3,7 +3,7 @@ import { validarEvento, type BorradorEvento } from './validacionEvento'
 
 const base: BorradorEvento = {
   perfilId: '', titulo: 'Reunión', tipo: '', lugar: '', direccion: '', notas: '',
-  inicioEn: '2026-07-20T10:00', finEn: '', repetir: false,
+  inicioEn: '2026-07-20T10:00', finEn: '', avisar24h: true, avisar1h: true, repetir: false,
   frecuencia: 'SEMANAL', intervalo: 1, hasta: ''
 }
 

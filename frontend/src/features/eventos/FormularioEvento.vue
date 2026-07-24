@@ -19,7 +19,7 @@ const emit = defineEmits<{
 
 const borrador = reactive<BorradorEvento>({
   perfilId: '', titulo: '', tipo: '', lugar: '', direccion: '', notas: '', inicioEn: '', finEn: '',
-  repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: ''
+  avisar24h: true, avisar1h: true, repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: ''
 })
 const errores = ref<ErroresEvento>({})
 const errorGeneral = ref('')
@@ -42,7 +42,7 @@ async function reiniciar() {
     perfilId: props.perfiles[0]?.id ?? '',
     titulo: '', tipo: '', lugar: '', direccion: '', notas: '',
     inicioEn: redondearSiguienteCuarto(new Date(), props.zonaHoraria),
-    finEn: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: ''
+    finEn: '', avisar24h: true, avisar1h: true, repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: ''
   })
   errores.value = {}
   errorGeneral.value = ''
@@ -150,6 +150,8 @@ async function guardar() {
       notas: borrador.notas.trim() || undefined,
       inicioEn: fechaFamiliarAInstant(borrador.inicioEn, props.zonaHoraria),
       finEn: borrador.finEn ? fechaFamiliarAInstant(borrador.finEn, props.zonaHoraria) : undefined,
+      avisar24h: borrador.avisar24h,
+      avisar1h: borrador.avisar1h,
       recurrencia: borrador.repetir ? {
         frecuencia: borrador.frecuencia,
         intervalo: borrador.intervalo,
@@ -281,6 +283,12 @@ onBeforeUnmount(() => {
         <input id="evento-direccion" v-model="borrador.direccion" maxlength="500" />
         <label for="evento-notas">Notas opcionales</label>
         <textarea id="evento-notas" v-model="borrador.notas" maxlength="1000" rows="3" />
+
+        <fieldset class="grupo-formulario">
+          <legend>Recordatorios</legend>
+          <label class="opcion-linea"><input v-model="borrador.avisar24h" type="checkbox" /> 24 horas antes</label>
+          <label class="opcion-linea"><input v-model="borrador.avisar1h" type="checkbox" /> 1 hora antes</label>
+        </fieldset>
 
         <label class="opcion-linea"><input v-model="borrador.repetir" type="checkbox" /> Repetir evento</label>
         <template v-if="borrador.repetir">

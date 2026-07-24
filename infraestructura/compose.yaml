@@ -68,6 +68,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET es obligatorio}
       ARCHIVOS_ENCRYPTION_KEY: ${ARCHIVOS_ENCRYPTION_KEY:?ARCHIVOS_ENCRYPTION_KEY es obligatorio}
       ARCHIVOS_RAIZ: /var/lib/agenda-familiar/archivos
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${WEB_PUSH_VAPID_PRIVATE_KEY:-}
+      WEB_PUSH_VAPID_SUBJECT: ${WEB_PUSH_VAPID_SUBJECT:-mailto:administracion@obusystem.com}
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65
     volumes:
       - archivos_datos:/var/lib/agenda-familiar/archivos

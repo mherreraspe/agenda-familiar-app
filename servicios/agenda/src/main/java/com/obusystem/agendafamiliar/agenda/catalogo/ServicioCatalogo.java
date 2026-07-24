@@ -245,11 +245,12 @@ public class ServicioCatalogo {
         for (int indice = 0; indice < serie.fechas().size(); indice++) {
             UUID id = UuidV7.nuevo();
             java.time.Instant inicio = serie.fechas().get(indice);
-            jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, inicio_en, fin_en, lugar_guardado_id, recurrencia_id, numero_ocurrencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            jdbc.update("INSERT INTO eventos (id_publico, familia_id, perfil_id, titulo, tipo, lugar, direccion, notas, inicio_en, fin_en, lugar_guardado_id, recurrencia_id, numero_ocurrencia, avisar_24h, avisar_1h) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     id, familia.getId(), perfil, solicitud.titulo().trim(), limpiar(solicitud.tipo()), lugar, direccion,
                     limpiar(solicitud.notas()), Timestamp.from(inicio),
                     duracion == null ? null : Timestamp.from(inicio.plus(duracion)), lugarGuardado, serie.id(),
-                    serie.id() == null ? null : indice + 1);
+                    serie.id() == null ? null : indice + 1, !Boolean.FALSE.equals(solicitud.avisar24h()),
+                    !Boolean.FALSE.equals(solicitud.avisar1h()));
             if (primera == null) primera = id;
             eventosAplicacion.publishEvent(new EventoCreado(familia.getId(), id));
         }

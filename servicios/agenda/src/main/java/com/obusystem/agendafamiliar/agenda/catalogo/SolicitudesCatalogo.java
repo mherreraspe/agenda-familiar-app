@@ -77,10 +77,14 @@ public final class SolicitudesCatalogo {
             @Size(max = 40) String tipo, @Size(max = 300) String lugar,
             @Size(max = 500) String direccion, @Size(max = 1000) String notas,
             @NotNull @FutureOrPresent Instant inicioEn, Instant finEn,
-            @Valid SolicitudRecurrencia recurrencia) {
+            @Valid SolicitudRecurrencia recurrencia, Boolean avisar24h, Boolean avisar1h) {
         public Evento(UUID perfilId, String titulo, String tipo, String lugar, String direccion,
                 String notas, Instant inicioEn, Instant finEn) {
-            this(perfilId, titulo, tipo, lugar, direccion, notas, inicioEn, finEn, null);
+            this(perfilId, titulo, tipo, lugar, direccion, notas, inicioEn, finEn, null, true, true);
+        }
+        public Evento(UUID perfilId, String titulo, String tipo, String lugar, String direccion,
+                String notas, Instant inicioEn, Instant finEn, SolicitudRecurrencia recurrencia) {
+            this(perfilId, titulo, tipo, lugar, direccion, notas, inicioEn, finEn, recurrencia, true, true);
         }
     }
 }

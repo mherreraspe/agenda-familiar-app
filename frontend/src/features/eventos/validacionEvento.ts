@@ -9,6 +9,8 @@ export interface BorradorEvento {
   notas: string
   inicioEn: string
   finEn: string
+  avisar24h: boolean
+  avisar1h: boolean
   repetir: boolean
   frecuencia: 'DIARIA' | 'SEMANAL' | 'MENSUAL'
   intervalo: number

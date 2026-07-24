@@ -64,7 +64,9 @@ describe('FormularioEvento', () => {
 
     expect(crearEvento).toHaveBeenCalledWith(expect.objectContaining({
       titulo: 'Control',
-      inicioEn: '2099-07-19T15:00:00.000Z'
+      inicioEn: '2099-07-19T15:00:00.000Z',
+      avisar24h: true,
+      avisar1h: true
     }))
     expect(wrapper.emitted('guardado')).toHaveLength(1)
     wrapper.unmount()
