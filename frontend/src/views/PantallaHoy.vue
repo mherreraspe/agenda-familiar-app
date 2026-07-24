@@ -17,6 +17,7 @@ import {
   cerrarElementoRevision,
   cerrarTratamiento,
   completarTarea,
+  consultarFamiliasUsuario,
   consultarAuditoria,
   consultarConfiguracionFamilia,
   consultarCuota,
@@ -31,11 +32,14 @@ import {
   crearTratamiento,
   descargarReceta,
   eliminarReceta,
+  establecerFamiliaActiva,
   iniciarSesion,
+  limpiarFamiliaActiva,
   renovarSesion,
   subirReceta,
   type EstadoOcurrencia,
   type ElementoRevision,
+  type FamiliaUsuario,
   type OcurrenciaResumen,
   type ObjetoFamiliar,
   type RespuestaAuditoria,
@@ -67,6 +71,8 @@ const error = ref('')
 const mensaje = ref('')
 const sesionActiva = ref(false)
 const administradorPlataforma = ref(false)
+const familiasUsuario = ref<FamiliaUsuario[]>([])
+const familiaActivaId = ref('')
 const restaurando = ref(true)
 const enLinea = ref(typeof navigator === 'undefined' || navigator.onLine)
 const estadoSincronizacion = ref<EstadoSincronizacion>('reconectando')
@@ -229,8 +235,10 @@ onMounted(async () => {
       await router.replace({ name: 'admin' })
       return
     }
-    await cargarSeccion(props.seccion)
-    iniciarSincronizacion()
+    if (await prepararFamilia()) {
+      await cargarSeccion(props.seccion)
+      iniciarSincronizacion()
+    }
   } catch {
     sesionActiva.value = false
   } finally {
@@ -351,14 +359,57 @@ async function entrar() {
       await router.replace({ name: 'admin' })
       return
     }
-    await cargarSeccion(props.seccion, true)
-    iniciarSincronizacion()
+    if (await prepararFamilia()) {
+      await cargarSeccion(props.seccion, true)
+      iniciarSincronizacion()
+    }
     clave.value = ''
   } catch (causa) {
     error.value = causa instanceof Error ? causa.message : 'No se pudo iniciar sesión'
   } finally {
     cargando.value = false
   }
+}
+
+async function prepararFamilia() {
+  const respuesta = await consultarFamiliasUsuario()
+  familiasUsuario.value = respuesta.familias
+  if (!respuesta.familias.length) {
+    familiaActivaId.value = ''
+    limpiarFamiliaActiva()
+    return false
+  }
+  const seleccionada = respuesta.familias.find(item => item.id === familiaActivaId.value) ?? respuesta.familias[0]
+  familiaActivaId.value = seleccionada.id
+  establecerFamiliaActiva(seleccionada.id)
+  return true
+}
+
+function limpiarDatosFamilia() {
+  datos.value = null
+  catalogo.value = null
+  agendaTratamientos.value = null
+  auditoria.value = null
+  familia.value = null
+  cuota.value = null
+  objetos.value = null
+  filtroPerfil.value = 'TODOS'
+  Object.keys(recursosCargados).forEach(recurso => { recursosCargados[recurso as keyof typeof recursosCargados] = false })
+  formulario.value = null
+  cerrarRecetaVisible()
+}
+
+async function cambiarFamilia(familiaId: string) {
+  if (familiaId === familiaActivaId.value || !familiasUsuario.value.some(item => item.id === familiaId)) return
+  cerrarSincronizacion?.()
+  cerrarSincronizacion = null
+  familiaActivaId.value = familiaId
+  establecerFamiliaActiva(familiaId)
+  limpiarDatosFamilia()
+  mensaje.value = ''
+  error.value = ''
+  await cargarSeccion(props.seccion, true)
+  iniciarSincronizacion()
 }
 
 async function cargarBase(forzar = false) {
@@ -772,14 +823,9 @@ async function salir() {
     await eliminarSesion()
     cerrarSincronizacion?.()
     cerrarSincronizacion = null
-    datos.value = null
-    catalogo.value = null
-    agendaTratamientos.value = null
-    auditoria.value = null
-    familia.value = null
-    cuota.value = null
-    Object.keys(recursosCargados).forEach(recurso => { recursosCargados[recurso as keyof typeof recursosCargados] = false })
-    cerrarRecetaVisible()
+    limpiarDatosFamilia()
+    familiasUsuario.value = []
+    familiaActivaId.value = ''
     sesionActiva.value = false
     administradorPlataforma.value = false
     mensaje.value = ''
@@ -813,6 +859,16 @@ async function salir() {
     </section>
   </main>
 
+  <main v-else-if="!familiaActivaId" class="acceso">
+    <section class="panel-acceso panel-acceso--sin-familia">
+      <img src="/icono.svg" alt="" width="72" height="72" />
+      <p class="sobretitulo">Cuenta activa</p>
+      <h1>Aún no tienes una familia asignada</h1>
+      <p>Pide al administrador de la plataforma que agregue tu cuenta a una familia. Después, vuelve a ingresar.</p>
+      <button type="button" class="boton-secundario" @click="salir">Cerrar sesión</button>
+    </section>
+  </main>
+
   <div v-else>
     <AppShell
       :titulo="tituloPantalla"
@@ -823,7 +879,10 @@ async function salir() {
       :tipo-anadir-directo="tipoAnadirCabecera"
       :mostrar-anadir="mostrarAnadirCabecera"
       :administrador-plataforma="administradorPlataforma"
+      :familias="familiasUsuario"
+      :familia-activa-id="familiaActivaId"
       @anadir="abrirAlta"
+      @cambiar-familia="cambiarFamilia"
       @salir="salir"
     >
       <p v-if="!enLinea" class="aviso-conexion" role="status">

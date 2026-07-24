@@ -65,6 +65,7 @@ async function prepararApi(page: Page) {
     }
     if (ruta.endsWith('/autenticacion/enlaces/consultar')) return responder({ tipo: 'INVITACION', correo: 'p***@example.com', familia: 'Familia Herrera', expiraEn: '2099-01-01T00:00:00Z' })
     if (ruta.endsWith('/autenticacion/enlaces/consumir')) return route.fulfill({ status: 204, body: '' })
+    if (ruta === '/api/v1/familias') return responder({ familias: [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', rol: 'ADMINISTRADOR_FAMILIAR' }] })
     if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil], tareas: [] })
     if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos: [], lugares: [] })
     if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: historialTomas, revisar: [] })
@@ -277,7 +278,7 @@ test('todas las altas generales son modales, exclusivas y restauran el foco', as
 test('solo permite un menú Más abierto y lo cierra al pulsar fuera', async ({ page }) => {
   await page.goto('/salud?seccion=tratamientos')
   const activadores = page.locator('.menu-mas > summary')
-  expect(await activadores.count()).toBeGreaterThan(1)
+  await expect(activadores).toHaveCount(5)
   await activadores.nth(0).click()
   await expect(page.locator('.menu-mas[open]')).toHaveCount(1)
   await page.getByRole('heading', { name: 'Tratamientos' }).click()

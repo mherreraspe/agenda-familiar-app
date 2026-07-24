@@ -1,6 +1,5 @@
-export const FAMILIA_TEST_ID = '0197f100-0000-7000-8000-000000000001'
-
 let accessToken = ''
+let familiaActivaId = ''
 let renovacionEnCurso: Promise<RespuestaSesion> | null = null
 const cacheLectura = new Map<string, unknown>()
 
@@ -114,6 +113,8 @@ export interface FamiliaAdministrada {
 }
 
 export interface RespuestaFamiliasPlataforma { familias: FamiliaAdministrada[] }
+export interface FamiliaUsuario { id: string; nombre: string; zonaHoraria: string; rol: 'ADMINISTRADOR_FAMILIAR' | 'ADULTO' }
+export interface RespuestaFamiliasUsuario { familias: FamiliaUsuario[] }
 export interface MiembroPlataforma { perfilId: string; usuarioId: string; nombre: string; permiso: 'ADULTO' | 'ADMINISTRADOR_FAMILIAR'; activo: boolean }
 export interface EnlaceAccesoAdministrado { id: string; tipo: 'INVITACION' | 'RESTABLECIMIENTO'; usuarioId: string; correo: string; estado: 'PENDIENTE' | 'USADO' | 'REVOCADO' | 'VENCIDO'; expiraEn: string; creadoEn: string }
 export interface EnlaceAccesoGenerado { id: string; tipo: 'INVITACION' | 'RESTABLECIMIENTO'; usuarioId: string; enlace: string; expiraEn: string }
@@ -192,6 +193,23 @@ function sujetoSesion() {
   }
 }
 
+function familiaActiva() {
+  if (!familiaActivaId) throw new Error('Selecciona una familia para continuar.')
+  return encodeURIComponent(familiaActivaId)
+}
+
+export function establecerFamiliaActiva(familiaId: string) {
+  const nueva = familiaId.trim()
+  if (!nueva) throw new Error('La familia seleccionada no es válida.')
+  if (nueva !== familiaActivaId) cacheLectura.clear()
+  familiaActivaId = nueva
+}
+
+export function limpiarFamiliaActiva() {
+  familiaActivaId = ''
+  cacheLectura.clear()
+}
+
 export async function iniciarSesion(correo: string, clave: string) {
   return pedirSesion('/api/v1/autenticacion/iniciar-sesion', {
     method: 'POST',
@@ -207,14 +225,14 @@ export async function cerrarSesion() {
   })
   if (!respuesta.ok) throw await problema(respuesta)
   accessToken = ''
-  cacheLectura.clear()
+  limpiarFamiliaActiva()
 }
 
 export async function abrirFlujoEventos(ultimoEventoId: string, signal: AbortSignal, reintentar = true) {
   const encabezados = new Headers({ Accept: 'text/event-stream' })
   if (accessToken) encabezados.set('Authorization', `Bearer ${accessToken}`)
   if (ultimoEventoId) encabezados.set('Last-Event-ID', ultimoEventoId)
-  const respuesta = await fetch(`/api/v1/familias/${FAMILIA_TEST_ID}/eventos`, {
+  const respuesta = await fetch(`/api/v1/familias/${familiaActiva()}/eventos`, {
     headers: encabezados,
     credentials: 'same-origin',
     cache: 'no-store',
@@ -230,7 +248,11 @@ export async function abrirFlujoEventos(ultimoEventoId: string, signal: AbortSig
 }
 
 export function consultarHoy() {
-  return solicitud<RespuestaHoy>(`/api/v1/familias/${FAMILIA_TEST_ID}/hoy`)
+  return solicitud<RespuestaHoy>(`/api/v1/familias/${familiaActiva()}/hoy`)
+}
+
+export function consultarFamiliasUsuario() {
+  return solicitud<RespuestaFamiliasUsuario>('/api/v1/familias')
 }
 
 export function consultarFamiliasPlataforma() {
@@ -292,35 +314,35 @@ export function consumirEnlaceAcceso(token: string, clave: string) {
 }
 
 export function consultarCatalogo() {
-  return solicitud<RespuestaCatalogo>(`/api/v1/familias/${FAMILIA_TEST_ID}/catalogo`)
+  return solicitud<RespuestaCatalogo>(`/api/v1/familias/${familiaActiva()}/catalogo`)
 }
 
 export function consultarOcurrencias() {
-  return solicitud<RespuestaOcurrencias>(`/api/v1/familias/${FAMILIA_TEST_ID}/ocurrencias`)
+  return solicitud<RespuestaOcurrencias>(`/api/v1/familias/${familiaActiva()}/ocurrencias`)
 }
 
 export function consultarAuditoria() {
-  return solicitud<RespuestaAuditoria>(`/api/v1/familias/${FAMILIA_TEST_ID}/auditoria`)
+  return solicitud<RespuestaAuditoria>(`/api/v1/familias/${familiaActiva()}/auditoria`)
 }
 
 export function consultarObjetos(consulta = '') {
-  return solicitud<RespuestaObjetos>(`/api/v1/familias/${FAMILIA_TEST_ID}/objetos?q=${encodeURIComponent(consulta)}`)
+  return solicitud<RespuestaObjetos>(`/api/v1/familias/${familiaActiva()}/objetos?q=${encodeURIComponent(consulta)}`)
 }
 
 export function consultarConfiguracionFamilia() {
-  return solicitud<RespuestaFamilia>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion`)
+  return solicitud<RespuestaFamilia>(`/api/v1/familias/${familiaActiva()}/configuracion`)
 }
 
 export function consultarCuota() {
-  return solicitud<RespuestaCuota>(`/api/v1/familias/${FAMILIA_TEST_ID}/archivos/cuota`)
+  return solicitud<RespuestaCuota>(`/api/v1/familias/${familiaActiva()}/archivos/cuota`)
 }
 
 export function consultarSugerencias(consulta: string) {
-  return solicitud<RespuestaSugerencias>(`/api/v1/familias/${FAMILIA_TEST_ID}/sugerencias?q=${encodeURIComponent(consulta)}`)
+  return solicitud<RespuestaSugerencias>(`/api/v1/familias/${familiaActiva()}/sugerencias?q=${encodeURIComponent(consulta)}`)
 }
 
 export function cambiarEstadoOcurrencia(ocurrenciaId: string, estado: Exclude<EstadoOcurrencia, 'PENDIENTE'>, pospuestaA?: string) {
-  return solicitud<OcurrenciaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/ocurrencias/${ocurrenciaId}/estado/${estado}`, {
+  return solicitud<OcurrenciaResumen>(`/api/v1/familias/${familiaActiva()}/ocurrencias/${ocurrenciaId}/estado/${estado}`, {
     method: 'PATCH',
     headers: { 'Idempotency-Key': crypto.randomUUID() },
     body: pospuestaA ? JSON.stringify({ pospuestaA }) : undefined
@@ -328,14 +350,14 @@ export function cambiarEstadoOcurrencia(ocurrenciaId: string, estado: Exclude<Es
 }
 
 export function cerrarElementoRevision(elementoId: string) {
-  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/revisar/${elementoId}/cerrar`, {
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/revisar/${elementoId}/cerrar`, {
     method: 'PATCH',
     headers: { 'Idempotency-Key': crypto.randomUUID() }
   })
 }
 
 export function cerrarTratamiento(tratamientoId: string, motivo?: string) {
-  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos/${tratamientoId}/cerrar`, {
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/tratamientos/${tratamientoId}/cerrar`, {
     method: 'PATCH',
     headers: { 'Idempotency-Key': crypto.randomUUID() },
     body: JSON.stringify({ motivo: motivo || undefined })
@@ -347,62 +369,62 @@ export function completarTarea(tareaId: string) {
 }
 
 export function actuarAgenda(entidad: 'tareas' | 'eventos', id: string, accion: 'COMPLETAR' | 'OMITIR' | 'REPROGRAMAR', fechaNueva?: string) {
-  return solicitud<{ id: string; origenId?: string; entidad: string; estado: string; fecha: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/${entidad}/${id}/acciones/${accion}`, {
+  return solicitud<{ id: string; origenId?: string; entidad: string; estado: string; fecha: string }>(`/api/v1/familias/${familiaActiva()}/${entidad}/${id}/acciones/${accion}`, {
     method: 'PATCH', headers: { 'Idempotency-Key': crypto.randomUUID() },
     body: fechaNueva ? JSON.stringify({ fechaNueva }) : undefined
   })
 }
 
 export function crearTarea(datos: { titulo: string; descripcion: string; perfilId: string; fechaLimite: string; recurrencia?: RecurrenciaSolicitud }) {
-  return solicitud<TareaResumen>(`/api/v1/familias/${FAMILIA_TEST_ID}/tareas`, { method: 'POST', body: JSON.stringify(datos) })
+  return solicitud<TareaResumen>(`/api/v1/familias/${familiaActiva()}/tareas`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
 export function crearEvento(datos: { perfilId?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; recurrencia?: RecurrenciaSolicitud }) {
-  return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/eventos`, { method: 'POST', body: JSON.stringify(datos) })
+  return solicitud<{ id: string }>(`/api/v1/familias/${familiaActiva()}/eventos`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
 export function crearPerfil(datos: DatosPerfil) {
-  return solicitud<PerfilAdministrado>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion/perfiles`, { method: 'POST', body: JSON.stringify(datos) })
+  return solicitud<PerfilAdministrado>(`/api/v1/familias/${familiaActiva()}/configuracion/perfiles`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
 export function actualizarPerfil(id: string, datos: DatosPerfil) {
-  return solicitud<PerfilAdministrado>(`/api/v1/familias/${FAMILIA_TEST_ID}/configuracion/perfiles/${id}`, { method: 'PATCH', body: JSON.stringify(datos) })
+  return solicitud<PerfilAdministrado>(`/api/v1/familias/${familiaActiva()}/configuracion/perfiles/${id}`, { method: 'PATCH', body: JSON.stringify(datos) })
 }
 
 export function crearMedicamento(datos: { nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string }) {
-  return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/medicamentos`, { method: 'POST', body: JSON.stringify(datos) })
+  return solicitud<{ id: string }>(`/api/v1/familias/${familiaActiva()}/medicamentos`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
 export function crearTratamiento(datos: { perfilId: string; medicamentoId?: string; nombre: string; indicacion?: string; cantidadReceta?: string; frecuencia?: string; horario: string; horarios?: string[]; intervaloHoras?: number; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
-  return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos`, { method: 'POST', body: JSON.stringify(datos) })
+  return solicitud<{ id: string }>(`/api/v1/familias/${familiaActiva()}/tratamientos`, { method: 'POST', body: JSON.stringify(datos) })
 }
 
 export function crearObjeto(datos: DatosObjeto) {
-  return solicitud<{ id: string }>(`/api/v1/familias/${FAMILIA_TEST_ID}/objetos`, {
+  return solicitud<{ id: string }>(`/api/v1/familias/${familiaActiva()}/objetos`, {
     method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
   })
 }
 
 export function actualizarObjeto(id: string, datos: DatosObjeto) {
-  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/objetos/${id}`, { method: 'PATCH', body: JSON.stringify(datos) })
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/objetos/${id}`, { method: 'PATCH', body: JSON.stringify(datos) })
 }
 
 export function subirReceta(tratamientoId: string, archivo: Blob) {
   const formulario = new FormData()
   formulario.append('archivo', archivo, 'receta.jpg')
-  return solicitud<RespuestaArchivo>(`/api/v1/familias/${FAMILIA_TEST_ID}/tratamientos/${tratamientoId}/receta`, {
+  return solicitud<RespuestaArchivo>(`/api/v1/familias/${familiaActiva()}/tratamientos/${tratamientoId}/receta`, {
     method: 'POST', body: formulario
   })
 }
 
 export function eliminarReceta(archivoId: string) {
-  return solicitud<void>(`/api/v1/familias/${FAMILIA_TEST_ID}/archivos/${archivoId}`, { method: 'DELETE' })
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/archivos/${archivoId}`, { method: 'DELETE' })
 }
 
 export async function descargarReceta(archivoId: string, miniatura = false, reintentar = true): Promise<Blob> {
   const encabezados = new Headers({ Accept: 'image/jpeg' })
   if (accessToken) encabezados.set('Authorization', `Bearer ${accessToken}`)
-  const respuesta = await fetch(`/api/v1/familias/${FAMILIA_TEST_ID}/archivos/${archivoId}?miniatura=${miniatura}`, {
+  const respuesta = await fetch(`/api/v1/familias/${familiaActiva()}/archivos/${archivoId}?miniatura=${miniatura}`, {
     headers: encabezados, credentials: 'same-origin'
   })
   if (respuesta.status === 401 && reintentar && accessToken) {

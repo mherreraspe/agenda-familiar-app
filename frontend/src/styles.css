@@ -84,6 +84,9 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .menu-desplegable__panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 6; display: grid; width: max-content; min-width: 210px; padding: 8px; border: 1px solid var(--linea); border-radius: 12px; background: var(--superficie); box-shadow: 0 16px 38px rgb(25 51 45 / 16%); }
 .menu-desplegable__panel a, .menu-desplegable__panel button { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 9px; color: #315b4c; background: transparent; text-align: left; text-decoration: none; font-weight: 800; }
 .menu-desplegable__panel a:hover, .menu-desplegable__panel a:focus-visible, .menu-desplegable__panel button:hover, .menu-desplegable__panel button:focus-visible { background: #eef2ef; outline: 2px solid #315b4c; outline-offset: -2px; }
+.menu-desplegable__panel button[aria-current="true"] { background: #e4eee9; color: #173e32; }
+.menu-desplegable__titulo { margin: 4px 12px 2px; color: #6a746f; font-size: .76rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.menu-desplegable__separador { height: 1px; margin: 6px 8px; background: var(--linea); }
 .menu-desplegable--avatar .avatar { display: inline-grid; width: 44px; min-width: 44px; min-height: 44px; padding: 0; place-items: center; border: 1px solid var(--linea); border-radius: 50%; color: var(--verde); background: var(--superficie); }
 
 @media (min-width: 840px) {
