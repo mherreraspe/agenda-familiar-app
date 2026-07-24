@@ -42,6 +42,7 @@ class ArchivosFamiliaIT {
     private static final UUID FAMILIA = UUID.fromString("0197f100-0000-7000-8000-000000000001");
     private static final UUID PAPA = UUID.fromString("0197f100-0000-7000-8000-000000000101");
     private static final UUID PERFIL_PAPA = UUID.fromString("0197f100-0000-7000-8000-000000000201");
+    private static final UUID PERFIL_HIJO = UUID.fromString("0197f100-0000-7000-8000-000000000203");
     private static final Path RAIZ = Path.of(System.getProperty("java.io.tmpdir"), "agenda-v8-" + UUID.randomUUID());
 
     @Container
@@ -80,6 +81,24 @@ class ArchivosFamiliaIT {
         assertThat(java.util.Arrays.equals(java.util.Arrays.copyOf(disco, 2), new byte[] {(byte) 0xff, (byte) 0xd8})).isFalse();
         assertThat(new String(disco, java.nio.charset.StandardCharsets.ISO_8859_1)).doesNotContain("GPS-PRIVADO");
         assertThat(archivos.cuota(FAMILIA, jwt()).usadosBytes()).isEqualTo(respuesta.bytesAlmacenados());
+    }
+
+    @Test
+    @Transactional
+    void comparteUnaSolaRecetaEntreLasPersonasDelMismoTratamiento() throws Exception {
+        var grupo = catalogo.crearTratamientos(FAMILIA, "receta-grupal-" + UUID.randomUUID(),
+                new SolicitudesCatalogo.TratamientoMultiple(List.of(PERFIL_PAPA, PERFIL_HIJO), null,
+                        "Gotas familiares", null, "2 gotas", null, null, null, List.of(LocalTime.of(8, 0)), null,
+                        LocalDate.now(), LocalDate.now().plusDays(1), null, null), jwt());
+        RespuestaArchivo receta = archivos.subirReceta(FAMILIA, grupo.ids().getFirst(),
+                foto("receta-grupal.png", ProcesadorImagenTest.imagenPng(120, 90)), jwt());
+
+        assertThat(catalogo.consultar(FAMILIA, jwt()).tratamientos().stream()
+                .filter(item -> item.grupoId().equals(grupo.grupoId())).map(item -> item.recetaId()).toList())
+                .containsExactly(receta.id(), receta.id());
+        assertThatThrownBy(() -> archivos.subirReceta(FAMILIA, grupo.ids().get(1),
+                foto("otra-receta.png", ProcesadorImagenTest.imagenPng(121, 90)), jwt()))
+                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("ya tiene");
     }
 
     @Test

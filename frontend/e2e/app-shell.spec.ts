@@ -3,13 +3,16 @@ import AxeBuilder from '@axe-core/playwright'
 
 async function prepararApi(page: Page) {
   const perfil = { id: 'perfil-1', nombre: 'Mamá', tipo: 'ADULTO', color: '#315b4c', relacion: 'Mamá' }
+  const perfilHijo = { id: 'perfil-2', nombre: 'Alessio', tipo: 'DEPENDIENTE', color: '#b57b35', relacion: 'Hijo' }
   const tratamientos = Array.from({ length: 6 }, (_, indice) => ({
-    id: `tratamiento-${indice}`, perfilId: perfil.id, persona: 'Mamá', medicamento: `Tratamiento ${indice + 1}`,
+    id: `tratamiento-${indice}`, grupoId: `grupo-${indice}`, perfilId: perfil.id, persona: 'Mamá', medicamento: `Tratamiento ${indice + 1}`,
     responsable: 'Mamá', horarios: ['08:00:00'], estado: 'ACTIVO', recetaId: indice === 0 ? 'receta-1' : undefined
   }))
   const medicamentos = Array.from({ length: 6 }, (_, indice) => ({
     id: `medicamento-${indice}`, loteId: `lote-${indice}`, nombre: `Medicamento ${indice + 1}`,
-    presentacion: 'Tabletas', concentracion: '500 mg', cantidad: 10, unidad: 'tabletas', estado: 'DISPONIBLE'
+    presentacion: 'Tabletas', concentracion: '500 mg', cantidad: 10, unidad: 'tabletas', estadoEnvase: 'SIN_ABRIR',
+    avisarVencimiento: true, anticipacionVencimientoDias: 7, avisarApertura: true, anticipacionAperturaDias: 3,
+    estado: 'DISPONIBLE', requiereAtencion: false, version: 0
   }))
   const historialTomas = Array.from({ length: 20 }, (_, indice) => ({
     id: `toma-${indice}`, perfilId: perfil.id, persona: 'Mamá', tratamiento: `Tratamiento ${indice + 1}`,
@@ -66,7 +69,7 @@ async function prepararApi(page: Page) {
     if (ruta.endsWith('/autenticacion/enlaces/consultar')) return responder({ tipo: 'INVITACION', correo: 'p***@example.com', familia: 'Familia Herrera', expiraEn: '2099-01-01T00:00:00Z' })
     if (ruta.endsWith('/autenticacion/enlaces/consumir')) return route.fulfill({ status: 204, body: '' })
     if (ruta === '/api/v1/familias') return responder({ familias: [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', rol: 'ADMINISTRADOR_FAMILIAR' }] })
-    if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil], tareas: [] })
+    if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil, perfilHijo], tareas: [] })
     if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos: [], lugares: [] })
     if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: historialTomas, revisar: [] })
     if (ruta.endsWith('/auditoria')) return responder({ entradas: [] })
@@ -75,6 +78,9 @@ async function prepararApi(page: Page) {
     if (ruta.endsWith('/archivos/receta-1')) return route.fulfill({ status: 200, contentType: 'image/jpeg', body: '' })
     if (ruta.endsWith('/objetos') && route.request().method() === 'GET') return responder({ objetos, ubicaciones: [{ ruta: objetos[0].ruta, cantidad: 1 }] })
     if (ruta.endsWith('/objetos') && route.request().method() === 'POST') return responder({ id: 'objeto-2' })
+    if (ruta.endsWith('/medicamentos') && route.request().method() === 'POST') return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'medicamento-nuevo', loteId: 'lote-nuevo' }) })
+    if (ruta.endsWith('/tratamientos/grupos') && route.request().method() === 'POST') return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ grupoId: 'grupo-nuevo', ids: ['tratamiento-nuevo'] }) })
+    if (/\/medicamentos\/lotes\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') return route.fulfill({ status: 204, body: '' })
     if (/\/objetos\/[^/]+$/.test(ruta) && route.request().method() === 'PATCH') return route.fulfill({ status: 204 })
     return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' })
   })
@@ -145,7 +151,7 @@ test('consume una invitación y elimina el token de la dirección visible', asyn
 
 test('navega por destinos reales y muestra solo el dominio activo', async ({ page }) => {
   await page.goto('/hoy')
-  await expect(page.getByRole('link', { name: /Hoy/ })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('navigation', { name: 'Navegación principal' }).getByRole('link', { name: 'Hoy', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('heading', { name: 'Todo está al día' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Por resolver' })).toHaveCount(0)
   await expect(page.getByText('Ver historial', { exact: true })).toHaveCount(0)
@@ -162,6 +168,16 @@ test('navega por destinos reales y muestra solo el dominio activo', async ({ pag
   await expect(page.getByRole('heading', { name: 'Tomas', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Tratamientos' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Próximos eventos' })).toHaveCount(0)
+})
+
+test('mantiene Por resolver como vista separada de Hoy', async ({ page }) => {
+  await page.goto('/hoy')
+  await expect(page.getByRole('navigation', { name: 'Vistas de Hoy' })).toBeVisible()
+  await page.getByRole('link', { name: 'Por resolver', exact: true }).click()
+  await expect(page).toHaveURL(/vista=resolver/)
+  await expect(page.getByRole('heading', { name: 'Nada por resolver' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tareas de hoy' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Tomas del día' })).toHaveCount(0)
 })
 
 test('Salud muestra una sola subsección y conserva la selección en la URL', async ({ page }) => {
@@ -245,6 +261,58 @@ test('Tratamiento cabe en pantalla y bloquea cualquier segunda alta', async ({ p
   await page.keyboard.press('Escape')
   await expect(dialogo).toBeHidden()
   await expect(page.locator('button[aria-label="Abrir menú de familia"]')).toBeEnabled()
+})
+
+test('registra un tratamiento práctico para varias personas con horarios explícitos', async ({ page }) => {
+  await page.goto('/salud?seccion=tratamientos')
+  await page.getByRole('button', { name: 'Tratamiento', exact: true }).click()
+  const dialogo = page.getByRole('dialog', { name: 'Nuevo tratamiento' })
+
+  await dialogo.getByLabel('Alessio', { exact: true }).check()
+  await dialogo.getByLabel('Nombre corto del tratamiento').fill('Gotas para los ojos')
+  await dialogo.getByLabel('Medicamento opcional').fill('Lágrimas artificiales')
+  await dialogo.getByLabel('Dosis opcional').fill('2 gotas')
+  await dialogo.getByLabel('Dónde o cómo se aplica (opcional)').fill('En ambos ojos')
+  await dialogo.getByLabel('Horario 1', { exact: true }).fill('08:00')
+  await dialogo.getByRole('button', { name: '+ Añadir otro horario' }).click()
+  await dialogo.getByLabel('Horario 2', { exact: true }).fill('14:00')
+  await dialogo.getByRole('button', { name: '+ Añadir otro horario' }).click()
+  await dialogo.getByLabel('Horario 3', { exact: true }).fill('20:00')
+  await expect(dialogo.getByText('2 persona(s) · 3')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+  const accesibilidad = await new AxeBuilder({ page }).include('dialog').analyze()
+  expect(accesibilidad.violations.filter(item => item.impact === 'critical' || item.impact === 'serious')).toEqual([])
+
+  const alta = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/tratamientos/grupos'))
+  await dialogo.getByRole('button', { name: 'Guardar tratamiento' }).click()
+  const solicitud = await alta
+  expect(solicitud.headers()['idempotency-key']).toBeTruthy()
+  expect(solicitud.postDataJSON()).toMatchObject({
+    perfilIds: ['perfil-1', 'perfil-2'], nombre: 'Gotas para los ojos', nombreMedicamento: 'Lágrimas artificiales',
+    dosis: '2 gotas', aplicacion: 'En ambos ojos', horarios: ['08:00', '14:00', '20:00']
+  })
+  await expect(dialogo).toBeHidden()
+})
+
+test('registra cada envase y actualiza su apertura de forma independiente', async ({ page }) => {
+  await page.goto('/salud?seccion=botiquin')
+  await page.getByRole('button', { name: 'Medicamento', exact: true }).click()
+  const dialogo = page.getByRole('dialog', { name: 'Nuevo medicamento' })
+  await dialogo.getByLabel('Nombre').fill('Gotas oculares')
+  await dialogo.getByLabel('Abierto', { exact: true }).check()
+  await dialogo.getByLabel('Se abrió el').fill('2026-07-23')
+  await dialogo.getByLabel('Usar durante (días)').fill('30')
+  const alta = page.waitForRequest(request => request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/medicamentos'))
+  await dialogo.getByRole('button', { name: 'Guardar medicamento' }).click()
+  const solicitudAlta = await alta
+  expect(solicitudAlta.postDataJSON()).toMatchObject({ estadoEnvase: 'ABIERTO', abiertoEn: '2026-07-23', duracionAbiertoDias: 30 })
+
+  const tarjeta = page.locator('#botiquin article.tarjeta').filter({ has: page.getByText('Medicamento 1', { exact: true }) })
+  const apertura = page.waitForRequest(request => request.method() === 'PATCH' && new URL(request.url()).pathname.endsWith('/medicamentos/lotes/lote-0'))
+  await tarjeta.getByRole('button', { name: 'Marcar abierto' }).click()
+  const solicitudApertura = await apertura
+  expect(solicitudApertura.headers()['idempotency-key']).toBeTruthy()
+  expect(solicitudApertura.postDataJSON()).toMatchObject({ estadoEnvase: 'ABIERTO', estadoInventario: 'DISPONIBLE', version: 0 })
 })
 
 test('todas las altas generales son modales, exclusivas y restauran el foco', async ({ page }) => {

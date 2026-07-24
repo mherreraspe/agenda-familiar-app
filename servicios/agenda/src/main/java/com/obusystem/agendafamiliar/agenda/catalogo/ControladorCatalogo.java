@@ -8,7 +8,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -37,20 +39,43 @@ public class ControladorCatalogo {
 
     @PostMapping("/medicamentos")
     @ResponseStatus(HttpStatus.CREATED)
-    Map<String, UUID> crearMedicamento(@PathVariable UUID familiaId,
+    ServicioCatalogo.ResultadoMedicamento crearMedicamento(@PathVariable UUID familiaId,
+            @RequestHeader("Idempotency-Key") String clave,
             @Valid @RequestBody SolicitudesCatalogo.Medicamento solicitud, @AuthenticationPrincipal Jwt jwt) {
-        UUID id = catalogo.crearMedicamento(familiaId, solicitud, jwt);
+        var resultado = catalogo.crearMedicamento(familiaId, clave, solicitud, jwt);
         sincronizacion.publicar(familiaId, RecursoSincronizacion.SALUD);
-        return Map.of("id", id);
+        return resultado;
     }
 
     @PostMapping("/tratamientos")
     @ResponseStatus(HttpStatus.CREATED)
     Map<String, UUID> crearTratamiento(@PathVariable UUID familiaId,
+            @RequestHeader("Idempotency-Key") String clave,
             @Valid @RequestBody SolicitudesCatalogo.Tratamiento solicitud, @AuthenticationPrincipal Jwt jwt) {
-        UUID id = catalogo.crearTratamiento(familiaId, solicitud, jwt);
+        UUID id = catalogo.crearTratamiento(familiaId, clave, solicitud, jwt);
         sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
         return Map.of("id", id);
+    }
+
+    @PostMapping("/tratamientos/grupos")
+    @ResponseStatus(HttpStatus.CREATED)
+    ServicioCatalogo.ResultadoTratamientos crearTratamientos(@PathVariable UUID familiaId,
+            @RequestHeader("Idempotency-Key") String clave,
+            @Valid @RequestBody SolicitudesCatalogo.TratamientoMultiple solicitud,
+            @AuthenticationPrincipal Jwt jwt) {
+        var resultado = catalogo.crearTratamientos(familiaId, clave, solicitud, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
+        return resultado;
+    }
+
+    @PatchMapping("/medicamentos/lotes/{loteId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void actualizarEnvase(@PathVariable UUID familiaId, @PathVariable UUID loteId,
+            @RequestHeader("Idempotency-Key") String clave,
+            @Valid @RequestBody SolicitudesCatalogo.ActualizacionEnvase solicitud,
+            @AuthenticationPrincipal Jwt jwt) {
+        catalogo.actualizarEnvase(familiaId, loteId, clave, solicitud, jwt);
+        sincronizacion.publicar(familiaId, RecursoSincronizacion.HOY, RecursoSincronizacion.SALUD);
     }
 
     @PostMapping("/eventos")

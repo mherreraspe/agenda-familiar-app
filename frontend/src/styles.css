@@ -283,6 +283,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .dialogo details { padding: 12px; border: 1px solid #ded9ce; border-radius: 12px; }
 .dialogo summary { cursor: pointer; color: #315b4c; font-weight: 800; }
 .detalles-progresivos { display: grid; gap: 15px; margin-top: 15px; }
+.grupo-formulario { display: grid; gap: 12px; margin: 0; padding: 14px; border: 1px solid #d8dfdb; border-radius: 14px; background: #f7faf8; }
+.grupo-formulario legend { padding: 0 5px; color: #244b3d; font-weight: 850; }
+.grupo-formulario small { color: var(--tinta-suave); }
+.chips-personas, .selector-segmentado { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips-personas label, .selector-segmentado label { display: flex; min-height: 44px; flex-direction: row; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #cbd7d1; border-radius: 999px; background: white; cursor: pointer; }
+.chips-personas input, .selector-segmentado input { width: auto; margin: 0; accent-color: #315b4c; }
+.chips-personas label:has(input:checked), .selector-segmentado label:has(input:checked) { border-color: #315b4c; color: #244b3d; background: #dcebe4; }
+.lista-horarios { display: grid; gap: 10px; }
+.lista-horarios > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; align-items: end; }
+.lista-horarios > div label { grid-column: 1 / -1; }
+.lista-horarios .boton-secundario { min-height: 44px; }
+.resumen-tratamiento { margin: 0; color: #315b4c; font-weight: 800; }
+.carga-receta { padding: 14px; border: 1px dashed #8da99e; border-radius: 14px; background: #f1f7f4; }
 .sugerencias { display: grid; gap: 6px; margin-top: -8px; }
 .sugerencias button { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; border: 1px solid #ded9ce; border-radius: 10px; color: #315b4c; background: white; text-align: left; }
 .sugerencias small { color: #63706b; }
