@@ -15,16 +15,17 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 | Posponer toma | Salud / Más | — | Menú Más | `cambiarEstadoOcurrencia` | E2E |
 | Omitir toma | Salud / Más | — | Menú Más | `cambiarEstadoOcurrencia` | E2E |
 | Reprogramar toma | Salud / Más | — | Formulario | `cambiarEstadoOcurrencia` | E2E |
-| Cerrar revisión | Hoy / Atención | Cerrar | — | `cerrarElementoRevision` | E2E |
-| Crear tratamiento | Salud / Tratamientos | Guardar | — | `crearTratamiento` | E2E |
+| Cerrar revisión | Hoy / Por resolver | Cerrar | — | `cerrarElementoRevision` | E2E |
+| Crear tratamiento para una o varias personas | Salud / Tratamientos | Guardar | Receta opcional | `crearTratamiento` (grupo idempotente) | IT / E2E |
 | Cerrar tratamiento | Salud / Detalle | Finalizar | — | `cerrarTratamiento` | E2E |
 | Ver receta | Salud / Detalle | Ver | — | `descargarReceta` | E2E |
 | Subir receta | Salud / Detalle | Añadir | — | `subirReceta` | E2E |
 | Eliminar receta | Salud / Detalle | — | Eliminar | `eliminarReceta` | E2E |
 | Ver cuota | Salud / Recetas | — | — | `consultarCuota` | Vitest |
-| Ver botiquín | Salud / Botiquín | Abrir detalle | Filtros | `consultarCatalogo` | E2E |
+| Ver botiquín | Salud / Botiquín | Revisar envase | Agotado / descartar | `consultarCatalogo` | IT / E2E |
 | Crear medicamento | Salud / Botiquín | Guardar | — | `crearMedicamento` | E2E |
-| Ver vencimientos | Salud / Botiquín | Abrir detalle | Filtro | `consultarCatalogo` | E2E |
+| Marcar envase abierto | Salud / Botiquín | Marcar abierto | Avisos configurables | `actualizarEnvase` | IT / E2E |
+| Ver vigencia efectiva | Salud / Botiquín / Por resolver | Revisar | — | `consultarCatalogo` | IT / E2E |
 | Buscar objeto | Objetos / Buscador | Escribir consulta | Explorar lugares | `consultarObjetos` | IT / E2E |
 | Crear objeto | Objetos / Añadir | Guardar | — | `crearObjeto` | IT / E2E |
 | Editar o mover objeto | Objetos / Fila | Editar | — | `actualizarObjeto` | IT / E2E |
@@ -54,6 +55,7 @@ Esta matriz es el control obligatorio para reorganizar la interfaz sin ocultar c
 - Acceso administrado — PR #36 desplegado en `20260724T003756Z`: miembros adultos, invitaciones de 48 h, restablecimientos de 30 min, tokens de un solo uso, sesiones revocadas y capas exclusivas; 72 escenarios Playwright/axe verdes.
 - Separación administrativa — PR #38: la cuenta global deriva a `/admin` y queda fuera de `familia_test`; PR #39 corrige la recuperación operativa con el proyecto Compose real.
 - Familia activa — PR #40 desplegado en `20260724T025339Z`: membresías resueltas desde el JWT bajo RLS, sin UUID fijo; selección automática o cambio en el menú, con limpieza de datos y SSE; 78 escenarios Playwright/axe completados.
+- Salud práctica — PR #42 desplegado en `20260724T051336Z`: tratamiento grupal con horarios guiados y receta compartida, Hoy/Por resolver separados, envases independientes y vigencia por vencimiento o apertura; V12/RLS/índices y 87 escenarios Playwright/axe verdes.
 - PR 4 completado mediante #30. El siguiente bloque es Web Push privado, con avisos genéricos y detalle únicamente dentro de la PWA autenticada.
 
 Una función solo puede cambiar de ubicación o quedar fuera de producción mediante una decisión explícita registrada aquí.
