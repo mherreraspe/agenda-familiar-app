@@ -15,7 +15,8 @@ public class ConfiguracionSeguridad {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sesion -> sesion.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(autorizacion -> autorizacion
-                        .requestMatchers("/actuator/health", "/actuator/info", "/iniciar-sesion", "/renovar", "/cerrar-sesion").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info", "/iniciar-sesion", "/renovar", "/cerrar-sesion",
+                                "/enlaces/consultar", "/enlaces/consumir").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> { }))
                 .build();

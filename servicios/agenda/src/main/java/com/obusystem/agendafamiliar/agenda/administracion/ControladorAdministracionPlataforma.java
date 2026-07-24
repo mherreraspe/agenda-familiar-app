@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,5 +35,21 @@ public class ControladorAdministracionPlataforma {
             @Valid @RequestBody SolicitudFamiliaPlataforma solicitud,
             @AuthenticationPrincipal Jwt jwt) {
         return administracion.crear(clave, solicitud, jwt);
+    }
+
+    @GetMapping("/{familiaId}/miembros")
+    RespuestaMiembrosPlataforma consultarMiembros(@PathVariable java.util.UUID familiaId,
+            @AuthenticationPrincipal Jwt jwt) {
+        return administracion.consultarMiembros(familiaId, jwt);
+    }
+
+    @PostMapping("/{familiaId}/miembros")
+    @ResponseStatus(HttpStatus.CREATED)
+    RespuestaMiembrosPlataforma.MiembroAdministrado crearMiembro(
+            @PathVariable java.util.UUID familiaId,
+            @RequestHeader("Idempotency-Key") String clave,
+            @Valid @RequestBody SolicitudMiembroPlataforma solicitud,
+            @AuthenticationPrincipal Jwt jwt) {
+        return administracion.crearMiembro(familiaId, clave, solicitud, jwt);
     }
 }

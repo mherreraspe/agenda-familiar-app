@@ -21,6 +21,8 @@ async function prepararApi(page: Page) {
     ruta: ['Habitación principal', 'Ropero', 'Caja de documentos'], actualizadoEn: '2026-07-23T18:00:00Z', version: 0
   }]
   const familiasAdmin = [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', creadaEn: '2026-07-23T18:00:00Z' }]
+  const miembrosAdmin: Array<{ perfilId: string; usuarioId: string; nombre: string; permiso: string; activo: boolean }> = []
+  const enlacesAdmin: Array<{ id: string; tipo: string; usuarioId: string; correo: string; estado: string; expiraEn: string; creadoEn: string }> = []
   await page.route('**/api/v1/**', async route => {
     const ruta = new URL(route.request().url()).pathname
     const responder = (datos: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(datos) })
@@ -31,6 +33,31 @@ async function prepararApi(page: Page) {
       familiasAdmin.unshift({ id: `familia-${familiasAdmin.length + 1}`, ...datos, creadaEn: '2026-07-23T21:00:00Z' })
       return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(familiasAdmin[0]) })
     }
+    if (/\/administracion\/familias\/[^/]+\/miembros$/.test(ruta) && route.request().method() === 'GET') return responder({ miembros: miembrosAdmin })
+    if (/\/administracion\/familias\/[^/]+\/miembros$/.test(ruta) && route.request().method() === 'POST') {
+      const datos = route.request().postDataJSON() as { usuarioId: string; nombre: string; permiso: string }
+      const miembro = { perfilId: `perfil-admin-${miembrosAdmin.length + 1}`, ...datos, activo: true }
+      miembrosAdmin.push(miembro)
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(miembro) })
+    }
+    if (ruta.endsWith('/autenticacion/administracion/enlaces') && route.request().method() === 'GET') return responder({ enlaces: enlacesAdmin })
+    if (ruta.endsWith('/autenticacion/administracion/usuarios') && route.request().method() === 'GET') return responder({ cuentas: [] })
+    if (ruta.endsWith('/autenticacion/administracion/invitaciones') && route.request().method() === 'POST') {
+      const datos = route.request().postDataJSON() as { usuarioId: string; correo: string }
+      const enlace = { id: `enlace-${enlacesAdmin.length + 1}`, tipo: 'INVITACION', usuarioId: datos.usuarioId,
+        correo: datos.correo, estado: 'PENDIENTE', expiraEn: '2026-07-25T18:00:00Z', creadoEn: '2026-07-23T18:00:00Z' }
+      enlacesAdmin.unshift(enlace)
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ...enlace, enlace: '/activar#token=token-e2e' }) })
+    }
+    if (/\/autenticacion\/administracion\/usuarios\/[^/]+\/restablecimientos$/.test(ruta)) return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'reset-1', tipo: 'RESTABLECIMIENTO', usuarioId: 'usuario-1', enlace: '/activar#token=reset-e2e', expiraEn: '2026-07-23T19:00:00Z' }) })
+    if (/\/autenticacion\/administracion\/enlaces\/[^/]+$/.test(ruta) && route.request().method() === 'DELETE') {
+      const id = ruta.split('/').at(-1)
+      const enlace = enlacesAdmin.find(item => item.id === id)
+      if (enlace) enlace.estado = 'REVOCADO'
+      return route.fulfill({ status: 204, body: '' })
+    }
+    if (ruta.endsWith('/autenticacion/enlaces/consultar')) return responder({ tipo: 'INVITACION', correo: 'p***@example.com', familia: 'Familia Herrera', expiraEn: '2099-01-01T00:00:00Z' })
+    if (ruta.endsWith('/autenticacion/enlaces/consumir')) return route.fulfill({ status: 204, body: '' })
     if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil], tareas: [] })
     if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos: [], lugares: [] })
     if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: historialTomas, revisar: [] })
@@ -62,7 +89,38 @@ test('administración lista y crea familias en una única capa modal', async ({ 
   await dialogo.getByRole('button', { name: 'Crear familia' }).click()
   await expect(dialogo).toBeHidden()
   await expect(activador).toBeFocused()
-  await expect(page.getByText('Familia Rivera', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Familia Rivera/ })).toBeVisible()
+})
+
+test('administra miembros con invitación de un solo uso sin apilar capas', async ({ page }) => {
+  await page.goto('/admin')
+  await page.getByRole('button', { name: /Familia Herrera/ }).click()
+  await expect(page.getByRole('heading', { name: 'Miembros con acceso' })).toBeVisible()
+  await page.getByRole('button', { name: 'Añadir miembro' }).click()
+  const formulario = page.getByRole('dialog', { name: 'Añadir miembro' })
+  await formulario.getByLabel('Nombre visible').fill('Ana Rivera')
+  await formulario.getByLabel('Correo de acceso').fill('ana@example.com')
+  await formulario.getByLabel('Permiso').selectOption('ADMINISTRADOR_FAMILIAR')
+  await formulario.getByRole('button', { name: 'Generar enlace' }).click()
+
+  const enlace = page.getByRole('dialog', { name: 'Enlace de un solo uso' })
+  await expect(enlace).toBeVisible()
+  expect(await page.locator('dialog:modal').count()).toBe(1)
+  await expect(enlace.getByRole('textbox', { name: 'Enlace' })).toHaveValue(/\/activar#token=token-e2e$/)
+  await enlace.getByRole('button', { name: 'Cerrar', exact: true }).click()
+  await expect(page.getByText('Ana Rivera', { exact: true })).toBeVisible()
+  await expect(page.getByText('pendiente', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+})
+
+test('consume una invitación y elimina el token de la dirección visible', async ({ page }) => {
+  await page.goto('/activar#token=token-e2e')
+  await expect(page.getByRole('heading', { name: 'Activa tu acceso' })).toBeVisible()
+  await expect(page).toHaveURL(/\/activar$/)
+  await page.getByLabel('Nueva contraseña').fill('ClaveNuevaSegura2026!')
+  await page.getByLabel('Repetir contraseña').fill('ClaveNuevaSegura2026!')
+  await page.getByRole('button', { name: 'Guardar contraseña' }).click()
+  await expect(page.getByRole('heading', { name: 'Contraseña guardada' })).toBeVisible()
 })
 
 test('navega por destinos reales y muestra solo el dominio activo', async ({ page }) => {
@@ -339,7 +397,7 @@ test('avisa cuando no hay conexión y mantiene las altas solo en línea', async 
 })
 
 test('no presenta violaciones críticas o serias de accesibilidad', async ({ page }) => {
-  for (const ruta of ['/hoy', '/agenda', '/salud', '/objetos', '/ajustes/familia', '/actividad', '/admin']) {
+  for (const ruta of ['/hoy', '/agenda', '/salud', '/objetos', '/ajustes/familia', '/actividad', '/admin', '/activar']) {
     await page.goto(ruta)
     await expect(page.locator('.estado-carga')).toHaveCount(0)
     const resultado = await new AxeBuilder({ page }).analyze()
