@@ -5,31 +5,32 @@ Leer este archivo al iniciar una sesión. Consultar el checklist o la guía oper
 ## Estado actual
 
 - Rama remota: `main`.
-- Commit desplegado: `c155e00f974645a612e4561cdb50ed640319a249`.
-- Release activo: `20260723T233543Z`.
+- Commit desplegado: `d73b8c69f4f397301f7fcdeca6df8f0adbd3030b`.
+- Release activo: `20260724T003756Z`.
 - Producción: frontend, autenticación, agenda y PostgreSQL saludables.
-- Migraciones: autenticación V1–V3 y agenda V1–V10 aplicadas correctamente.
-- Último bloque: administración global y alta real de familias.
-- E2E HTTPS aprobado; 66 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
+- Migraciones: autenticación V1–V4 y agenda V1–V11 aplicadas correctamente.
+- Último bloque: miembros administrados, invitaciones y restablecimientos de un solo uso.
+- E2E HTTPS aprobado; 72 escenarios Playwright/axe verdes en 320×700, 390×844 y 1280×900.
 
 ## Último bloque completado
 
-- PR #34: rol global `ADMINISTRADOR_PLATAFORMA` firmado en JWT y protegido en backend.
-- Ruta `/admin` con listado y alta real e idempotente de familias; acceso oculto y denegado a usuarios familiares.
-- Auditoría de plataforma sin contenido médico y migración V10 con aislamiento por actor.
+- PR #36: `/admin` permite añadir miembros adultos y generar invitaciones de un solo uso válidas durante 48 horas.
+- `/activar` permite al invitado elegir su contraseña; el token se retira de la dirección visible y la base conserva solo su hash SHA-256.
+- El administrador puede generar restablecimientos válidos durante 30 minutos; al consumirlos se revocan todas las sesiones refresh del usuario.
+- Creación, consumo y revocación quedan auditados; expiración, reuso y consumo concurrente están cubiertos con PostgreSQL 18.
 - Verificación local: 43 pruebas frontend, build Vite y 10 pruebas backend aprobadas.
-- CI de PR `30053417092` y CI de `main` `30053507456`: frontend y backend/PostgreSQL 18 verdes.
-- Release `20260723T233543Z` saludable; autenticación V1–V3 y agenda V1–V10 validadas.
-- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-c155e00-20260723T233543Z`.
+- CI de PR `30056539025` y CI de `main` `30056643411`: frontend y backend/PostgreSQL 18 verdes.
+- Release `20260724T003756Z` saludable; autenticación V1–V4 y agenda V1–V11 validadas.
+- Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-d73b8c6-20260724T003756Z`.
 - E2E HTTPS: altas, receta cifrada, aislamiento 404, auditoría, responsables e indexación aprobados.
 
 ## Siguiente bloque funcional
 
-1. Añadir miembros desde `/admin` mediante invitaciones de un solo uso, con vencimiento y hash del token.
-2. Entregar un enlace que permita al invitado establecer su propia contraseña; nunca mostrar ni almacenar la contraseña en claro.
-3. Permitir al administrador iniciar un restablecimiento mediante enlace de un solo uso, con revocación de sesiones al completarlo.
-4. Auditar creación, consumo, expiración y revocación sin guardar tokens ni contenido familiar.
-5. Probar aislamiento, enumeración, reuso, concurrencia, expiración, CSRF e IDOR antes de desplegar.
+1. Implementar Web Push solo después de permiso explícito del usuario y por dispositivo autenticado.
+2. Enviar notificaciones privadas sin nombres, medicamentos ni contenido sensible en la pantalla bloqueada; abrir la PWA autenticada para ver el detalle.
+3. Aislar suscripciones por usuario y familia, permitir revocar cada dispositivo y eliminar endpoints inválidos.
+4. Mantener Hoy como bandeja operativa; las notificaciones no deben duplicar ni reemplazar sus estados de atención.
+5. Probar permisos denegados, aislamiento, renovación de suscripción, entrega duplicada y dispositivo revocado.
 
 ## Entrada operativa
 
