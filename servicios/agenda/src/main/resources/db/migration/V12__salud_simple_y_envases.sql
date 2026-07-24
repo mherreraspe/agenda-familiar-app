@@ -3,7 +3,11 @@ ALTER TABLE tratamientos
     ADD COLUMN nombre_medicamento VARCHAR(180),
     ADD COLUMN aplicacion VARCHAR(300);
 
+-- El propietario NOBYPASSRLS necesita el bypass acotado para migrar todas las familias.
+-- Flyway ejecuta la migración en una transacción: FORCE se restaura o todo revierte.
+ALTER TABLE tratamientos NO FORCE ROW LEVEL SECURITY;
 UPDATE tratamientos SET grupo_publico_id = id_publico WHERE grupo_publico_id IS NULL;
+ALTER TABLE tratamientos FORCE ROW LEVEL SECURITY;
 ALTER TABLE tratamientos ALTER COLUMN grupo_publico_id SET NOT NULL;
 
 ALTER TABLE lotes_medicamento
