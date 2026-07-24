@@ -238,6 +238,23 @@ Integrado mediante los PR #38–#40, desplegado y verificado en producción:
 - [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-aeb1f81-20260724T025339Z`.
 - [x] E2E HTTPS aprobado: servicios saludables, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
 
+## Bloque completado — Salud práctica y vigencia de envases
+
+Integrado mediante el PR #42, desplegado y verificado en producción:
+
+- [x] Alta guiada de tratamiento para una o varias personas, con nombre corto, medicamento/dosis/aplicación opcionales y horas explícitas o intervalo mutuamente excluyentes.
+- [x] Una fotografía de receta cifrada se comparte dentro del grupo de tratamiento, con bloqueo de concurrencia para impedir duplicados.
+- [x] Hoy contiene únicamente tareas y tomas del día; `Por resolver` es una vista separada con atrasos y avisos de Botiquín.
+- [x] Cada envase de Botiquín conserva estado sin abrir/abierto, apertura, duración posterior, avisos, agotado o descartado de forma independiente.
+- [x] Vigencia efectiva calculada con la fecha más temprana entre vencimiento impreso y límite tras abrir.
+- [x] V12 añade grupos, datos de aplicación, estado de envase, idempotencia con RLS forzado e índices por familia para grupos, pendientes y vigencia.
+- [x] Migración validada con propietario `NOBYPASSRLS`; el backfill transaccional restaura y comprueba `FORCE ROW LEVEL SECURITY`.
+- [x] Verificación local: 45 pruebas frontend, build Vite y 11 pruebas backend; 87 escenarios Playwright/axe en tres viewports.
+- [x] CI de PR `30068576773` y CI de `main` `30068668429` verdes con PostgreSQL 18.
+- [x] PR #42 integrado como `cbadc5a`; release `20260724T051336Z` saludable, V1–V12 validadas.
+- [x] Backup predeploy: `/srv/agenda-familiar/backups/predeploy/pre-cbadc5a-20260724T051336Z`.
+- [x] E2E HTTPS aprobado: servicios UP, migración V12 aplicada, aislamiento 404, receta cifrada, auditoría, responsables e indexación asíncrona.
+
 ## Completado y verificado
 
 - [x] Repositorio local vinculado con `mherreraspe/agenda-familiar-app` y rama principal sincronizada.
@@ -256,7 +273,7 @@ Integrado mediante los PR #38–#40, desplegado y verificado en producción:
 - [x] AppShell adaptable con barra inferior móvil, navegación lateral desde 840 px y ancho útil máximo de 1.200 px.
 - [x] Rutas reales `/hoy`, `/agenda`, `/salud`, `/objetos`, `/ajustes/familia` y `/actividad`, con redirecciones desde rutas anteriores.
 - [x] Filtro de persona compartido mediante Pinia; Familia y Actividad disponibles desde el avatar.
-- [x] Pantalla “Hoy” limitada a atención, tareas del día y tomas; Agenda y Salud muestran sus propios dominios.
+- [x] Pantalla “Hoy” limitada a tareas y tomas del día; `Por resolver`, Agenda y Salud muestran sus propios dominios.
 - [x] Acción global Añadir para evento, tarea, objeto y tratamiento; Objetos dispone además de alta contextual.
 - [x] Tarjetas repetitivas convertidas en filas compactas con una acción principal y menú Más.
 - [x] Carga global sustituida por cargas e invalidaciones específicas de Hoy, Agenda, Salud, Objetos, Familia y Actividad.
@@ -298,6 +315,7 @@ Integrado mediante los PR #38–#40, desplegado y verificado en producción:
 - PR de cuenta administrativa separada: <https://github.com/mherreraspe/agenda-familiar-app/pull/38>; CI `30058962041` aprobado.
 - PR de recuperación administrativa con Compose: <https://github.com/mherreraspe/agenda-familiar-app/pull/39>; CI `30059403460` aprobado.
 - PR de resolución de familia activa: <https://github.com/mherreraspe/agenda-familiar-app/pull/40>; CI `30062673683` y `30062763663` aprobados, release `20260724T025339Z` verificado.
+- PR de Salud práctica y vigencia de envases: <https://github.com/mherreraspe/agenda-familiar-app/pull/42>; CI `30068576773` y `30068668429` aprobados, release `20260724T051336Z` verificado.
 - Release `20260718T163608Z`: Flyway registra V5 `auditoria lugares y palabras clave` como aplicada correctamente.
 - Backups previos al despliegue: dumps custom de `agenda_familiar` y `autenticacion` con manifiesto SHA-256 en `/srv/agenda-familiar/backups/predeploy/pre-53fc275-20260718T144100Z/`.
 - Release `20260718T200358Z`: V6 aplicada una vez; backup predeploy con manifiesto en `/srv/agenda-familiar/backups/predeploy/pre-5b9bdd4-20260718T200357Z/`.
