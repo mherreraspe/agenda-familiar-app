@@ -32,10 +32,11 @@ export interface RespuestaHoy {
 }
 
 export type EstadoBotiquin = 'DISPONIBLE' | 'POR_VENCER' | 'VENCIDO' | 'AGOTADO' | 'DESCARTADO'
+export type EstadoEnvase = 'SIN_ABRIR' | 'ABIERTO'
 
 export interface RespuestaCatalogo {
-  medicamentos: Array<{ id: string; loteId?: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estado: EstadoBotiquin }>
-  tratamientos: Array<{ id: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; responsablePerfilId: string; responsable: string; responsableAlternativoPerfilId?: string; responsableAlternativo?: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string; estado: string; recetaId?: string }>
+  medicamentos: Array<{ id: string; loteId?: string; nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estadoEnvase: EstadoEnvase; abiertoEn?: string; duracionAbiertoDias?: number; fechaLimiteApertura?: string; vigenteHasta?: string; motivoVigencia?: 'DESPUES_DE_ABRIR' | 'VENCIMIENTO_IMPRESO'; avisarVencimiento: boolean; anticipacionVencimientoDias: number; avisarApertura: boolean; anticipacionAperturaDias: number; estado: EstadoBotiquin; requiereAtencion: boolean; version: number }>
+  tratamientos: Array<{ id: string; grupoId: string; perfilId: string; persona: string; medicamentoId?: string; medicamento: string; nombreMedicamento?: string; aplicacion?: string; responsablePerfilId: string; responsable: string; responsableAlternativoPerfilId?: string; responsableAlternativo?: string; indicacion?: string; dosisIndicada?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio: string; fechaFin?: string; estado: string; recetaId?: string }>
   eventos: Array<{ id: string; perfilId?: string; persona?: string; titulo: string; tipo?: string; lugar?: string; direccion?: string; notas?: string; inicioEn: string; finEn?: string; estado: string; recurrente: boolean; eventoOrigenId?: string }>
   lugares: Array<{ id: string; nombre: string; direccion?: string; ultimaUtilizacion: string; frecuenciaUso: number }>
 }
@@ -391,12 +392,22 @@ export function actualizarPerfil(id: string, datos: DatosPerfil) {
   return solicitud<PerfilAdministrado>(`/api/v1/familias/${familiaActiva()}/configuracion/perfiles/${id}`, { method: 'PATCH', body: JSON.stringify(datos) })
 }
 
-export function crearMedicamento(datos: { nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string }) {
-  return solicitud<{ id: string }>(`/api/v1/familias/${familiaActiva()}/medicamentos`, { method: 'POST', body: JSON.stringify(datos) })
+export function crearMedicamento(datos: { nombre: string; presentacion: string; concentracion: string; cantidad: number; unidad: string; fechaVencimiento?: string; estadoEnvase: EstadoEnvase; abiertoEn?: string; duracionAbiertoDias?: number; avisarVencimiento: boolean; anticipacionVencimientoDias: number; avisarApertura: boolean; anticipacionAperturaDias: number }) {
+  return solicitud<{ id: string; loteId: string }>(`/api/v1/familias/${familiaActiva()}/medicamentos`, {
+    method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
 }
 
-export function crearTratamiento(datos: { perfilId: string; medicamentoId?: string; nombre: string; indicacion?: string; cantidadReceta?: string; frecuencia?: string; horario: string; horarios?: string[]; intervaloHoras?: number; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
-  return solicitud<{ id: string }>(`/api/v1/familias/${familiaActiva()}/tratamientos`, { method: 'POST', body: JSON.stringify(datos) })
+export function crearTratamiento(datos: { perfilIds: string[]; medicamentoId?: string; nombre: string; nombreMedicamento?: string; dosis?: string; aplicacion?: string; indicacion?: string; frecuencia?: string; horarios: string[]; intervaloHoras?: number; fechaInicio?: string; fechaFin?: string; responsablePerfilId?: string; responsableAlternativoPerfilId?: string }) {
+  return solicitud<{ grupoId: string; ids: string[] }>(`/api/v1/familias/${familiaActiva()}/tratamientos/grupos`, {
+    method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
+}
+
+export function actualizarEnvase(loteId: string, datos: { estadoEnvase: EstadoEnvase; abiertoEn?: string; duracionAbiertoDias?: number; avisarVencimiento: boolean; anticipacionVencimientoDias: number; avisarApertura: boolean; anticipacionAperturaDias: number; estadoInventario?: 'DISPONIBLE' | 'AGOTADO' | 'DESCARTADO'; version: number }) {
+  return solicitud<void>(`/api/v1/familias/${familiaActiva()}/medicamentos/lotes/${loteId}`, {
+    method: 'PATCH', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(datos)
+  })
 }
 
 export function crearObjeto(datos: DatosObjeto) {

@@ -11,6 +11,7 @@ import { useInterfazStore } from '../stores/interfaz'
 import {
   cerrarSesion as eliminarSesion,
   actuarAgenda,
+  actualizarEnvase,
   actualizarObjeto,
   actualizarPerfil,
   cambiarEstadoOcurrencia,
@@ -96,8 +97,8 @@ const dialogoReceta = ref<HTMLDialogElement | null>(null)
 let activadorFormulario: HTMLElement | null = null
 let activadorReceta: HTMLElement | null = null
 const nuevaTarea = reactive({ titulo: '', descripcion: '', perfilId: '', fechaLimite: '', repetir: false, frecuencia: 'SEMANAL', intervalo: 1, hasta: '' })
-const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
-const nuevoTratamiento = reactive({ perfilId: '', medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+const nuevoMedicamento = reactive({ nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '', estadoEnvase: 'SIN_ABRIR' as 'SIN_ABRIR' | 'ABIERTO', abiertoEn: '', duracionAbiertoDias: '', avisarVencimiento: true, anticipacionVencimientoDias: 7, avisarApertura: true, anticipacionAperturaDias: 3 })
+const nuevoTratamiento = reactive({ perfilIds: [] as string[], medicamentoId: '', nombre: '', nombreMedicamento: '', dosis: '', aplicacion: '', indicacion: '', frecuencia: '', modoHorario: 'HORAS' as 'HORAS' | 'INTERVALO', horarios: ['08:00'] as string[], intervaloHoras: 8, fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
 const busquedaObjetos = ref('')
 const objetoEditadoId = ref<string | null>(null)
 const nuevoObjeto = reactive({ nombre: '', categoria: '', notas: '', ruta: '', version: undefined as number | undefined })
@@ -158,17 +159,21 @@ const proximas = computed(() => pendientes.value.filter(tarea => new Date(tarea.
 const tareasHoy = computed(() => proximas.value.filter(tarea => claveFecha(tarea.fechaLimite) === claveFecha(new Date().toISOString())))
 const eventosFiltrados = computed(() => catalogo.value?.eventos.filter(evento => evento.estado === 'PROGRAMADO' && new Date(evento.inicioEn) >= new Date() && coincideFiltro(evento.perfilId)) ?? [])
 const eventosAtrasados = computed(() => catalogo.value?.eventos.filter(evento => evento.estado === 'PROGRAMADO' && new Date(evento.inicioEn) < new Date() && coincideFiltro(evento.perfilId)) ?? [])
-const cantidadRevision = computed(() => elementosRevision.value.length + atrasadas.value.length + eventosAtrasados.value.length)
+const alertasBotiquin = computed(() => catalogo.value?.medicamentos.filter(medicamento => medicamento.requiereAtencion) ?? [])
+const cantidadRevision = computed(() => elementosRevision.value.length + atrasadas.value.length + eventosAtrasados.value.length + alertasBotiquin.value.length)
 const tratamientosFiltrados = computed(() => catalogo.value?.tratamientos.filter(tratamiento => coincideFiltro(tratamiento.perfilId)) ?? [])
 const ocurrenciasPendientes = computed(() => agendaTratamientos.value?.ocurrencias.filter(
   ocurrencia => ocurrencia.estado === 'PENDIENTE' && coincideFiltro(ocurrencia.perfilId)
 ) ?? [])
+const ocurrenciasDeHoy = computed(() => ocurrenciasPendientes.value.filter(
+  ocurrencia => claveFecha(ocurrencia.programadaEn) === claveFecha(new Date().toISOString())
+))
 const historialOcurrencias = computed(() => agendaTratamientos.value?.ocurrencias.filter(
   ocurrencia => ocurrencia.estado !== 'PENDIENTE' && coincideFiltro(ocurrencia.perfilId)
 ).sort((a, b) => new Date(b.resueltaEn ?? b.programadaEn).getTime() - new Date(a.resueltaEn ?? a.programadaEn).getTime()) ?? [])
 const vencimientosCercanos = computed(() => catalogo.value?.medicamentos.filter(
-  medicamento => medicamento.estado === 'POR_VENCER' || medicamento.estado === 'VENCIDO'
-).sort((a, b) => (a.fechaVencimiento ?? '').localeCompare(b.fechaVencimiento ?? '')) ?? [])
+  medicamento => medicamento.requiereAtencion
+).sort((a, b) => (a.vigenteHasta ?? '').localeCompare(b.vigenteHasta ?? '')) ?? [])
 const elementosRevision = computed(() => agendaTratamientos.value?.revisar.filter(elemento => {
   if (filtroPerfil.value === 'TODOS' || elemento.origen !== 'OCURRENCIA') return true
   return agendaTratamientos.value?.ocurrencias.some(ocurrencia => ocurrencia.id === elemento.entidadId && coincideFiltro(ocurrencia.perfilId))
@@ -178,9 +183,10 @@ const seccionSalud = computed<SeccionSalud>(() => {
   return solicitada === 'tratamientos' || solicitada === 'botiquin' || solicitada === 'recetas' ? solicitada : 'hoy'
 })
 const mostrandoHistorialTomas = computed(() => props.seccion === 'salud' && seccionSalud.value === 'hoy' && route.query.vista === 'historial')
+const mostrandoResolverHoy = computed(() => props.seccion === 'hoy' && route.query.vista === 'resolver')
 const historialTomasVisible = computed(() => historialOcurrencias.value.slice(0, limiteHistorialTomas.value))
-const hayContenidoHoy = computed(() => tareasHoy.value.length > 0 || ocurrenciasPendientes.value.length > 0 || cantidadRevision.value > 0)
-const ocurrenciasVisibles = computed(() => ocurrenciasPendientes.value.slice(0, mostrarTodoSalud.hoy ? undefined : 5))
+const hayContenidoHoy = computed(() => tareasHoy.value.length > 0 || ocurrenciasDeHoy.value.length > 0)
+const ocurrenciasVisibles = computed(() => ocurrenciasDeHoy.value.slice(0, mostrarTodoSalud.hoy ? undefined : 5))
 const tratamientosVisibles = computed(() => tratamientosFiltrados.value.slice(0, mostrarTodoSalud.tratamientos ? undefined : 5))
 const medicamentosVisibles = computed(() => (catalogo.value?.medicamentos ?? []).slice(0, mostrarTodoSalud.botiquin ? undefined : 5))
 const recetasVisibles = computed(() => tratamientosFiltrados.value.filter(tratamiento => tratamiento.recetaId).slice(0, mostrarTodoSalud.recetas ? undefined : 5))
@@ -222,6 +228,10 @@ function destinoSalud(destino: SeccionSalud) {
 
 function destinoHistorialTomas() {
   return { name: 'salud', query: { ...route.query, vista: 'historial' } }
+}
+
+function destinoVistaHoy(vista?: 'resolver') {
+  return { name: 'hoy', query: vista ? { vista } : {} }
 }
 
 onMounted(async () => {
@@ -419,7 +429,7 @@ async function cargarBase(forzar = false) {
   if (!nuevaTarea.perfilId && datos.value.perfiles.length) {
     nuevaTarea.perfilId = datos.value.perfiles[0].id
   }
-  if (!nuevoTratamiento.perfilId && datos.value.perfiles.length) nuevoTratamiento.perfilId = datos.value.perfiles[0].id
+  if (!nuevoTratamiento.perfilIds.length && datos.value.perfiles.length) nuevoTratamiento.perfilIds = [datos.value.perfiles[0].id]
 }
 
 async function cargarCatalogo(forzar = false) {
@@ -520,25 +530,29 @@ async function guardarMedicamento() {
   await ejecutarGuardado(async () => {
     await crearMedicamento({
       ...nuevoMedicamento,
-      fechaVencimiento: nuevoMedicamento.fechaVencimiento || undefined
+      fechaVencimiento: nuevoMedicamento.fechaVencimiento || undefined,
+      abiertoEn: nuevoMedicamento.estadoEnvase === 'ABIERTO' ? (nuevoMedicamento.abiertoEn || undefined) : undefined,
+      duracionAbiertoDias: nuevoMedicamento.duracionAbiertoDias ? Number(nuevoMedicamento.duracionAbiertoDias) : undefined
     })
-    Object.assign(nuevoMedicamento, { nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '' })
+    Object.assign(nuevoMedicamento, { nombre: '', presentacion: '', concentracion: '', cantidad: 1, unidad: 'unidad', fechaVencimiento: '', estadoEnvase: 'SIN_ABRIR', abiertoEn: '', duracionAbiertoDias: '', avisarVencimiento: true, anticipacionVencimientoDias: 7, avisarApertura: true, anticipacionAperturaDias: 3 })
   }, 'El medicamento fue agregado.', () => cargarCatalogo(true))
 }
 
 async function guardarTratamiento() {
   let avisoReceta = ''
   await ejecutarGuardado(async () => {
+    if (!nuevoTratamiento.perfilIds.length) throw new Error('Selecciona al menos una persona.')
     const creado = await crearTratamiento({
-      perfilId: nuevoTratamiento.perfilId,
+      perfilIds: nuevoTratamiento.perfilIds,
       medicamentoId: nuevoTratamiento.medicamentoId || undefined,
       nombre: nuevoTratamiento.nombre,
+      nombreMedicamento: nuevoTratamiento.nombreMedicamento || undefined,
+      dosis: nuevoTratamiento.dosis || undefined,
+      aplicacion: nuevoTratamiento.aplicacion || undefined,
       indicacion: nuevoTratamiento.indicacion || undefined,
-      cantidadReceta: nuevoTratamiento.cantidadReceta || undefined,
       frecuencia: nuevoTratamiento.frecuencia || undefined,
-      horario: nuevoTratamiento.horario,
-      horarios: nuevoTratamiento.horariosAdicionales.split(',').map(horario => horario.trim()).filter(Boolean),
-      intervaloHoras: nuevoTratamiento.intervaloHoras ? Number(nuevoTratamiento.intervaloHoras) : undefined,
+      horarios: nuevoTratamiento.modoHorario === 'HORAS' ? nuevoTratamiento.horarios : [nuevoTratamiento.horarios[0]],
+      intervaloHoras: nuevoTratamiento.modoHorario === 'INTERVALO' ? Number(nuevoTratamiento.intervaloHoras) : undefined,
       fechaInicio: nuevoTratamiento.fechaInicio || undefined,
       fechaFin: nuevoTratamiento.fechaFin || undefined,
       responsablePerfilId: nuevoTratamiento.responsablePerfilId || undefined,
@@ -546,15 +560,49 @@ async function guardarTratamiento() {
     })
     if (recetaSeleccionada.value) {
       try {
-        await subirReceta(creado.id, await reducirImagenReceta(recetaSeleccionada.value))
+        await subirReceta(creado.ids[0], await reducirImagenReceta(recetaSeleccionada.value))
       } catch (causa) {
         avisoReceta = `El tratamiento fue creado, pero la receta no se guardó: ${causa instanceof Error ? causa.message : 'error desconocido'}`
       }
     }
-    Object.assign(nuevoTratamiento, { perfilId: nuevoTratamiento.perfilId, medicamentoId: '', nombre: '', indicacion: '', cantidadReceta: '', frecuencia: '', horario: '', horariosAdicionales: '', intervaloHoras: '', fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
+    Object.assign(nuevoTratamiento, { perfilIds: [...nuevoTratamiento.perfilIds], medicamentoId: '', nombre: '', nombreMedicamento: '', dosis: '', aplicacion: '', indicacion: '', frecuencia: '', modoHorario: 'HORAS', horarios: ['08:00'], intervaloHoras: 8, fechaInicio: '', fechaFin: '', responsablePerfilId: '', responsableAlternativoPerfilId: '' })
     recetaSeleccionada.value = null
   }, 'El tratamiento fue agregado.', () => Promise.all([cargarCatalogo(true), cargarOcurrencias(true), cargarCuota(true)]).then(() => undefined))
   if (avisoReceta) mensaje.value = avisoReceta
+}
+
+function agregarHorario() {
+  if (nuevoTratamiento.horarios.length < 8) nuevoTratamiento.horarios.push('12:00')
+}
+
+function quitarHorario(indice: number) {
+  if (nuevoTratamiento.horarios.length > 1) nuevoTratamiento.horarios.splice(indice, 1)
+}
+
+async function cambiarEnvase(medicamento: RespuestaCatalogo['medicamentos'][number], accion: 'ABRIR' | 'AGOTAR' | 'DESCARTAR') {
+  if (!medicamento.loteId) return
+  const abrir = accion === 'ABRIR'
+  try {
+    cargando.value = true
+    error.value = ''
+    await actualizarEnvase(medicamento.loteId, {
+      estadoEnvase: abrir ? 'ABIERTO' : medicamento.estadoEnvase,
+      abiertoEn: abrir ? claveFecha(new Date().toISOString()) : medicamento.abiertoEn,
+      duracionAbiertoDias: medicamento.duracionAbiertoDias,
+      avisarVencimiento: medicamento.avisarVencimiento,
+      anticipacionVencimientoDias: medicamento.anticipacionVencimientoDias,
+      avisarApertura: medicamento.avisarApertura,
+      anticipacionAperturaDias: medicamento.anticipacionAperturaDias,
+      estadoInventario: accion === 'AGOTAR' ? 'AGOTADO' : accion === 'DESCARTAR' ? 'DESCARTADO' : 'DISPONIBLE',
+      version: medicamento.version
+    })
+    mensaje.value = abrir ? 'El envase quedó marcado como abierto.' : accion === 'AGOTAR' ? 'El envase quedó marcado como agotado.' : 'El envase fue descartado.'
+    await cargarCatalogo(true)
+  } catch (causa) {
+    error.value = causa instanceof Error ? causa.message : 'No se pudo actualizar el envase'
+  } finally {
+    cargando.value = false
+  }
 }
 
 function seleccionarReceta(evento: Event) {
@@ -914,22 +962,30 @@ async function salir() {
         <RouterLink :to="destinoSalud('recetas')" :aria-current="seccionSalud === 'recetas' ? 'page' : undefined">Recetas</RouterLink>
       </nav>
 
-      <section v-if="seccion === 'hoy' && hayContenidoHoy" class="resumen" aria-label="Resumen del día">
+      <nav v-if="seccion === 'hoy'" class="subnavegacion" aria-label="Vistas de Hoy">
+        <RouterLink :to="destinoVistaHoy()" :aria-current="!mostrandoResolverHoy ? 'page' : undefined">Hoy</RouterLink>
+        <RouterLink :to="destinoVistaHoy('resolver')" :aria-current="mostrandoResolverHoy ? 'page' : undefined">Por resolver<span v-if="cantidadRevision"> ({{ cantidadRevision }})</span></RouterLink>
+      </nav>
+
+      <section v-if="seccion === 'hoy' && !mostrandoResolverHoy && hayContenidoHoy" class="resumen" aria-label="Resumen del día">
         <div v-if="tareasHoy.length"><strong>{{ tareasHoy.length }}</strong><span>{{ tareasHoy.length === 1 ? 'tarea' : 'tareas' }}</span></div>
-        <div v-if="ocurrenciasPendientes.length"><strong>{{ ocurrenciasPendientes.length }}</strong><span>{{ ocurrenciasPendientes.length === 1 ? 'toma pendiente' : 'tomas pendientes' }}</span></div>
-        <div v-if="cantidadRevision"><strong>{{ cantidadRevision }}</strong><span>necesita atención</span></div>
+        <div v-if="ocurrenciasDeHoy.length"><strong>{{ ocurrenciasDeHoy.length }}</strong><span>{{ ocurrenciasDeHoy.length === 1 ? 'toma de hoy' : 'tomas de hoy' }}</span></div>
       </section>
 
-      <section v-if="seccion === 'hoy' && !hayContenidoHoy" class="estado-dia-libre" aria-labelledby="titulo-dia-libre">
+      <section v-if="seccion === 'hoy' && !mostrandoResolverHoy && !hayContenidoHoy" class="estado-dia-libre" aria-labelledby="titulo-dia-libre">
         <span class="estado-dia-libre__marca" aria-hidden="true">✓</span>
         <div><h2 id="titulo-dia-libre">Todo está al día</h2><p>No hay tareas, tomas ni elementos que necesiten atención.</p></div>
         <RouterLink :to="{ name: 'agenda' }">Ver lo que viene</RouterLink>
+      </section>
+      <section v-if="mostrandoResolverHoy && !cantidadRevision" class="estado-dia-libre" aria-labelledby="titulo-sin-pendientes">
+        <span class="estado-dia-libre__marca" aria-hidden="true">✓</span>
+        <div><h2 id="titulo-sin-pendientes">Nada por resolver</h2><p>No hay atrasos ni avisos que necesiten atención.</p></div>
       </section>
 
       <p v-if="mensaje" class="confirmacion" role="status">{{ mensaje }}</p>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
 
-      <section v-if="(seccion === 'hoy' && tareasHoy.length) || (seccion === 'agenda' && proximas.length)" class="seccion">
+      <section v-if="(seccion === 'hoy' && !mostrandoResolverHoy && tareasHoy.length) || (seccion === 'agenda' && proximas.length)" class="seccion">
         <div class="titulo-seccion">
           <div><span class="etiqueta etiqueta--verde">{{ seccion === 'hoy' ? 'Hoy' : 'En orden' }}</span><h2>{{ seccion === 'hoy' ? 'Tareas de hoy' : 'Próximos siete días' }}</h2></div>
         </div>
@@ -941,9 +997,9 @@ async function salir() {
         />
       </section>
 
-      <section v-if="(seccion === 'hoy' && ocurrenciasPendientes.length) || (seccion === 'salud' && seccionSalud === 'hoy' && !mostrandoHistorialTomas)" id="ocurrencias" class="seccion">
+      <section v-if="(seccion === 'hoy' && !mostrandoResolverHoy && ocurrenciasDeHoy.length) || (seccion === 'salud' && seccionSalud === 'hoy' && !mostrandoHistorialTomas)" id="ocurrencias" class="seccion">
         <div class="titulo-seccion"><div><h2>{{ seccion === 'salud' ? 'Tomas' : 'Tomas del día' }}</h2></div></div>
-        <article v-for="ocurrencia in (seccion === 'salud' ? ocurrenciasVisibles : ocurrenciasPendientes)" :key="ocurrencia.id" class="tarjeta tarjeta--proximo">
+        <article v-for="ocurrencia in (seccion === 'salud' ? ocurrenciasVisibles : ocurrenciasDeHoy)" :key="ocurrencia.id" class="tarjeta tarjeta--proximo">
           <time>{{ new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: datos?.zonaHoraria }).format(new Date(ocurrencia.programadaEn)) }}</time>
           <div class="tarjeta__contenido"><h3>{{ ocurrencia.tratamiento }}</h3><p>Para {{ ocurrencia.persona }}</p></div>
           <div class="acciones-ocurrencia">
@@ -955,9 +1011,9 @@ async function salir() {
             />
           </div>
         </article>
-        <p v-if="!ocurrenciasPendientes.length" class="estado-vacio">No hay tomas pendientes para este filtro.</p>
-        <button v-if="seccion === 'salud' && ocurrenciasPendientes.length > 5" type="button" class="boton-ver-mas" @click="mostrarTodoSalud.hoy = !mostrarTodoSalud.hoy">
-          {{ mostrarTodoSalud.hoy ? 'Mostrar menos' : `Ver ${ocurrenciasPendientes.length - 5} más` }}
+        <p v-if="!ocurrenciasDeHoy.length" class="estado-vacio">No hay tomas para hoy con este filtro.</p>
+        <button v-if="seccion === 'salud' && ocurrenciasDeHoy.length > 5" type="button" class="boton-ver-mas" @click="mostrarTodoSalud.hoy = !mostrarTodoSalud.hoy">
+          {{ mostrarTodoSalud.hoy ? 'Mostrar menos' : `Ver ${ocurrenciasDeHoy.length - 5} más` }}
         </button>
         <RouterLink v-if="seccion === 'salud' && historialOcurrencias.length" class="enlace-historial" :to="destinoHistorialTomas()">Ver historial</RouterLink>
       </section>
@@ -974,7 +1030,7 @@ async function salir() {
         <button v-if="historialOcurrencias.length > limiteHistorialTomas" type="button" class="boton-ver-mas" @click="limiteHistorialTomas += 10">Ver {{ Math.min(10, historialOcurrencias.length - limiteHistorialTomas) }} más</button>
       </section>
 
-      <section v-if="seccion === 'hoy' && cantidadRevision" id="revisar" class="seccion seccion--alerta">
+      <section v-if="mostrandoResolverHoy && cantidadRevision" id="revisar" class="seccion seccion--alerta">
         <div class="titulo-seccion"><div><span class="etiqueta">Necesita atención</span><h2>Por resolver</h2></div></div>
         <TarjetaPendiente v-for="tarea in atrasadas" :key="`revisar-${tarea.id}`" :hora="hora(tarea)"
           :titulo="tarea.titulo" :detalle="`${tarea.responsable} · Tarea vencida`" tono="atrasado"
@@ -998,6 +1054,11 @@ async function salir() {
           </div>
           <button v-else type="button" class="boton-accion" @click="resolverDesdeRevision(elemento)">Cerrar</button>
         </article>
+        <article v-for="medicamento in alertasBotiquin" :key="`resolver-lote-${medicamento.loteId || medicamento.id}`" class="tarjeta tarjeta--atrasado">
+          <time>{{ medicamento.vigenteHasta || 'Sin fecha' }}</time>
+          <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.estado === 'VENCIDO' ? 'Ya no está vigente' : 'Revisar vigencia del envase' }}</p><small>{{ medicamento.motivoVigencia === 'DESPUES_DE_ABRIR' ? 'Límite después de abrir' : 'Vencimiento impreso' }}</small></div>
+          <RouterLink class="boton-accion enlace-boton" :to="destinoSalud('botiquin')">Ver botiquín</RouterLink>
+        </article>
       </section>
 
       <section v-if="seccion === 'agenda'" id="calendario" class="seccion">
@@ -1016,6 +1077,7 @@ async function salir() {
           <div class="tarjeta__contenido">
             <div class="tarjeta__encabezado"><h3>{{ tratamiento.medicamento }}</h3><span class="estado">{{ tratamiento.estado }}</span></div>
             <p>{{ tratamiento.persona }} · {{ tratamiento.intervaloHoras ? `cada ${tratamiento.intervaloHoras} h` : tratamiento.horarios.map(horario => horario.slice(0, 5)).join(' · ') }}</p>
+            <small v-if="tratamiento.nombreMedicamento || tratamiento.dosisIndicada || tratamiento.aplicacion">{{ [tratamiento.nombreMedicamento, tratamiento.dosisIndicada, tratamiento.aplicacion].filter(Boolean).join(' · ') }}</small>
             <details class="detalles-fila">
               <summary>Ver detalles</summary>
               <p>Responsable: {{ tratamiento.responsable }}<span v-if="tratamiento.responsableAlternativo"> · alternativo: {{ tratamiento.responsableAlternativo }}</span></p>
@@ -1037,9 +1099,9 @@ async function salir() {
       </section>
 
       <section v-if="seccion === 'salud' && seccionSalud === 'botiquin' && vencimientosCercanos.length" id="vencimientos" class="seccion seccion--alerta">
-        <div class="titulo-seccion"><div><span class="etiqueta">Vencimientos</span><h2>Vencimientos cercanos</h2></div></div>
+        <div class="titulo-seccion"><div><span class="etiqueta">Revisar</span><h2>Avisos del botiquín</h2></div></div>
         <article v-for="medicamento in vencimientosCercanos" :key="`vence-${medicamento.loteId || medicamento.id}`" class="tarjeta tarjeta--atrasado">
-          <time>{{ medicamento.fechaVencimiento || 'Sin fecha' }}</time>
+          <time>{{ medicamento.vigenteHasta || 'Sin fecha' }}</time>
           <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.cantidad }} {{ medicamento.unidad }}</p></div>
           <span class="estado">{{ medicamento.estado.replace('_', ' ') }}</span>
         </article>
@@ -1048,7 +1110,16 @@ async function salir() {
       <section v-if="seccion === 'salud' && seccionSalud === 'botiquin'" id="botiquin" class="seccion">
         <div class="titulo-seccion"><div><span class="etiqueta">Botiquín</span><h2>Medicamentos</h2></div></div>
         <article v-for="medicamento in medicamentosVisibles" :key="medicamento.loteId || medicamento.id" class="tarjeta">
-          <div class="tarjeta__contenido"><h3>{{ medicamento.nombre }}</h3><p>{{ medicamento.presentacion }} · {{ medicamento.concentracion }}</p><small>{{ medicamento.cantidad }} {{ medicamento.unidad }} · vence {{ medicamento.fechaVencimiento || 'sin fecha' }}</small></div>
+          <div class="tarjeta__contenido">
+            <div class="tarjeta__encabezado"><h3>{{ medicamento.nombre }}</h3><span class="estado">{{ medicamento.estadoEnvase === 'ABIERTO' ? 'Abierto' : 'Sin abrir' }}</span></div>
+            <p>{{ [medicamento.presentacion, medicamento.concentracion].filter(Boolean).join(' · ') || 'Sin presentación indicada' }}</p>
+            <small>{{ medicamento.cantidad }} {{ medicamento.unidad }}<span v-if="medicamento.vigenteHasta"> · usar hasta {{ medicamento.vigenteHasta }} ({{ medicamento.motivoVigencia === 'DESPUES_DE_ABRIR' ? 'después de abrir' : 'vencimiento impreso' }})</span></small>
+            <div v-if="medicamento.estado !== 'AGOTADO' && medicamento.estado !== 'DESCARTADO'" class="detalles-fila__acciones">
+              <button v-if="medicamento.estadoEnvase === 'SIN_ABRIR'" type="button" class="boton-accion" :disabled="cargando" @click="cambiarEnvase(medicamento, 'ABRIR')">Marcar abierto</button>
+              <button type="button" class="boton-secundario" :disabled="cargando" @click="cambiarEnvase(medicamento, 'AGOTAR')">Agotado</button>
+              <button type="button" class="boton-secundario" :disabled="cargando" @click="cambiarEnvase(medicamento, 'DESCARTAR')">Descartar</button>
+            </div>
+          </div>
           <span class="estado">{{ medicamento.estado.replace('_', ' ') }}</span>
         </article>
         <p v-if="!catalogo?.medicamentos.length" class="estado-vacio">No hay medicamentos guardados en el botiquín.</p>
@@ -1159,24 +1230,41 @@ async function salir() {
         <label>Presentación<input v-model.trim="nuevoMedicamento.presentacion" maxlength="120" placeholder="Caja, frasco…" /></label>
         <label>Concentración<input v-model.trim="nuevoMedicamento.concentracion" maxlength="120" placeholder="Texto del envase" /></label>
         <div class="campos-dobles"><label>Cantidad<input v-model.number="nuevoMedicamento.cantidad" type="number" min="0" step="0.01" required /></label><label>Unidad<input v-model.trim="nuevoMedicamento.unidad" maxlength="40" required /></label></div>
-        <label>Vencimiento opcional<input v-model="nuevoMedicamento.fechaVencimiento" type="date" /></label>
+        <label>Vencimiento impreso opcional<input v-model="nuevoMedicamento.fechaVencimiento" type="date" /></label>
+        <fieldset class="grupo-formulario"><legend>Estado de este envase</legend>
+          <div class="selector-segmentado"><label><input v-model="nuevoMedicamento.estadoEnvase" type="radio" value="SIN_ABRIR" /> Sin abrir</label><label><input v-model="nuevoMedicamento.estadoEnvase" type="radio" value="ABIERTO" /> Abierto</label></div>
+          <div v-if="nuevoMedicamento.estadoEnvase === 'ABIERTO'" class="campos-dobles"><label>Se abrió el<input v-model="nuevoMedicamento.abiertoEn" type="date" required /></label><label>Usar durante (días)<input v-model="nuevoMedicamento.duracionAbiertoDias" type="number" min="1" max="3650" placeholder="Ej. 30" /></label></div>
+        </fieldset>
+        <details><summary>Configurar avisos</summary><div class="detalles-progresivos">
+          <label class="opcion-linea"><input v-model="nuevoMedicamento.avisarVencimiento" type="checkbox" /> Avisar antes del vencimiento impreso</label>
+          <label v-if="nuevoMedicamento.avisarVencimiento">Días de anticipación<input v-model.number="nuevoMedicamento.anticipacionVencimientoDias" type="number" min="0" max="365" /></label>
+          <label class="opcion-linea"><input v-model="nuevoMedicamento.avisarApertura" type="checkbox" /> Avisar cuando termine el tiempo después de abrir</label>
+          <label v-if="nuevoMedicamento.avisarApertura">Días de anticipación<input v-model.number="nuevoMedicamento.anticipacionAperturaDias" type="number" min="0" max="365" /></label>
+        </div></details>
       </form>
 
       <form v-else-if="formulario === 'tratamiento'" id="formulario-general" @submit.prevent="guardarTratamiento">
-        <label>Persona<select v-model="nuevoTratamiento.perfilId" required><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
-        <label>Nombre del tratamiento o medicamento<input v-model.trim="nuevoTratamiento.nombre" maxlength="180" required /></label>
-        <label>Horario<input v-model="nuevoTratamiento.horario" type="time" required /></label>
-        <details><summary>Más detalles opcionales</summary><div class="detalles-progresivos">
+        <fieldset class="grupo-formulario"><legend>¿Para quién es?</legend><div class="chips-personas"><label v-for="perfil in datos?.perfiles" :key="perfil.id"><input v-model="nuevoTratamiento.perfilIds" type="checkbox" :value="perfil.id" /> {{ perfil.nombre }}</label></div><small>Puedes registrar la misma indicación para varias personas.</small></fieldset>
+        <label>Nombre corto del tratamiento<input v-model.trim="nuevoTratamiento.nombre" maxlength="180" placeholder="Ej. Gotas para los ojos" required /></label>
+        <div class="campos-dobles"><label>Medicamento opcional<input v-model.trim="nuevoTratamiento.nombreMedicamento" maxlength="180" placeholder="Nombre de la receta" /></label><label>Dosis opcional<input v-model.trim="nuevoTratamiento.dosis" maxlength="300" placeholder="Ej. 2 gotas" /></label></div>
+        <label>Dónde o cómo se aplica (opcional)<input v-model.trim="nuevoTratamiento.aplicacion" maxlength="300" placeholder="Ej. En ambos ojos" /></label>
+        <fieldset class="grupo-formulario"><legend>¿Cuándo se realiza?</legend>
+          <div class="selector-segmentado"><label><input v-model="nuevoTratamiento.modoHorario" type="radio" value="HORAS" /> Horas específicas</label><label><input v-model="nuevoTratamiento.modoHorario" type="radio" value="INTERVALO" /> Cada ciertas horas</label></div>
+          <div v-if="nuevoTratamiento.modoHorario === 'HORAS'" class="lista-horarios">
+            <div v-for="(_, indice) in nuevoTratamiento.horarios" :key="indice"><label :for="`horario-${indice}`">Horario {{ indice + 1 }}</label><input :id="`horario-${indice}`" v-model="nuevoTratamiento.horarios[indice]" type="time" required /><button v-if="nuevoTratamiento.horarios.length > 1" type="button" class="boton-secundario" :aria-label="`Quitar horario ${indice + 1}`" @click="quitarHorario(indice)">Quitar</button></div>
+            <button v-if="nuevoTratamiento.horarios.length < 8" type="button" class="boton-secundario" @click="agregarHorario">+ Añadir otro horario</button>
+          </div>
+          <div v-else class="campos-dobles"><label>Primera hora<input v-model="nuevoTratamiento.horarios[0]" type="time" required /></label><label>Cada cuántas horas<input v-model.number="nuevoTratamiento.intervaloHoras" type="number" min="1" max="168" required /></label></div>
+          <p class="resumen-tratamiento">{{ nuevoTratamiento.perfilIds.length || 0 }} persona(s) · {{ nuevoTratamiento.modoHorario === 'HORAS' ? nuevoTratamiento.horarios.length : `cada ${nuevoTratamiento.intervaloHoras} h` }}</p>
+        </fieldset>
+        <label class="carga-receta">Foto de la receta (opcional)<input type="file" accept="image/jpeg,image/png" capture="environment" @change="seleccionarReceta" /><small>Puedes fotografiarla para consultar el detalle sin copiar todo. Se elimina ubicación/EXIF y se guarda cifrada.</small></label>
+        <p v-if="recetaSeleccionada" class="confirmacion">{{ recetaSeleccionada.name }} · {{ (recetaSeleccionada.size / 1048576).toFixed(1) }} MiB</p>
+        <details><summary>Más opciones</summary><div class="detalles-progresivos">
           <label>Vincular al botiquín<select v-model="nuevoTratamiento.medicamentoId"><option value="">Sin vincular</option><option v-for="medicamento in catalogo?.medicamentos" :key="medicamento.id" :value="medicamento.id">{{ medicamento.nombre }} · {{ medicamento.concentracion }}</option></select></label>
-          <label>Indicación<textarea v-model.trim="nuevoTratamiento.indicacion" maxlength="1000" rows="2" /></label>
-          <label>Cantidad indicada en la receta<input v-model.trim="nuevoTratamiento.cantidadReceta" maxlength="300" /></label>
-          <label>Frecuencia o notas del horario<input v-model.trim="nuevoTratamiento.frecuencia" maxlength="300" /></label>
-          <label>Horarios adicionales<input v-model.trim="nuevoTratamiento.horariosAdicionales" placeholder="14:00, 20:00" /></label>
-          <label>Intervalo en horas<input v-model="nuevoTratamiento.intervaloHoras" type="number" min="1" max="168" placeholder="Usa solo un horario inicial" /></label>
+          <label>Indicaciones o cuidados<textarea v-model.trim="nuevoTratamiento.indicacion" maxlength="1000" rows="2" /></label>
+          <label>Nota sobre la frecuencia<input v-model.trim="nuevoTratamiento.frecuencia" maxlength="300" /></label>
           <label>Responsable opcional<select v-model="nuevoTratamiento.responsablePerfilId"><option value="">La misma persona</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
           <label>Responsable alternativo<select v-model="nuevoTratamiento.responsableAlternativoPerfilId"><option value="">Sin alternativo</option><option v-for="perfil in datos?.perfiles" :key="perfil.id" :value="perfil.id">{{ perfil.nombre }}</option></select></label>
-          <label>Fotografía de receta opcional<input type="file" accept="image/jpeg,image/png" capture="environment" @change="seleccionarReceta" /><small>Se reduce y elimina ubicación/EXIF antes de guardarla cifrada.</small></label>
-          <p v-if="recetaSeleccionada" class="confirmacion">{{ recetaSeleccionada.name }} · {{ (recetaSeleccionada.size / 1048576).toFixed(1) }} MiB</p>
           <div class="campos-dobles"><label>Inicio opcional<input v-model="nuevoTratamiento.fechaInicio" type="date" /></label><label>Fin opcional<input v-model="nuevoTratamiento.fechaFin" type="date" /></label></div>
         </div></details>
       </form>

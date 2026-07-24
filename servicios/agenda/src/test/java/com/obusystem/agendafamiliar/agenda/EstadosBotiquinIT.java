@@ -38,7 +38,7 @@ class EstadosBotiquinIT {
         Long familiaId = jdbc.queryForObject("SELECT id FROM familias WHERE id_publico=?", Long.class, FAMILIA);
         jdbc.queryForObject("SELECT set_config('agenda.familia_id', ?, true)", String.class, familiaId.toString());
 
-        actualizar("cantidad=12, estado='DISPONIBLE', fecha_vencimiento=CURRENT_DATE+10", familiaId);
+        actualizar("cantidad=12, estado='DISPONIBLE', fecha_vencimiento=CURRENT_DATE+5", familiaId);
         assertThat(estado()).isEqualTo("POR_VENCER");
 
         actualizar("fecha_vencimiento=CURRENT_DATE-1", familiaId);

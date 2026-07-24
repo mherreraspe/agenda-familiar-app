@@ -102,6 +102,11 @@ class MigracionesAgendaIT {
                 assertThat(resultado.getInt(1)).isEqualTo(1);
                 assertThat(resultado.getInt(2)).isZero();
             }
+            try (var resultado = consulta.executeQuery(
+                    "SELECT relforcerowsecurity FROM pg_class WHERE oid='tratamientos'::regclass")) {
+                assertThat(resultado.next()).isTrue();
+                assertThat(resultado.getBoolean(1)).isTrue();
+            }
         }
     }
 }

@@ -10,9 +10,14 @@ import java.util.UUID;
 public record RespuestaCatalogo(List<MedicamentoResumen> medicamentos,
         List<TratamientoResumen> tratamientos, List<EventoResumen> eventos, List<LugarResumen> lugares) {
     public record MedicamentoResumen(UUID id, UUID loteId, String nombre, String presentacion, String concentracion,
-            BigDecimal cantidad, String unidad, LocalDate fechaVencimiento, String estado) { }
-    public record TratamientoResumen(UUID id, UUID perfilId, String persona, UUID medicamentoId,
-            String medicamento, UUID responsablePerfilId, String responsable,
+            BigDecimal cantidad, String unidad, LocalDate fechaVencimiento, String estadoEnvase,
+            LocalDate abiertoEn, Integer duracionAbiertoDias, LocalDate fechaLimiteApertura,
+            LocalDate vigenteHasta, String motivoVigencia, boolean avisarVencimiento,
+            int anticipacionVencimientoDias, boolean avisarApertura, int anticipacionAperturaDias,
+            String estado, boolean requiereAtencion, long version) { }
+    public record TratamientoResumen(UUID id, UUID grupoId, UUID perfilId, String persona, UUID medicamentoId,
+            String medicamento, String nombreMedicamento, String aplicacion,
+            UUID responsablePerfilId, String responsable,
             UUID responsableAlternativoPerfilId, String responsableAlternativo,
             String indicacion, String dosisIndicada, String frecuencia, List<LocalTime> horarios, Integer intervaloHoras,
             LocalDate fechaInicio, LocalDate fechaFin, String estado, UUID recetaId) { }

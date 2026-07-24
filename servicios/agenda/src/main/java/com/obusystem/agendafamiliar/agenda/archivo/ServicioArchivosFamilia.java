@@ -37,6 +37,10 @@ public class ServicioArchivosFamilia {
     public RespuestaArchivo subirReceta(UUID familiaId, UUID tratamientoId, MultipartFile archivo, Jwt jwt) {
         Familia familia = acceso.autorizar(familiaId, jwt);
         Long tratamientoInterno = tratamiento(familia.getId(), tratamientoId);
+        UUID grupo = jdbc.queryForObject("SELECT grupo_publico_id FROM tratamientos WHERE familia_id=? AND id=?",
+                UUID.class, familia.getId(), tratamientoInterno);
+        jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", (rs, fila) -> 0,
+                familia.getId() + ":receta:" + grupo);
         if (existeReceta(familia.getId(), tratamientoInterno)) {
             throw problema(HttpStatus.CONFLICT, "El tratamiento ya tiene una fotografía de receta");
         }
@@ -123,7 +127,7 @@ public class ServicioArchivosFamilia {
     }
 
     private boolean existeReceta(Long familiaId, Long tratamientoId) {
-        return jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM archivos_familia WHERE familia_id=? AND tratamiento_id=? AND estado='ACTIVO')",
+        return jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM tratamientos objetivo JOIN tratamientos grupo ON grupo.familia_id=objetivo.familia_id AND grupo.grupo_publico_id=objetivo.grupo_publico_id JOIN archivos_familia ar ON ar.tratamiento_id=grupo.id AND ar.familia_id=grupo.familia_id AND ar.estado='ACTIVO' WHERE objetivo.familia_id=? AND objetivo.id=?)",
                 Boolean.class, familiaId, tratamientoId);
     }
 

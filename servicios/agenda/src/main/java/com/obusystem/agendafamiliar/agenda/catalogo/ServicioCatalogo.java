@@ -6,6 +6,8 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -27,6 +29,8 @@ import com.obusystem.agendafamiliar.agenda.recurrencia.ServicioRecurrencias;
 
 @Service
 public class ServicioCatalogo {
+    public record ResultadoMedicamento(UUID id, UUID loteId) { }
+    public record ResultadoTratamientos(UUID grupoId, List<UUID> ids) { }
     private final AccesoFamilia acceso;
     private final JdbcTemplate jdbc;
     private final ServicioOcurrencias ocurrencias;
@@ -51,7 +55,17 @@ public class ServicioCatalogo {
 
     @Transactional
     public UUID crearMedicamento(UUID familiaId, SolicitudesCatalogo.Medicamento solicitud, Jwt jwt) {
+        return crearMedicamento(familiaId, UUID.randomUUID().toString(), solicitud, jwt).id();
+    }
+
+    @Transactional
+    public ResultadoMedicamento crearMedicamento(UUID familiaId, String clave, SolicitudesCatalogo.Medicamento solicitud, Jwt jwt) {
         Familia familia = acceso.autorizar(familiaId, jwt);
+        validarClave(clave);
+        bloquear(familia.getId(), clave);
+        ResultadoMedicamento anterior = resultadoMedicamento(familia.getId(), clave, "CREAR_MEDICAMENTO");
+        if (anterior != null) return anterior;
+        validarApertura(solicitud.estadoEnvase(), solicitud.abiertoEn());
         UUID medicamentoId = UuidV7.nuevo();
         UUID loteId = UuidV7.nuevo();
         jdbc.update("INSERT INTO medicamentos (id_publico, familia_id, nombre, presentacion, concentracion) VALUES (?, ?, ?, ?, ?)",
@@ -59,43 +73,106 @@ public class ServicioCatalogo {
                 limpiar(solicitud.concentracion()));
         Long interno = jdbc.queryForObject("SELECT id FROM medicamentos WHERE familia_id = ? AND id_publico = ?", Long.class,
                 familia.getId(), medicamentoId);
-        jdbc.update("INSERT INTO lotes_medicamento (id_publico, familia_id, medicamento_id, cantidad, unidad, fecha_vencimiento) VALUES (?, ?, ?, ?, ?, ?)",
+        jdbc.update("INSERT INTO lotes_medicamento (id_publico, familia_id, medicamento_id, cantidad, unidad, fecha_vencimiento, estado_envase, abierto_en, duracion_abierto_dias, avisar_vencimiento, anticipacion_vencimiento_dias, avisar_apertura, anticipacion_apertura_dias) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 loteId, familia.getId(), interno, solicitud.cantidad(), solicitud.unidad(),
-                solicitud.fechaVencimiento() == null ? null : Date.valueOf(solicitud.fechaVencimiento()));
+                solicitud.fechaVencimiento() == null ? null : Date.valueOf(solicitud.fechaVencimiento()),
+                valor(solicitud.estadoEnvase(), "SIN_ABRIR"),
+                solicitud.abiertoEn() == null ? null : Date.valueOf(solicitud.abiertoEn()), solicitud.duracionAbiertoDias(),
+                valor(solicitud.avisarVencimiento(), true), valor(solicitud.anticipacionVencimientoDias(), 7),
+                valor(solicitud.avisarApertura(), true), valor(solicitud.anticipacionAperturaDias(), 3));
+        guardarResultado(familia.getId(), clave, "CREAR_MEDICAMENTO", medicamentoId, loteId.toString());
         auditar(familia.getId(), jwt, "CREAR", "MEDICAMENTO", medicamentoId, "Medicamento registrado");
-        return medicamentoId;
+        return new ResultadoMedicamento(medicamentoId, loteId);
     }
 
     @Transactional
     public UUID crearTratamiento(UUID familiaId, SolicitudesCatalogo.Tratamiento solicitud, Jwt jwt) {
+        return crearTratamiento(familiaId, UUID.randomUUID().toString(), solicitud, jwt);
+    }
+
+    @Transactional
+    public UUID crearTratamiento(UUID familiaId, String clave, SolicitudesCatalogo.Tratamiento solicitud, Jwt jwt) {
+        List<LocalTime> horarios = solicitud.horarios() == null ? new ArrayList<>() : new ArrayList<>(solicitud.horarios());
+        if (solicitud.horario() != null) horarios.add(solicitud.horario());
+        return crearTratamientos(familiaId, clave, new SolicitudesCatalogo.TratamientoMultiple(
+                List.of(solicitud.perfilId()), solicitud.medicamentoId(), solicitud.nombre(), null,
+                solicitud.cantidadReceta(), null, solicitud.indicacion(), solicitud.frecuencia(), horarios,
+                solicitud.intervaloHoras(), solicitud.fechaInicio(), solicitud.fechaFin(),
+                solicitud.responsablePerfilId(), solicitud.responsableAlternativoPerfilId()), jwt).ids().getFirst();
+    }
+
+    @Transactional
+    public ResultadoTratamientos crearTratamientos(UUID familiaId, String clave,
+            SolicitudesCatalogo.TratamientoMultiple solicitud, Jwt jwt) {
         Familia familia = acceso.autorizar(familiaId, jwt);
+        validarClave(clave);
+        bloquear(familia.getId(), clave);
+        ResultadoTratamientos anterior = resultadoTratamientos(familia.getId(), clave, "CREAR_TRATAMIENTOS");
+        if (anterior != null) return anterior;
+        List<UUID> perfiles = new ArrayList<>(new LinkedHashSet<>(solicitud.perfilIds()));
+        if (perfiles.size() != solicitud.perfilIds().size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No repitas una persona en el tratamiento");
+        }
         LocalDate inicio = solicitud.fechaInicio() == null
                 ? LocalDate.now(ZoneId.of(familia.getZonaHoraria())) : solicitud.fechaInicio();
         validarRango(inicio, solicitud.fechaFin());
-        Long perfil = idInterno("perfiles", familia.getId(), solicitud.perfilId(), "Perfil inválido");
-        Long responsable = solicitud.responsablePerfilId() == null ? perfil
-                : idInterno("perfiles", familia.getId(), solicitud.responsablePerfilId(), "Responsable inválido");
-        Long responsableAlternativo = solicitud.responsableAlternativoPerfilId() == null ? null
-                : idInterno("perfiles", familia.getId(), solicitud.responsableAlternativoPerfilId(), "Responsable alternativo inválido");
+        List<LocalTime> horarios = horariosSolicitados(solicitud.horarios(), solicitud.intervaloHoras());
         Long medicamento = solicitud.medicamentoId() == null ? null
                 : idInterno("medicamentos", familia.getId(), solicitud.medicamentoId(), "Medicamento inválido");
-        UUID id = UuidV7.nuevo();
-        jdbc.update("INSERT INTO tratamientos (id_publico, familia_id, perfil_id, medicamento_id, nombre_libre, responsable_perfil_id, responsable_alternativo_perfil_id, indicacion, dosis_indicada, cantidad_receta, frecuencia, fecha_inicio, fecha_fin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                id, familia.getId(), perfil, medicamento, solicitud.nombre().trim(), responsable, responsableAlternativo,
-                limpiar(solicitud.indicacion()), limpiar(solicitud.cantidadReceta()), limpiar(solicitud.cantidadReceta()),
-                limpiar(solicitud.frecuencia()), Date.valueOf(inicio),
-                solicitud.fechaFin() == null ? null : Date.valueOf(solicitud.fechaFin()));
-        Long tratamientoInterno = jdbc.queryForObject(
-                "SELECT id FROM tratamientos WHERE familia_id=? AND id_publico=?", Long.class, familia.getId(), id);
-        List<LocalTime> horarios = horariosSolicitados(solicitud);
-        for (LocalTime horario : horarios) {
-            jdbc.update("INSERT INTO horarios_tratamiento (id_publico, familia_id, tratamiento_id, hora_local, intervalo_horas) VALUES (?, ?, ?, ?, ?)",
-                    UuidV7.nuevo(), familia.getId(), tratamientoInterno, Time.valueOf(horario), solicitud.intervaloHoras());
+        UUID grupoId = UuidV7.nuevo();
+        List<UUID> ids = new ArrayList<>();
+        for (UUID perfilId : perfiles) {
+            Long perfil = idInterno("perfiles", familia.getId(), perfilId, "Perfil inválido");
+            Long responsable = solicitud.responsablePerfilId() == null ? perfil
+                    : idInterno("perfiles", familia.getId(), solicitud.responsablePerfilId(), "Responsable inválido");
+            Long alternativo = solicitud.responsableAlternativoPerfilId() == null ? null
+                    : idInterno("perfiles", familia.getId(), solicitud.responsableAlternativoPerfilId(), "Responsable alternativo inválido");
+            UUID id = UuidV7.nuevo();
+            jdbc.update("INSERT INTO tratamientos (id_publico, grupo_publico_id, familia_id, perfil_id, medicamento_id, nombre_libre, nombre_medicamento, aplicacion, responsable_perfil_id, responsable_alternativo_perfil_id, indicacion, dosis_indicada, cantidad_receta, frecuencia, fecha_inicio, fecha_fin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)",
+                    id, grupoId, familia.getId(), perfil, medicamento, solicitud.nombre().trim(),
+                    limpiar(solicitud.nombreMedicamento()), limpiar(solicitud.aplicacion()), responsable, alternativo,
+                    limpiar(solicitud.indicacion()), limpiar(solicitud.dosis()), limpiar(solicitud.frecuencia()),
+                    Date.valueOf(inicio), solicitud.fechaFin() == null ? null : Date.valueOf(solicitud.fechaFin()));
+            Long interno = jdbc.queryForObject("SELECT id FROM tratamientos WHERE familia_id=? AND id_publico=?",
+                    Long.class, familia.getId(), id);
+            for (LocalTime horario : horarios) {
+                jdbc.update("INSERT INTO horarios_tratamiento (id_publico, familia_id, tratamiento_id, hora_local, intervalo_horas) VALUES (?, ?, ?, ?, ?)",
+                        UuidV7.nuevo(), familia.getId(), interno, Time.valueOf(horario), solicitud.intervaloHoras());
+            }
+            ocurrencias.materializarTratamiento(familia, interno);
+            ids.add(id);
         }
-        ocurrencias.materializarTratamiento(familia, tratamientoInterno);
-        auditar(familia.getId(), jwt, "CREAR", "TRATAMIENTO", id,
-                "Tratamiento registrado sin interpretar la indicación");
-        return id;
+        guardarResultado(familia.getId(), clave, "CREAR_TRATAMIENTOS", grupoId,
+                ids.stream().map(UUID::toString).collect(java.util.stream.Collectors.joining(",")));
+        auditar(familia.getId(), jwt, "CREAR", "TRATAMIENTO", grupoId,
+                "Tratamiento registrado para " + ids.size() + " persona(s)");
+        return new ResultadoTratamientos(grupoId, List.copyOf(ids));
+    }
+
+    @Transactional
+    public void actualizarEnvase(UUID familiaId, UUID loteId, String clave,
+            SolicitudesCatalogo.ActualizacionEnvase solicitud, Jwt jwt) {
+        Familia familia = acceso.autorizar(familiaId, jwt);
+        validarClave(clave);
+        bloquear(familia.getId(), clave);
+        if (resultadoPrincipal(familia.getId(), clave, "ACTUALIZAR_ENVASE") != null) return;
+        validarApertura(solicitud.estadoEnvase(), solicitud.abiertoEn());
+        List<String> estadoActual = jdbc.query("SELECT estado_envase FROM lotes_medicamento WHERE familia_id=? AND id_publico=?",
+                (rs, fila) -> rs.getString(1), familia.getId(), loteId);
+        if (estadoActual.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Envase no encontrado");
+        if ("ABIERTO".equals(estadoActual.getFirst()) && "SIN_ABRIR".equals(solicitud.estadoEnvase())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un envase abierto no puede volver a marcarse sin abrir");
+        }
+        int filas = jdbc.update("UPDATE lotes_medicamento SET estado_envase=?, abierto_en=?, duracion_abierto_dias=?, avisar_vencimiento=?, anticipacion_vencimiento_dias=?, avisar_apertura=?, anticipacion_apertura_dias=?, estado=COALESCE(?, estado), actualizado_en=NOW(), version=version+1 WHERE familia_id=? AND id_publico=? AND version=?",
+                solicitud.estadoEnvase(), solicitud.abiertoEn() == null ? null : Date.valueOf(solicitud.abiertoEn()),
+                solicitud.duracionAbiertoDias(), valor(solicitud.avisarVencimiento(), true),
+                valor(solicitud.anticipacionVencimientoDias(), 7), valor(solicitud.avisarApertura(), true),
+                valor(solicitud.anticipacionAperturaDias(), 3), solicitud.estadoInventario(), familia.getId(), loteId,
+                solicitud.version());
+        if (filas == 0) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "El envase cambió en otro dispositivo. Recarga antes de editarlo.");
+        guardarResultado(familia.getId(), clave, "ACTUALIZAR_ENVASE", loteId, "");
+        auditar(familia.getId(), jwt, "ACTUALIZAR", "LOTE_MEDICAMENTO", loteId, "Estado del envase actualizado");
     }
 
     @Transactional
@@ -131,26 +208,37 @@ public class ServicioCatalogo {
     }
 
     private List<RespuestaCatalogo.MedicamentoResumen> medicamentos(Long familiaId) {
-        return jdbc.query("SELECT m.id_publico, l.id_publico lote_publico, m.nombre, m.presentacion, m.concentracion, l.cantidad, l.unidad, l.fecha_vencimiento, "
+        return jdbc.query("SELECT m.id_publico, l.id_publico lote_publico, m.nombre, m.presentacion, m.concentracion, l.cantidad, l.unidad, l.fecha_vencimiento, l.estado_envase, l.abierto_en, l.duracion_abierto_dias, l.avisar_vencimiento, l.anticipacion_vencimiento_dias, l.avisar_apertura, l.anticipacion_apertura_dias, l.version, "
+                + "CASE WHEN l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL THEN l.abierto_en + l.duracion_abierto_dias::INTEGER END fecha_limite_apertura, "
+                + "CASE WHEN l.fecha_vencimiento IS NULL THEN CASE WHEN l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL THEN l.abierto_en + l.duracion_abierto_dias::INTEGER END WHEN l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL THEN LEAST(l.fecha_vencimiento, l.abierto_en + l.duracion_abierto_dias::INTEGER) ELSE l.fecha_vencimiento END vigente_hasta, "
+                + "CASE WHEN l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL AND (l.fecha_vencimiento IS NULL OR l.abierto_en + l.duracion_abierto_dias::INTEGER <= l.fecha_vencimiento) THEN 'DESPUES_DE_ABRIR' WHEN l.fecha_vencimiento IS NOT NULL THEN 'VENCIMIENTO_IMPRESO' END motivo_vigencia, "
                 + "CASE WHEN l.estado='DESCARTADO' THEN 'DESCARTADO' "
                 + "WHEN l.estado='AGOTADO' OR COALESCE(l.cantidad, 0)=0 THEN 'AGOTADO' "
-                + "WHEN l.fecha_vencimiento < CURRENT_DATE THEN 'VENCIDO' "
-                + "WHEN l.fecha_vencimiento <= CURRENT_DATE + 30 THEN 'POR_VENCER' "
-                + "ELSE 'DISPONIBLE' END estado_calculado "
+                + "WHEN (CASE WHEN l.fecha_vencimiento IS NULL THEN CASE WHEN l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL THEN l.abierto_en + l.duracion_abierto_dias::INTEGER END WHEN l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL THEN LEAST(l.fecha_vencimiento, l.abierto_en + l.duracion_abierto_dias::INTEGER) ELSE l.fecha_vencimiento END) < CURRENT_DATE THEN 'VENCIDO' "
+                + "WHEN (l.avisar_vencimiento AND l.fecha_vencimiento BETWEEN CURRENT_DATE AND CURRENT_DATE + l.anticipacion_vencimiento_dias::INTEGER) OR (l.avisar_apertura AND l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL AND l.abierto_en + l.duracion_abierto_dias::INTEGER BETWEEN CURRENT_DATE AND CURRENT_DATE + l.anticipacion_apertura_dias::INTEGER) THEN 'POR_VENCER' "
+                + "ELSE 'DISPONIBLE' END estado_calculado, "
+                + "CASE WHEN l.estado NOT IN ('AGOTADO','DESCARTADO') THEN ((l.avisar_vencimiento AND l.fecha_vencimiento <= CURRENT_DATE + l.anticipacion_vencimiento_dias::INTEGER) OR (l.avisar_apertura AND l.estado_envase='ABIERTO' AND l.duracion_abierto_dias IS NOT NULL AND l.abierto_en + l.duracion_abierto_dias::INTEGER <= CURRENT_DATE + l.anticipacion_apertura_dias::INTEGER)) ELSE FALSE END requiere_atencion "
                 + "FROM medicamentos m LEFT JOIN lotes_medicamento l ON l.medicamento_id=m.id AND l.familia_id=m.familia_id "
                 + "WHERE m.familia_id=? ORDER BY m.nombre, l.fecha_vencimiento",
                 (rs, fila) -> new RespuestaCatalogo.MedicamentoResumen(rs.getObject("id_publico", UUID.class),
                         rs.getObject("lote_publico", UUID.class),
                         rs.getString("nombre"), rs.getString("presentacion"), rs.getString("concentracion"),
                         rs.getBigDecimal("cantidad"), rs.getString("unidad"),
-                        rs.getObject("fecha_vencimiento", LocalDate.class), rs.getString("estado_calculado")), familiaId);
+                        rs.getObject("fecha_vencimiento", LocalDate.class), rs.getString("estado_envase"),
+                        rs.getObject("abierto_en", LocalDate.class), rs.getObject("duracion_abierto_dias", Integer.class),
+                        rs.getObject("fecha_limite_apertura", LocalDate.class), rs.getObject("vigente_hasta", LocalDate.class),
+                        rs.getString("motivo_vigencia"), rs.getBoolean("avisar_vencimiento"),
+                        rs.getInt("anticipacion_vencimiento_dias"), rs.getBoolean("avisar_apertura"),
+                        rs.getInt("anticipacion_apertura_dias"), rs.getString("estado_calculado"),
+                        rs.getBoolean("requiere_atencion"), rs.getLong("version")), familiaId);
     }
 
     private List<RespuestaCatalogo.TratamientoResumen> tratamientos(Long familiaId) {
-        return jdbc.query("SELECT t.id tratamiento_interno, t.id_publico, p.id_publico perfil_publico, p.nombre_visible, m.id_publico medicamento_publico, t.nombre_libre medicamento, rp.id_publico responsable_publico, rp.nombre_visible responsable, rap.id_publico responsable_alternativo_publico, rap.nombre_visible responsable_alternativo, t.indicacion, COALESCE(t.cantidad_receta, t.dosis_indicada) dosis_indicada, t.frecuencia, t.fecha_inicio, t.fecha_fin, t.estado, ar.id_publico receta_publica FROM tratamientos t JOIN perfiles p ON p.id=t.perfil_id JOIN perfiles rp ON rp.id=t.responsable_perfil_id LEFT JOIN perfiles rap ON rap.id=t.responsable_alternativo_perfil_id LEFT JOIN medicamentos m ON m.id=t.medicamento_id LEFT JOIN archivos_familia ar ON ar.tratamiento_id=t.id AND ar.familia_id=t.familia_id AND ar.estado='ACTIVO' WHERE t.familia_id=? ORDER BY t.fecha_inicio DESC",
+        return jdbc.query("SELECT t.id tratamiento_interno, t.id_publico, t.grupo_publico_id, p.id_publico perfil_publico, p.nombre_visible, m.id_publico medicamento_publico, t.nombre_libre medicamento, t.nombre_medicamento, t.aplicacion, rp.id_publico responsable_publico, rp.nombre_visible responsable, rap.id_publico responsable_alternativo_publico, rap.nombre_visible responsable_alternativo, t.indicacion, t.dosis_indicada, t.frecuencia, t.fecha_inicio, t.fecha_fin, t.estado, receta.id_publico receta_publica FROM tratamientos t JOIN perfiles p ON p.id=t.perfil_id JOIN perfiles rp ON rp.id=t.responsable_perfil_id LEFT JOIN perfiles rap ON rap.id=t.responsable_alternativo_perfil_id LEFT JOIN medicamentos m ON m.id=t.medicamento_id LEFT JOIN LATERAL (SELECT ar.id_publico FROM tratamientos tg JOIN archivos_familia ar ON ar.tratamiento_id=tg.id AND ar.familia_id=tg.familia_id AND ar.estado='ACTIVO' WHERE tg.familia_id=t.familia_id AND tg.grupo_publico_id=t.grupo_publico_id ORDER BY ar.creado_en LIMIT 1) receta ON TRUE WHERE t.familia_id=? ORDER BY t.fecha_inicio DESC",
                 (rs, fila) -> new RespuestaCatalogo.TratamientoResumen(rs.getObject("id_publico", UUID.class),
-                        rs.getObject("perfil_publico", UUID.class), rs.getString("nombre_visible"),
-                        rs.getObject("medicamento_publico", UUID.class), rs.getString("medicamento"),
+                        rs.getObject("grupo_publico_id", UUID.class), rs.getObject("perfil_publico", UUID.class),
+                        rs.getString("nombre_visible"), rs.getObject("medicamento_publico", UUID.class),
+                        rs.getString("medicamento"), rs.getString("nombre_medicamento"), rs.getString("aplicacion"),
                         rs.getObject("responsable_publico", UUID.class), rs.getString("responsable"),
                         rs.getObject("responsable_alternativo_publico", UUID.class), rs.getString("responsable_alternativo"),
                         rs.getString("indicacion"), rs.getString("dosis_indicada"), rs.getString("frecuencia"),
@@ -210,18 +298,71 @@ public class ServicioCatalogo {
         }
     }
 
-    private List<LocalTime> horariosSolicitados(SolicitudesCatalogo.Tratamiento solicitud) {
-        List<LocalTime> horarios = solicitud.horarios() == null ? new java.util.ArrayList<>()
-                : new java.util.ArrayList<>(solicitud.horarios());
-        if (solicitud.horario() != null) horarios.add(solicitud.horario());
-        horarios = horarios.stream().filter(java.util.Objects::nonNull).distinct().sorted().toList();
-        if (horarios.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe indicar al menos un horario");
-        }
-        if (solicitud.intervaloHoras() != null && horarios.size() != 1) {
+    private List<LocalTime> horariosSolicitados(List<LocalTime> solicitados, Integer intervaloHoras) {
+        List<LocalTime> horarios = solicitados.stream().distinct().sorted().toList();
+        if (horarios.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Debe indicar al menos un horario");
+        if (intervaloHoras != null && horarios.size() != 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un intervalo requiere un único horario inicial");
         }
         return horarios;
+    }
+
+    private void validarApertura(String estado, LocalDate abiertoEn) {
+        String normalizado = valor(estado, "SIN_ABRIR");
+        if ("ABIERTO".equals(normalizado) && abiertoEn == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indica cuándo se abrió el envase");
+        }
+        if (abiertoEn != null && abiertoEn.isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fecha de apertura no puede estar en el futuro");
+        }
+    }
+
+    private void validarClave(String clave) {
+        if (clave == null || clave.isBlank() || clave.length() > 120) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Idempotency-Key inválida");
+        }
+    }
+
+    private void bloquear(Long familiaId, String clave) {
+        jdbc.query("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", (rs, fila) -> 0,
+                familiaId + ":salud:" + clave);
+    }
+
+    private UUID resultadoPrincipal(Long familiaId, String clave, String operacion) {
+        List<String[]> filas = jdbc.query("SELECT operacion, resultado_principal::TEXT FROM idempotencia_salud WHERE familia_id=? AND clave=?",
+                (rs, fila) -> new String[] { rs.getString(1), rs.getString(2) }, familiaId, clave);
+        if (filas.isEmpty()) return null;
+        if (!operacion.equals(filas.getFirst()[0])) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La clave de idempotencia ya se usó en otra operación");
+        }
+        return UUID.fromString(filas.getFirst()[1]);
+    }
+
+    private ResultadoMedicamento resultadoMedicamento(Long familiaId, String clave, String operacion) {
+        UUID principal = resultadoPrincipal(familiaId, clave, operacion);
+        if (principal == null) return null;
+        String ids = jdbc.queryForObject("SELECT resultado_ids FROM idempotencia_salud WHERE familia_id=? AND clave=?",
+                String.class, familiaId, clave);
+        return new ResultadoMedicamento(principal, UUID.fromString(ids));
+    }
+
+    private ResultadoTratamientos resultadoTratamientos(Long familiaId, String clave, String operacion) {
+        UUID principal = resultadoPrincipal(familiaId, clave, operacion);
+        if (principal == null) return null;
+        String ids = jdbc.queryForObject("SELECT resultado_ids FROM idempotencia_salud WHERE familia_id=? AND clave=?",
+                String.class, familiaId, clave);
+        List<UUID> resultados = ids == null || ids.isBlank() ? List.of()
+                : java.util.Arrays.stream(ids.split(",")).map(UUID::fromString).toList();
+        return new ResultadoTratamientos(principal, resultados);
+    }
+
+    private void guardarResultado(Long familiaId, String clave, String operacion, UUID principal, String ids) {
+        jdbc.update("INSERT INTO idempotencia_salud (familia_id, clave, operacion, resultado_principal, resultado_ids) VALUES (?, ?, ?, ?, ?)",
+                familiaId, clave, operacion, principal, ids);
+    }
+
+    private <T> T valor(T recibido, T porDefecto) {
+        return recibido == null ? porDefecto : recibido;
     }
 
     private String limpiar(String valor) {
