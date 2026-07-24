@@ -113,4 +113,14 @@ describe('AppShell', () => {
     expect(wrapper.findAll('.menu-desplegable__panel')).toHaveLength(1)
     wrapper.unmount()
   })
+
+  it('abre los avisos desde una campana con contador accesible', async () => {
+    const { wrapper } = await montar('/hoy', 'Familia Herrera', { cantidadNotificaciones: 3 })
+    const campana = wrapper.get('.boton-avisos')
+    expect(campana.attributes('aria-label')).toContain('3 sin leer')
+    expect(campana.text()).toContain('3')
+    await campana.trigger('click')
+    expect(wrapper.emitted('notificaciones')).toHaveLength(1)
+    wrapper.unmount()
+  })
 })

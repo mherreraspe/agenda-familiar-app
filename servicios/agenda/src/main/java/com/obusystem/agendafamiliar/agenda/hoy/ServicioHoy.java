@@ -64,7 +64,7 @@ public class ServicioHoy {
         for (int indice = 0; indice < serie.fechas().size(); indice++) {
             Tarea instancia = tareas.save(new Tarea(UuidV7.nuevo(), familia.getId(), perfil.getId(),
                     solicitud.titulo().trim(), solicitud.descripcion(), serie.fechas().get(indice), serie.id(),
-                    serie.id() == null ? null : indice + 1));
+                    serie.id() == null ? null : indice + 1, !Boolean.FALSE.equals(solicitud.avisar())));
             if (primera == null) primera = instancia;
         }
         auditar(familia.getId(), jwt, "CREAR", primera.getIdPublico(), serie.id() == null

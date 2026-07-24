@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{
   subtitulo: string
   familia?: string
   cantidadAtencion?: number
+  cantidadNotificaciones?: number
   etiquetaAnadir?: string
   tipoAnadirDirecto?: TipoAlta
   tiposAnadir?: TipoAlta[]
@@ -39,6 +40,7 @@ const emit = defineEmits<{
   anadir: [tipo: TipoAlta]
   salir: []
   cambiarFamilia: [familiaId: string]
+  notificaciones: []
 }>()
 
 const menuAnadir = ref<HTMLElement | null>(null)
@@ -114,6 +116,11 @@ function activarAnadir() {
               <button v-for="tipo in tiposAnadirVisibles" :key="tipo" type="button" @click="anadir(tipo)">{{ etiquetaTipoAlta[tipo] }}</button>
             </div>
           </div>
+
+          <button type="button" class="boton-avisos" :aria-label="cantidadNotificaciones ? `Abrir avisos, ${cantidadNotificaciones} sin leer` : 'Abrir avisos'" @click="cerrarMenus(); emit('notificaciones')">
+            <IconoApp nombre="campana" />
+            <span v-if="cantidadNotificaciones" class="contador">{{ cantidadNotificaciones > 99 ? '99+' : cantidadNotificaciones }}</span>
+          </button>
 
           <div ref="menuAvatar" class="menu-desplegable menu-desplegable--avatar">
             <button type="button" class="avatar" aria-label="Abrir menú de familia" aria-controls="menu-familia" :aria-expanded="menuAbierto === 'avatar'" @click="alternarMenu('avatar')"><IconoApp nombre="usuario" /></button>

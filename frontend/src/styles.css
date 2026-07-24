@@ -79,6 +79,8 @@ label { display: grid; gap: 6px; color: var(--tinta-suave); font-size: .85rem; f
 .boton-anadir { display: inline-flex; min-height: 44px; align-items: center; gap: 5px; padding: 9px 13px; border: 0; border-radius: 10px; color: white; background: var(--verde); font-weight: 800; cursor: pointer; }
 .boton-anadir, .menu-desplegable--avatar .avatar { position: relative; z-index: 7; }
 .boton-anadir .icono-app { width: 18px; height: 18px; }
+.boton-avisos { position: relative; display: inline-grid; width: 44px; min-width: 44px; height: 44px; padding: 0; place-items: center; border: 1px solid var(--linea); border-radius: 50%; color: var(--verde); background: var(--superficie); }
+.boton-avisos .contador { position: absolute; top: -5px; right: -5px; padding-inline: 5px; box-shadow: 0 0 0 3px var(--niebla); }
 .menu-desplegable { position: relative; }
 .menu-desplegable__velo { position: fixed; inset: 0; z-index: 5; border: 0; background: transparent; cursor: default; }
 .menu-desplegable__panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 6; display: grid; width: max-content; min-width: 210px; padding: 8px; border: 1px solid var(--linea); border-radius: 12px; background: var(--superficie); box-shadow: 0 16px 38px rgb(25 51 45 / 16%); }
@@ -356,6 +358,49 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .navegacion a.activo { color: #315b4c; }
 .contador { display: inline-grid; min-width: 18px; height: 18px; place-items: center; border-radius: 9px; color: white; background: #b45d40; font-size: .65rem; }
 
+.centro-avisos { inset: auto 0 0; width: min(100%, 520px); max-height: min(88dvh, 760px); margin: 0 auto; padding: 0; transform: none; border-radius: 22px 22px 0 0; }
+.centro-avisos[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.centro-avisos__cabecera { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 14px; border-bottom: 1px solid var(--linea); background: var(--superficie); }
+.centro-avisos__cabecera h2, .centro-avisos__cabecera p { margin: 0; }
+.centro-avisos__cabecera h2 { font: 720 1.7rem/1 var(--fuente-display); letter-spacing: -.035em; }
+.centro-avisos__contenido { min-height: 0; padding: 0 20px calc(24px + env(safe-area-inset-bottom)); overflow-y: auto; }
+.centro-avisos__resumen { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--linea); font-size: .84rem; }
+.enlace-accion { min-height: 40px; padding: 5px 0; border: 0; color: var(--verde); background: transparent; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.mensaje-exito { padding: 11px 14px; border-radius: 11px; color: #244b3d; background: #dcebe4; }
+.centro-avisos__grupo { margin: 24px 0 8px; color: var(--tinta-suave); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
+.pulso-familiar { position: relative; display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.pulso-familiar::before { position: absolute; top: 18px; bottom: 18px; left: 14px; width: 2px; background: var(--linea); content: ''; }
+.pulso-familiar li { --pulso: var(--verde); position: relative; display: grid; grid-template-columns: 30px 50px minmax(0, 1fr); align-items: start; gap: 8px; min-height: 82px; padding: 10px 0; }
+.pulso-familiar__aviso--evento { --pulso: #92691f !important; }
+.pulso-familiar__aviso--salud { --pulso: #a23d48 !important; }
+.pulso-familiar__aviso--botiquin { --pulso: #626aa0 !important; }
+.pulso-familiar__simbolo { position: relative; z-index: 1; display: grid; width: 30px; height: 30px; place-items: center; border: 2px solid var(--superficie); border-radius: 50%; color: white; background: var(--pulso); font-size: .82rem; font-weight: 900; box-shadow: 0 0 0 1px var(--pulso); }
+.pulso-familiar time { padding-top: 7px; color: var(--tinta-suave); font-size: .75rem; font-weight: 800; }
+.pulso-familiar li > button { display: grid; gap: 3px; min-width: 0; min-height: 58px; padding: 5px 8px 8px; border: 0; border-radius: 10px; color: var(--tinta); background: transparent; text-align: left; }
+.pulso-familiar li > button:hover { background: var(--niebla); }
+.pulso-familiar li > button strong, .pulso-familiar li > button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pulso-familiar li > button span, .pulso-familiar li > button small { color: var(--tinta-suave); }
+.pulso-familiar__aviso--leido { opacity: .62; }
+.centro-avisos__vacio { display: grid; gap: 4px; margin-block: 24px; padding: 24px 18px; background: var(--niebla); text-align: center; }
+.preferencias-avisos { margin-top: 24px; border-top: 1px solid var(--linea); }
+.preferencias-avisos > summary { min-height: 52px; padding: 16px 2px; color: var(--verde); font-weight: 850; cursor: pointer; }
+.preferencias-avisos__contenido { display: grid; gap: 18px; padding-bottom: 8px; }
+.preferencias-avisos__dispositivo { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; border-radius: 14px; background: var(--niebla); }
+.preferencias-avisos__dispositivo div, .preferencias-avisos__lista span { display: grid; gap: 3px; }
+.preferencias-avisos__dispositivo small, .preferencias-avisos__lista small, .ayuda-notificaciones { color: var(--tinta-suave); font-size: .76rem; }
+.preferencias-avisos fieldset { display: grid; gap: 10px; margin: 0; padding: 14px; border: 1px solid var(--linea); border-radius: 14px; }
+.preferencias-avisos fieldset label { display: flex; min-height: 34px; align-items: center; gap: 10px; }
+.preferencias-avisos fieldset input[type='checkbox'] { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--verde); }
+.preferencias-avisos__horario { grid-template-columns: 1fr 1fr; }
+.preferencias-avisos__horario legend { grid-column: 1 / -1; }
+.preferencias-avisos__horario label { display: grid !important; }
+.preferencias-avisos__lista { display: grid; gap: 8px; }
+.preferencias-avisos__lista > div { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--linea); }
+
+@media (min-width: 760px) {
+  .centro-avisos { inset: 0 0 0 auto; width: min(440px, 100%); height: 100dvh; max-height: none; margin: 0; border-radius: 22px 0 0 22px; }
+}
+
 @media (max-width: 520px) {
   .app-shell__cabecera { align-items: center; padding: 14px 16px 10px; }
   .app-shell__cabecera > div:first-child { min-width: 0; }
@@ -364,6 +409,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .app-shell__contexto span:nth-child(n + 2) { display: none; }
   .app-shell__principal { padding-inline: 16px; }
   .boton-anadir { padding-inline: 12px; }
+  .app-shell__acciones { gap: 6px; }
+  .boton-avisos, .menu-desplegable--avatar .avatar { width: 42px; min-width: 42px; height: 42px; min-height: 42px; }
   .menu-desplegable__panel { position: fixed; top: auto; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); left: 12px; width: auto; padding: 10px; border-radius: 16px; box-shadow: 0 22px 60px rgb(25 51 45 / 24%); }
   .menu-desplegable__velo { background: rgb(25 51 45 / 22%); }
   .menu-desplegable__panel a, .menu-desplegable__panel button { min-height: 52px; }
@@ -376,6 +423,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .agregar { right: 16px; }
   .campos-dobles { grid-template-columns: 1fr; }
   .dialogo--formulario { inset: 0; width: 100%; height: 100dvh; max-height: none; transform: none; border-radius: 0; }
+  .centro-avisos { width: 100%; }
   .dialogo--formulario .dialogo__cabecera, .dialogo--formulario form, .dialogo__acciones { padding-inline: 16px; }
   .dialogo__acciones { justify-content: stretch; }
   .dialogo__acciones button { flex: 1; }

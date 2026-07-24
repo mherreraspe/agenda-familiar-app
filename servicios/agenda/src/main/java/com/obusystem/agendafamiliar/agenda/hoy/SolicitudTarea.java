@@ -16,8 +16,13 @@ public record SolicitudTarea(
         @Size(max = 1000) String descripcion,
         @NotNull UUID perfilId,
         @NotNull @FutureOrPresent Instant fechaLimite,
-        @Valid SolicitudRecurrencia recurrencia) {
+        @Valid SolicitudRecurrencia recurrencia,
+        Boolean avisar) {
     public SolicitudTarea(String titulo, String descripcion, UUID perfilId, Instant fechaLimite) {
-        this(titulo, descripcion, perfilId, fechaLimite, null);
+        this(titulo, descripcion, perfilId, fechaLimite, null, true);
+    }
+    public SolicitudTarea(String titulo, String descripcion, UUID perfilId, Instant fechaLimite,
+            SolicitudRecurrencia recurrencia) {
+        this(titulo, descripcion, perfilId, fechaLimite, recurrencia, true);
     }
 }

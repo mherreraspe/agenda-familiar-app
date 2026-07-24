@@ -38,3 +38,9 @@ seguridad:
 archivos:
   raiz: ${ARCHIVOS_RAIZ:${java.io.tmpdir}/agenda-familiar-archivos}
   clave: ${ARCHIVOS_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+
+notificaciones:
+  web-push:
+    clave-publica: ${WEB_PUSH_VAPID_PUBLIC_KEY:}
+    clave-privada: ${WEB_PUSH_VAPID_PRIVATE_KEY:}
+    sujeto: ${WEB_PUSH_VAPID_SUBJECT:mailto:administracion@obusystem.com}

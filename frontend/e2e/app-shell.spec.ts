@@ -36,6 +36,12 @@ async function prepararApi(page: Page) {
   const familiasAdmin = [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', creadaEn: '2026-07-23T18:00:00Z' }]
   const miembrosAdmin: Array<{ perfilId: string; usuarioId: string; nombre: string; permiso: string; activo: boolean }> = []
   const enlacesAdmin: Array<{ id: string; tipo: string; usuarioId: string; correo: string; estado: string; expiraEn: string; creadoEn: string }> = []
+  const avisos = [
+    { id: 'aviso-1', tipo: 'TAREA', titulo: 'Tarea pendiente', detalle: 'Comprar ingredientes', destino: '/hoy?aviso=tarea-1', creadaEn: new Date().toISOString() },
+    { id: 'aviso-2', tipo: 'EVENTO', titulo: 'Cita dentro de una hora', detalle: 'Control dental', destino: '/agenda?aviso=evento-cita', creadaEn: new Date().toISOString() },
+    { id: 'aviso-3', tipo: 'SALUD', titulo: 'Toma pendiente', detalle: 'Tratamiento familiar', destino: '/salud?aviso=toma-1', creadaEn: new Date(Date.now() - 86400000).toISOString() }
+  ]
+  const preferenciasAvisos = { tareas: true, eventos: true, salud: true, botiquin: true, silencioDesde: '22:00', silencioHasta: '07:00' }
   await page.route('**/api/v1/**', async route => {
     const ruta = new URL(route.request().url()).pathname
     const responder = (datos: unknown) => route.fulfill({ contentType: 'application/json', body: JSON.stringify(datos) })
@@ -87,6 +93,17 @@ async function prepararApi(page: Page) {
     if (ruta.endsWith('/autenticacion/enlaces/consultar')) return responder({ tipo: 'INVITACION', correo: 'p***@example.com', familia: 'Familia Herrera', expiraEn: '2099-01-01T00:00:00Z' })
     if (ruta.endsWith('/autenticacion/enlaces/consumir')) return route.fulfill({ status: 204, body: '' })
     if (ruta === '/api/v1/familias') return responder({ familias: [{ id: 'familia-1', nombre: 'Familia Herrera', zonaHoraria: 'America/Lima', rol: 'ADMINISTRADOR_FAMILIAR' }] })
+    if (ruta.endsWith('/notificaciones') && route.request().method() === 'GET') return responder({ avisos, sinLeer: avisos.filter(aviso => !('leidaEn' in aviso)).length, preferencias: preferenciasAvisos, dispositivos: [], pushDisponible: false, clavePublica: '' })
+    if (/\/notificaciones\/[^/]+\/leida$/.test(ruta) && route.request().method() === 'PATCH') {
+      const aviso = avisos.find(item => item.id === ruta.split('/').at(-2)) as (typeof avisos)[number] & { leidaEn?: string }
+      if (aviso) aviso.leidaEn = new Date().toISOString()
+      return route.fulfill({ status: 204, body: '' })
+    }
+    if (ruta.endsWith('/notificaciones/leer-todas')) {
+      avisos.forEach(aviso => Object.assign(aviso, { leidaEn: new Date().toISOString() }))
+      return route.fulfill({ status: 204, body: '' })
+    }
+    if (ruta.endsWith('/notificaciones/preferencias')) return responder(Object.assign(preferenciasAvisos, route.request().postDataJSON()))
     if (ruta.endsWith('/hoy')) return responder({ familiaId: 'familia-1', familia: 'Familia Herrera', zonaHoraria: 'America/Lima', perfiles: [perfil, perfilHijo], tareas })
     if (ruta.endsWith('/catalogo')) return responder({ medicamentos, tratamientos, eventos, lugares: [] })
     if (ruta.endsWith('/ocurrencias')) return responder({ ocurrencias: historialTomas, revisar: [] })
@@ -586,4 +603,33 @@ test('no presenta violaciones críticas o serias de accesibilidad', async ({ pag
     const graves = resultado.violations.filter(violacion => violacion.impact === 'critical' || violacion.impact === 'serious')
     expect(graves, `${ruta}: ${graves.map(violacion => violacion.id).join(', ')}`).toEqual([])
   }
+})
+
+test('muestra una bandeja privada legible sin desbordes y separa leer de resolver', async ({ page }, testInfo) => {
+  await page.goto('/hoy')
+  await page.getByRole('button', { name: /Abrir avisos, 3 sin leer/ }).click()
+  const dialogo = page.getByRole('dialog', { name: 'Avisos' })
+  await expect(dialogo).toBeVisible()
+  await expect(dialogo.getByText('Pulso familiar')).toBeVisible()
+  await expect(dialogo.getByText('Comprar ingredientes')).toBeVisible()
+  await expect(dialogo.getByText('Control dental')).toBeVisible()
+
+  const caja = await dialogo.boundingBox()
+  expect(caja).not.toBeNull()
+  expect(caja!.x).toBeGreaterThanOrEqual(0)
+  expect(caja!.x + caja!.width).toBeLessThanOrEqual(testInfo.project.use.viewport!.width)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(testInfo.project.use.viewport!.width)
+
+  await dialogo.getByText('Configurar avisos').click()
+  await expect(dialogo.getByRole('button', { name: 'Activar' })).toBeDisabled()
+  await expect(dialogo.getByText(/pantalla bloqueada nunca muestra/)).toBeVisible()
+
+  const resultado = await new AxeBuilder({ page }).include('.centro-avisos').analyze()
+  const graves = resultado.violations.filter(violacion => violacion.impact === 'critical' || violacion.impact === 'serious')
+  expect(graves, graves.map(violacion => violacion.id).join(', ')).toEqual([])
+
+  await dialogo.getByText('Comprar ingredientes').click()
+  await expect(dialogo).toBeHidden()
+  await expect(page).toHaveURL(/\/hoy\?aviso=tarea-1/)
+  await expect(page.getByRole('button', { name: /Abrir avisos, 2 sin leer/ })).toBeVisible()
 })
